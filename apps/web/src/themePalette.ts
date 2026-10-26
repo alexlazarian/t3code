@@ -1115,10 +1115,8 @@ export function getThemeDefinition(theme: ThemePreference): ThemeDefinition | nu
 
 export function themeAllowsSidebarArtwork(theme: ThemePreference): boolean {
   const themeId = themeIdFromPreference(theme);
-  return (
-    BUILT_IN_THEME_DEFINITIONS.find((definition) => definition.id === themeId)?.sidebarArtwork ===
-    true
-  );
+  const builtIn = BUILT_IN_THEME_DEFINITIONS.find((definition) => definition.id === themeId);
+  return builtIn ? builtIn.sidebarArtwork === true : getThemeDefinition(theme) !== null;
 }
 
 /** Every selection path must check single-appearance themes to keep mix and appearance tiles in sync. */

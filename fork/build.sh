@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the fork as "T3 Code (Fork).app" (arm64) and install it into /Applications.
+# Build the fork as "T3 Code (Fork).app" (arm64), then install it (fork/install.sh).
 # The fork ships no update feed, so it never replaces itself with an official build.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -16,10 +16,4 @@ echo "Building T3 Code (Fork) $T3CODE_DESKTOP_VERSION"
 vp i
 vp run dist:desktop:dmg:arm64
 
-dmg="$(ls -t release/*"${T3CODE_DESKTOP_VERSION}"*arm64.dmg | head -1)"
-mount="$(hdiutil attach -nobrowse -readonly "$dmg" | tail -1 | cut -f3)"
-rm -rf "/Applications/T3 Code (Fork).app"
-cp -R "$mount/T3 Code (Fork).app" /Applications/
-hdiutil detach "$mount" -quiet
-xattr -dr com.apple.quarantine "/Applications/T3 Code (Fork).app" 2>/dev/null || true
-echo "Installed /Applications/T3 Code (Fork).app"
+exec "$(dirname "$0")/install.sh"
