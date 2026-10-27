@@ -897,6 +897,38 @@ export function resolveSidebarThreadStatus(thread: SidebarThreadStatusInput): Si
   return "ready";
 }
 
+export type SidebarStatusFilter = "all" | "needs-you" | "working";
+
+export function matchesSidebarStatusFilter(
+  status: SidebarThreadStatus,
+  hasActionableProposedPlan: boolean,
+  filter: SidebarStatusFilter,
+): boolean {
+  if (filter === "all") return true;
+  if (filter === "working") return status === "working";
+  return (
+    status === "approval" ||
+    status === "input" ||
+    status === "request" ||
+    (status === "ready" && hasActionableProposedPlan)
+  );
+}
+
+export function countSidebarStatusFilters(
+  threads: ReadonlyArray<SidebarThreadSummary>,
+): Record<"needs-you" | "working", number> {
+  const counts = { "needs-you": 0, working: 0 };
+  for (const thread of threads) {
+    const status = resolveSidebarThreadStatus(thread);
+    if (matchesSidebarStatusFilter(status, thread.hasActionableProposedPlan, "needs-you")) {
+      counts["needs-you"] += 1;
+    } else if (status === "working") {
+      counts.working += 1;
+    }
+  }
+  return counts;
+}
+
 export type SidebarV2TopStatusKind =
   | "approval"
   | "done"

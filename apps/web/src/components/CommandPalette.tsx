@@ -1,3 +1,5 @@
+import { useUiStateStore } from "../uiStateStore";
+import { requestOpenSidebar } from "../sidebarOpenRequest";
 import { threadPullRequestLinkMode } from "@t3tools/client-runtime/thread-pull-request-compatibility";
 import { visibleThreadPullRequests } from "@t3tools/shared/threadPullRequests";
 
@@ -56,6 +58,7 @@ import {
   CheckIcon,
   ChevronRightIcon,
   CornerLeftUpIcon,
+  BellIcon,
   FileSearchIcon,
   FolderGit2Icon,
   FolderIcon,
@@ -1148,7 +1151,19 @@ function OpenCommandPaletteDialog(props: {
     if (firstOption) startNewProject(firstOption.environmentId, null);
   };
 
-  const actionItems: Array<CommandPaletteActionItem | CommandPaletteSubmenuItem> = [];
+  const actionItems: Array<CommandPaletteActionItem | CommandPaletteSubmenuItem> = [
+    {
+      kind: "action",
+      value: "action:show-threads-that-need-you",
+      searchTerms: ["need", "attention", "approval", "input", "plan", "filter", "inbox"],
+      title: "Show threads that need you",
+      icon: <BellIcon className={ITEM_ICON_CLASS} />,
+      run: async () => {
+        useUiStateStore.getState().setSidebarStatusFilter("needs-you");
+        requestOpenSidebar();
+      },
+    },
+  ];
 
   if (projects.length > 0) {
     const activeProjectTitle =

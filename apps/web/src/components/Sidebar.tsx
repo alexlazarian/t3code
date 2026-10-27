@@ -188,6 +188,10 @@ import {
   type SidebarListItem,
   type SidebarSection,
   resolveSidebarRowThreadId,
+  countSidebarStatusFilters,
+  resolveSidebarThreadStatus,
+  matchesSidebarStatusFilter,
+  type SidebarStatusFilter,
 } from "./Sidebar.logic";
 import {
   createSidebarCollisionDetection,
@@ -313,6 +317,7 @@ interface SidebarThreadPartitionInput {
   readonly serverConfigs: ReadonlyMap<EnvironmentId, EnvironmentServerConfig>;
   readonly optimisticDrop: SidebarOptimisticDrop | null;
   readonly workingShelfEnabled: boolean;
+  readonly statusFilter: SidebarStatusFilter;
   // Snooze wakes, the queued-turn grace and the Working shelf's exit grace depend
   // on the clock, so the minute tick, the precise snooze-wake tick and the inbox
   // tracker's expiry version are inputs: a new key repartitions.
@@ -364,6 +369,18 @@ function routeThreadOnly(
   return routeThread === undefined ? EMPTY_THREADS : [routeThread];
 }
 
+function ClearFiltersButton(props: { readonly onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={props.onClick}
+      className="mx-auto mt-2 flex cursor-pointer items-center rounded-md border border-sidebar-border px-2.5 py-1 text-2xs font-medium text-sidebar-muted-foreground transition-colors hover:bg-sidebar-row-hover hover:text-sidebar-foreground"
+    >
+      Clear filters
+    </button>
+  );
+}
+
 // Separate hooks cache maps independently of later Sidebar hooks and preserve dnd-kit inputs.
 function useSidebarThreads(input: {
   readonly projectScopeKey: string | null;
@@ -372,6 +389,7 @@ function useSidebarThreads(input: {
   readonly optimisticDrop: SidebarOptimisticDrop | null;
   readonly threads: readonly EnvironmentThreadShell[];
   readonly routeRowThreadKey: string | null;
+  readonly statusFilter: SidebarStatusFilter;
 }) {
   const {
     projectScopeKey,
@@ -380,6 +398,7 @@ function useSidebarThreads(input: {
     optimisticDrop,
     threads,
     routeRowThreadKey,
+    statusFilter,
   } = input;
   const workingShelfEnabled = useClientSettings((s) => s.sidebarWorkingShelfEnabled);
   const inboxReturnsVersion = useSyncExternalStore(
@@ -420,6 +439,7 @@ function useSidebarThreads(input: {
     serverConfigs,
     optimisticDrop,
     workingShelfEnabled,
+    statusFilter,
     clockKey: `${nowMinute}:${snoozeWakeClock}:${inboxReturnsVersion}`,
   });
 
@@ -434,7 +454,9 @@ function useSidebarThreads(input: {
   const listedSettledThreads = settledThreads.filter(olderSettledShelf.isListed);
   useOlderSettledShelfGrowth(olderSettledShelf, listedSettledThreads);
   const settledCount =
-    settledThreads.length + olderSettledShelf.unloadedCount(partition.visibleThreads);
+    statusFilter === "all"
+      ? settledThreads.length + olderSettledShelf.unloadedCount(partition.visibleThreads)
+      : settledThreads.length;
   const visibleSettledThreads = (() => {
     const visible = listedSettledThreads.slice(0, settledVisibleCount);
     if (
@@ -520,9 +542,27 @@ function useSidebarThreads(input: {
 }
 
 function partitionSidebarThreads(input: SidebarThreadPartitionInput) {
-  const { threads, scopedProjectKeys, serverConfigs, optimisticDrop, workingShelfEnabled } = input;
+  const {
+    threads,
+    scopedProjectKeys,
+    serverConfigs,
+    optimisticDrop,
+    workingShelfEnabled,
+    statusFilter,
+  } = input;
   const preciseNow = new Date().toISOString();
-  const visible = filterSidebarV2VisibleThreads(threads, scopedProjectKeys);
+  const scoped = filterSidebarV2VisibleThreads(threads, scopedProjectKeys);
+  const statusCounts = countSidebarStatusFilters(scoped);
+  const visible =
+    statusFilter === "all"
+      ? scoped
+      : scoped.filter((thread) =>
+          matchesSidebarStatusFilter(
+            resolveSidebarThreadStatus(thread),
+            thread.hasActionableProposedPlan,
+            statusFilter,
+          ),
+        );
   const inboxObservation = inboxReturns.observe(workingShelfEnabled ? threads : null);
   const pinned: EnvironmentThreadShell[] = [];
   const active: EnvironmentThreadShell[] = [];
@@ -610,6 +650,7 @@ function partitionSidebarThreads(input: SidebarThreadPartitionInput) {
     ),
     settledThreads: sortSettledThreads(settled),
     visibleThreads: visible,
+    statusCounts,
     snoozeNow: preciseNow,
   };
 }
@@ -902,6 +943,8 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   // Hold dropped rows until server placement is confirmed; block another pickup from replacing the hold.
   const [optimisticDrop, setOptimisticDrop] = useState<SidebarOptimisticDrop | null>(null);
   const threadSearchInputRef = useRef<HTMLInputElement>(null);
+  const statusFilter = useUiStateStore((store) => store.sidebarStatusFilter);
+  const setStatusFilter = useUiStateStore((store) => store.setSidebarStatusFilter);
   const [threadSearchQuery, setThreadSearchQuery] = useState("");
   const [searchHighlightKey, setSearchHighlightKey] = useState<string | null>(null);
   const searchEnvironmentIds = useConnectedEnvironmentIds();
@@ -999,6 +1042,13 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     findThread: (key) => threads.find((candidate) => threadShellKey(candidate) === key),
   });
   const projectScopeKey = revealWidensScope ? null : chosenProjectScopeKey;
+  const isNarrowedByFilters =
+    statusFilter !== "all" || projectScopeKey !== null || isSearchingThreads;
+  const clearAllFilters = () => {
+    setStatusFilter("all");
+    clearThreadSearch();
+    setProjectScopeKey(null);
+  };
   // The widened scope outlives the reveal, so it is written back to the persisted
   // scope. Route changes arrive from history, links and the palette, and only this
   // component holds the project groups that decide a widening, so no single
@@ -1131,6 +1181,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     activeKeys,
     pinnedKeysById,
     activeKeysById,
+    statusCounts,
   } = useSidebarThreads({
     projectScopeKey,
     scopedProjectKeys,
@@ -1138,6 +1189,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     optimisticDrop,
     threads,
     routeRowThreadKey,
+    statusFilter,
   });
 
   // Ranked across environments as the palette ranks them, so one
@@ -2843,6 +2895,9 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
               searchResultCount={threadSearchResults.length}
               activeSearchResultIndex={activeSearchResultIndex}
               onClearSearch={clearThreadSearch}
+              statusFilter={statusFilter}
+              statusCounts={statusCounts}
+              onStatusFilterChange={setStatusFilter}
             />
           </SidebarGroup>
         }
@@ -2913,7 +2968,14 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                 role="status"
                 className="px-2 py-6 text-center text-xs text-sidebar-muted-foreground"
               >
-                {threadSearch.isPending ? "Searching thread messages…" : "No threads found"}
+                {threadSearch.isPending
+                  ? "Searching thread messages…"
+                  : statusFilter !== "all"
+                    ? "No threads match"
+                    : "No threads found"}
+                {!threadSearch.isPending && isNarrowedByFilters ? (
+                  <ClearFiltersButton onClick={clearAllFilters} />
+                ) : null}
               </p>
             )
           ) : null}
@@ -3220,6 +3282,24 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
           ) : null}
           {!isSearchingThreads &&
           visibleDraftSessionCount === 0 &&
+          statusFilter !== "all" &&
+          pinnedThreads.length +
+            activeThreads.length +
+            workingThreads.length +
+            snoozedThreads.length +
+            settledCount ===
+            0 ? (
+            <div
+              role="status"
+              className="flex flex-col items-center gap-2 px-2 py-6 text-center text-xs text-muted-foreground/60"
+            >
+              <span>No threads match</span>
+              <ClearFiltersButton onClick={clearAllFilters} />
+            </div>
+          ) : null}
+          {!isSearchingThreads &&
+          visibleDraftSessionCount === 0 &&
+          statusFilter === "all" &&
           pinnedThreads.length +
             activeThreads.length +
             workingThreads.length +

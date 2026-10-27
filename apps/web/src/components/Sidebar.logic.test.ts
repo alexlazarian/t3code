@@ -11,6 +11,8 @@ import {
   hasUnseenCompletion,
   resolveSidebarRowThreadId,
   isSidebarThreadWorking,
+  countSidebarStatusFilters,
+  matchesSidebarStatusFilter,
   orderItemsByPreferredIds,
   pinOrderKeyBetween,
   resolveProjectStatusIndicator,
@@ -1350,5 +1352,44 @@ describe("resolveSidebarRouteReveal", () => {
         findThread,
       }),
     ).toEqual({ pendingKey: hiddenKey, widensScope: false });
+  });
+});
+
+describe("status filter", () => {
+  const runtime = {
+    status: "running" as const,
+    activeRunId: null,
+    providerInstanceId: ProviderInstanceId.make("codex"),
+    providerName: "Codex",
+    lastError: null,
+    updatedAt: "2026-03-09T10:00:00.000Z",
+  };
+  const approvalThread = makeThread({ id: ThreadId.make("approval"), hasPendingApprovals: true });
+  const workingThread = makeThread({ id: ThreadId.make("working"), runtime });
+  const planReadyThread = makeThread({
+    id: ThreadId.make("plan-ready"),
+    hasActionableProposedPlan: true,
+  });
+  const doneThread = makeThread({ id: ThreadId.make("done") });
+
+  it("needs-you matches approval, input, request and plan ready", () => {
+    expect(matchesSidebarStatusFilter("approval", false, "needs-you")).toBe(true);
+    expect(matchesSidebarStatusFilter("input", false, "needs-you")).toBe(true);
+    expect(matchesSidebarStatusFilter("request", false, "needs-you")).toBe(true);
+    expect(matchesSidebarStatusFilter("ready", true, "needs-you")).toBe(true);
+    expect(matchesSidebarStatusFilter("ready", false, "needs-you")).toBe(false);
+    expect(matchesSidebarStatusFilter("working", false, "needs-you")).toBe(false);
+  });
+  it("working matches only working", () => {
+    expect(matchesSidebarStatusFilter("working", false, "working")).toBe(true);
+    expect(matchesSidebarStatusFilter("waiting", false, "working")).toBe(false);
+  });
+  it("all matches everything", () => {
+    expect(matchesSidebarStatusFilter("failed", false, "all")).toBe(true);
+  });
+  it("counts both chips", () => {
+    expect(
+      countSidebarStatusFilters([approvalThread, workingThread, planReadyThread, doneThread]),
+    ).toEqual({ "needs-you": 2, working: 1 });
   });
 });

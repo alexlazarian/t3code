@@ -10,6 +10,7 @@ import {
 import { useLocation, useParams, useRouter, type AnyRouter } from "@tanstack/react-router";
 
 import { isCommandPaletteOpen } from "../commandPaletteBus";
+import { onOpenSidebarRequest } from "../sidebarOpenRequest";
 import { isElectron } from "../env";
 import {
   releaseThreadUndoShortcut,
@@ -307,7 +308,7 @@ function SidebarControl() {
   const router = useRouter();
   const usagePageOpen = useLocation({ select: (location) => location.pathname === "/usage" });
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
-  const { toggleSidebar, isMobile, mobileSheetMounted } = useSidebar();
+  const { toggleSidebar, setOpen, setOpenMobile, isMobile, mobileSheetMounted } = useSidebar();
   const isSidebarVisible = useSidebarVisibility();
   const environmentIdentificationMode = useEnvironmentIdentificationMode();
   const stageBackdropVariant = useSidebarStageBackdropVariant(
@@ -362,6 +363,12 @@ function SidebarControl() {
       unsubscribe?.();
     };
   }, [keybindings, toggleSidebar, usagePageOpen]);
+
+  // oxlint-disable-next-line t3code/react-effect-budget -- subscribes to the palette's open-sidebar request on window
+  useEffect(
+    () => onOpenSidebarRequest(() => (isMobile ? setOpenMobile(true) : setOpen(true))),
+    [isMobile, setOpen, setOpenMobile],
+  );
 
   // The control lives as long as the shell, so it carries the shell's commands. Created
   // once so re-renders never re-register them.
