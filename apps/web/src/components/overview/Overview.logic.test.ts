@@ -126,6 +126,7 @@ describe("buildOverviewGrid", () => {
       partition: partition(threads),
       projects,
       projectKeyOf: overviewProjectKeyOf(projects),
+      workingShelfEnabled: false,
     });
     expect(grid.columns).toHaveLength(1);
     expect(grid.columns[0]?.counts.open).toBe(2);
@@ -150,6 +151,7 @@ describe("buildOverviewGrid", () => {
       "snoozed",
       "settled",
     ]);
+    expect(build(true).find((row) => row.section === "working")?.total).toBe(0);
     const rows = build(false);
     expect(rows.map((row) => row.section)).toEqual(["pinned", "active", "snoozed", "settled"]);
     expect(rows.map((row) => row.total)).toEqual([0, 1, 0, 0]);
@@ -171,6 +173,7 @@ describe("buildOverviewGrid", () => {
       partition: partition(threads),
       projects,
       projectKeyOf: overviewProjectKeyOf(projects),
+      workingShelfEnabled: false,
     });
     expect(grid.columns.map((column) => column.counts)).toEqual([
       { open: 4, working: 1, needsYou: 2 },
@@ -185,6 +188,7 @@ describe("buildOverviewGrid", () => {
         partition: partition(threads),
         projects,
         projectKeyOf: overviewProjectKeyOf(projects),
+        workingShelfEnabled: false,
       });
     expect(build([makeThread("a")]).columns.map((column) => column.projectKey)).toEqual([
       projects[0]!.projectKey,

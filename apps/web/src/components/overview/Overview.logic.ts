@@ -40,14 +40,12 @@ export function buildOverviewGrid(input: {
   >;
   projects: ReadonlyArray<SidebarProjectSnapshot>;
   projectKeyOf: (thread: SidebarThreadSummary) => string;
-  workingShelfEnabled?: boolean;
+  workingShelfEnabled: boolean;
 }): { columns: OverviewColumn[]; rows: OverviewRow[] } {
   const { partition, projects, projectKeyOf } = input;
   const sections: ReadonlyArray<readonly [SidebarSection, ReadonlyArray<SidebarThreadSummary>]> = [
     ["pinned", partition.pinnedThreads],
-    ...((input.workingShelfEnabled ?? partition.workingThreads.length > 0)
-      ? ([["working", partition.workingThreads]] as const)
-      : []),
+    ...(input.workingShelfEnabled ? ([["working", partition.workingThreads]] as const) : []),
     ["active", partition.activeThreads],
     ["snoozed", partition.snoozedThreads],
     ["settled", partition.settledThreads],
