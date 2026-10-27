@@ -434,6 +434,12 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["usage quota rate limit reset recover continue"],
   },
   {
+    id: "thread-view",
+    title: "Thread view",
+    to: "/settings/general",
+    searchTerms: ["list overview columns board projects sidebar layout"],
+  },
+  {
     id: "working-shelf",
     title: "Working section",
     to: "/settings/general",

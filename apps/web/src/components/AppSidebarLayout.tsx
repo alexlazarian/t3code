@@ -63,7 +63,9 @@ import {
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 import { appAtomRegistry } from "../rpc/atomRegistry";
 import { registerCommands, registerMenuAction } from "../shortcuts/dispatcher";
+import { getClientSettings } from "../hooks/useSettings";
 import { resolveThreadRouteRef } from "../threadRoutes";
+import { nextThreadView, switchThreadView } from "../threadView";
 
 const MACOS_TRAFFIC_LIGHTS_LEFT_INSET = "var(--desktop-window-controls-inset, 90px)";
 
@@ -173,6 +175,19 @@ export function registerNavigationHistoryCommands(router: AnyRouter): () => void
 
 // Escape leaves the pull requests page when no scope (a selection, a dialog,
 // a drag) claimed it, so it observes after every other scope.
+function registerThreadViewCommand(router: AnyRouter): () => void {
+  return registerCommands(
+    {
+      "view.toggleOverview": (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        switchThreadView(router, nextThreadView(getClientSettings().threadView));
+      },
+    },
+    { when: (event) => !isKeybindingCaptureTarget(event) },
+  );
+}
+
 function registerPullRequestsEscapeCommand(router: AnyRouter): () => void {
   return registerCommands(
     {},
@@ -274,6 +289,7 @@ function registerAppShellCommands(router: AnyRouter, shellElement: Element): () 
     registerThreadUndoCommands(router, readSidebarVisible),
     registerNavigationHistoryCommands(router),
     registerPullRequestsEscapeCommand(router),
+    registerThreadViewCommand(router),
     registerMenuAction("open-settings", () => {
       if (!/^\/settings(\/|$)/.test(router.state.location.pathname))
         void router.navigate({ to: "/settings" });
