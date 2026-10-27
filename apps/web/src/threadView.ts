@@ -5,10 +5,6 @@ import { updateClientSettings } from "./hooks/useSettings";
 import { readThreadShells } from "./state/entities";
 import { buildThreadRouteParams } from "./threadRoutes";
 
-export function nextThreadView(current: ThreadView): ThreadView {
-  return current === "list" ? "overview" : "list";
-}
-
 export function isOverviewPathname(pathname: string): boolean {
   return pathname === "/overview";
 }
@@ -47,7 +43,6 @@ export function switchThreadView(router: Pick<AnyRouter, "navigate">, view: Thre
   void router.navigate({ to: "/$environmentId/$threadId", params: buildThreadRouteParams(last) });
 }
 
-/** @public Consumed by the view switch control in Task 5. */
 export function useSwitchThreadView(): (view: ThreadView) => void {
   const router = useRouter();
   return (view) => switchThreadView(router, view);

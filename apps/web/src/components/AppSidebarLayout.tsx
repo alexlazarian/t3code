@@ -64,7 +64,8 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 import { appAtomRegistry } from "../rpc/atomRegistry";
 import { registerCommands, registerMenuAction } from "../shortcuts/dispatcher";
 import { resolveThreadRouteRef } from "../threadRoutes";
-import { isOverviewPathname, switchThreadView } from "../threadView";
+import { isOverviewPathname, switchThreadView, useSwitchThreadView } from "../threadView";
+import { Toggle, ToggleGroup } from "./ui/toggle-group";
 
 const MACOS_TRAFFIC_LIGHTS_LEFT_INSET = "var(--desktop-window-controls-inset, 90px)";
 
@@ -315,6 +316,9 @@ function SidebarControl() {
   const shortcutLabel = shortcutLabelForCommand(keybindings, "sidebar.toggle", {
     context: { usagePageOpen },
   });
+  const overviewOpen = useLocation({ select: (location) => isOverviewPathname(location.pathname) });
+  const setThreadView = useSwitchThreadView();
+  const viewShortcutLabel = shortcutLabelForCommand(keybindings, "view.toggleOverview");
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -386,6 +390,28 @@ function SidebarControl() {
         />
         <TooltipPopup side="bottom">
           Toggle main sidebar{shortcutLabel ? ` (${shortcutLabel})` : ""}
+        </TooltipPopup>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger
+          render={<div className="pointer-events-auto ml-2 [-webkit-app-region:no-drag]" />}
+        >
+          <ToggleGroup
+            aria-label="Thread view"
+            variant="mode"
+            value={[overviewOpen ? "overview" : "list"]}
+            onValueChange={(next) => {
+              const view = next[0];
+              if (view === "list" || view === "overview") setThreadView(view);
+            }}
+          >
+            <Toggle value="list">List</Toggle>
+            <Toggle value="overview">Overview</Toggle>
+          </ToggleGroup>
+        </TooltipTrigger>
+        <TooltipPopup side="bottom">
+          Switch to {overviewOpen ? "List" : "Overview"}
+          {viewShortcutLabel ? ` (${viewShortcutLabel})` : ""}
         </TooltipPopup>
       </Tooltip>
     </div>

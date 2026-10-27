@@ -800,7 +800,7 @@ export function GeneralSettingsPanel() {
           control={
             <ToggleGroup
               aria-label="Thread view"
-              variant="segmented"
+              variant="mode"
               value={[settings.threadView]}
               onValueChange={(next) => {
                 const view = next[0];

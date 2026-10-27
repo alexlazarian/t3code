@@ -60,6 +60,8 @@ import {
   FolderGit2Icon,
   FolderIcon,
   FolderPlusIcon,
+  LayoutGridIcon,
+  ListIcon,
   MessageSquareDashedIcon,
   LinkIcon,
   MessageSquareIcon,
@@ -85,6 +87,7 @@ import { useAtomValue } from "@effect/atom-react";
 
 import { isDesktopLocalConnectionTarget } from "../connection/desktopLocal";
 import { useDesktopLocalBootstraps } from "../connection/useDesktopLocalBootstraps";
+import { isOverviewPathname, useSwitchThreadView } from "../threadView";
 import { useHandleNewThread } from "../hooks/useHandleNewThread";
 import { useOpenPanelPullRequestUrl } from "../hooks/useOpenPanelPullRequestUrl";
 import { writeTextToClipboard } from "../hooks/useCopyToClipboard";
@@ -360,6 +363,7 @@ function OpenCommandPaletteDialog(props: {
 }) {
   const navigate = useNavigate();
   const pathname = useLocation({ select: (location) => location.pathname });
+  const setThreadView = useSwitchThreadView();
   const { openChildSearch, setOpen } = props;
   // Keyed by palette session: the intent and restored search only seed this
   // mount, and closing must not change what the closing palette shows.
@@ -1477,6 +1481,32 @@ function OpenCommandPaletteDialog(props: {
       icon: <PullRequestGlyph.pullRequest className={ITEM_ICON_CLASS} />,
       run: async () => {
         await navigate({ to: "/pull-requests", search: readPullRequestListPreferences() });
+      },
+    });
+  }
+
+  const viewSearchTerms = ["overview", "grid", "board", "list", "view", "switch"];
+  if (isOverviewPathname(pathname)) {
+    actionItems.push({
+      kind: "action",
+      value: "action:view-list",
+      searchTerms: viewSearchTerms,
+      title: "Switch to List",
+      icon: <ListIcon className={ITEM_ICON_CLASS} />,
+      run: async () => {
+        setThreadView("list");
+      },
+    });
+  } else {
+    actionItems.push({
+      kind: "action",
+      value: "action:view-overview",
+      searchTerms: viewSearchTerms,
+      title: "Switch to Overview",
+      icon: <LayoutGridIcon className={ITEM_ICON_CLASS} />,
+      shortcutCommand: "view.toggleOverview",
+      run: async () => {
+        setThreadView("overview");
       },
     });
   }

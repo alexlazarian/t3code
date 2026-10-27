@@ -2,14 +2,9 @@ import { describe, expect, it } from "vite-plus/test";
 
 import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
 
-import { isOverviewPathname, nextThreadView, pickLastVisitedThread } from "./threadView";
+import { isOverviewPathname, pickLastVisitedThread } from "./threadView";
 
 describe("threadView", () => {
-  it("toggles between list and overview", () => {
-    expect(nextThreadView("list")).toBe("overview");
-    expect(nextThreadView("overview")).toBe("list");
-  });
-
   it("recognizes the overview route", () => {
     expect(isOverviewPathname("/overview")).toBe(true);
     expect(isOverviewPathname("/env-1/thread-1")).toBe(false);
