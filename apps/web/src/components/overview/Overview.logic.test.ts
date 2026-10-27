@@ -1,4 +1,7 @@
-import type { EnvironmentServerConfig } from "@t3tools/client-runtime/connection";
+import type {
+  EnvironmentConnectionPhase,
+  EnvironmentServerConfig,
+} from "@t3tools/client-runtime/connection";
 import { EnvironmentId, ProjectId, ProviderInstanceId, ThreadId } from "@t3tools/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
@@ -8,6 +11,8 @@ import type { Project } from "../../types";
 import { partitionSidebarThreads } from "../Sidebar.logic";
 import {
   buildOverviewGrid,
+  isOverviewThreadOffline,
+  overviewOfflineNote,
   moveOverviewFocus,
   NO_PROJECT_KEY,
   overviewProjectKeyOf,
@@ -244,5 +249,35 @@ describe("moveOverviewFocus", () => {
 
   it("returns null for a key that is not on the grid", () => {
     expect(moveOverviewFocus(grid, "missing", "down")).toBeNull();
+  });
+});
+
+describe("overview offline machines", () => {
+  const phases = new Map<string, EnvironmentConnectionPhase>([
+    [envA, "connected"],
+    [envB, "reconnecting"],
+    ["env-c", "offline"],
+    ["env-d", "error"],
+  ]);
+
+  it("a thread whose environment is reconnecting counts as offline; connected does not", () => {
+    expect(isOverviewThreadOffline(envB, phases)).toBe(true);
+    expect(isOverviewThreadOffline("env-c", phases)).toBe(true);
+    expect(isOverviewThreadOffline(envA, phases)).toBe(false);
+    expect(isOverviewThreadOffline("env-unknown", phases)).toBe(false);
+  });
+
+  it("names offline machines, collapsing past two", () => {
+    const labels = new Map([
+      [envA, "Laptop"],
+      [envB, "Studio"],
+      ["env-c", "Server"],
+      ["env-d", "Desk"],
+    ]);
+    const note = (ids: string[]) => overviewOfflineNote(ids, phases, labels);
+    expect(note([envA])).toBeNull();
+    expect(note([envA, envB, envB])).toBe("Studio offline");
+    expect(note([envB, "env-c"])).toBe("Studio, Server offline");
+    expect(note([envB, "env-c", "env-d"])).toBe("3 machines offline");
   });
 });

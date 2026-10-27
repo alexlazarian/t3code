@@ -1,3 +1,5 @@
+import type { EnvironmentConnectionPhase } from "@t3tools/client-runtime/connection";
+
 import type { SidebarThreadSummary } from "../../types";
 import type { SidebarProjectSnapshot } from "../../sidebarProjectGrouping";
 import {
@@ -138,4 +140,27 @@ function nearestCard(
     if (below !== undefined && below.length > 0) return below[0]!;
   }
   return null;
+}
+
+/** Matches ChatView: any phase but "connected" is unavailable. An unknown environment is not flagged. */
+export function isOverviewThreadOffline(
+  environmentId: string,
+  phases: ReadonlyMap<string, EnvironmentConnectionPhase>,
+): boolean {
+  const phase = phases.get(environmentId);
+  return phase !== undefined && phase !== "connected";
+}
+
+export function overviewOfflineNote(
+  environmentIds: Iterable<string>,
+  phases: ReadonlyMap<string, EnvironmentConnectionPhase>,
+  labelById: ReadonlyMap<string, string>,
+): string | null {
+  const offline = new Set<string>();
+  for (const id of environmentIds) {
+    if (isOverviewThreadOffline(id, phases)) offline.add(id);
+  }
+  if (offline.size === 0) return null;
+  if (offline.size > 2) return `${offline.size} machines offline`;
+  return `${[...offline].map((id) => labelById.get(id) ?? "Machine").join(", ")} offline`;
 }

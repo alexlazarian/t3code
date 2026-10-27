@@ -1,6 +1,15 @@
+import {
+  isAtomCommandInterrupted,
+  squashAtomCommandFailure,
+} from "@t3tools/client-runtime/state/runtime";
 import type { ScopedThreadRef } from "@t3tools/contracts";
 import { XIcon } from "lucide-react";
-import { useState, type KeyboardEvent } from "react";
+import { useState, type KeyboardEvent, type ReactNode } from "react";
+
+import { environmentCatalog } from "../../connection/catalog";
+import { useQuietThreadShell } from "../../state/entities";
+import { useEnvironment } from "../../state/environments";
+import { useAtomCommand } from "../../state/use-atom-command";
 
 import {
   buildPendingUserInputAnswers,
@@ -13,7 +22,7 @@ import { ComposerPendingApprovalActions } from "../chat/ComposerPendingApprovalA
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Popover, PopoverClose, PopoverPopup } from "../ui/popover";
-import { toastManager } from "../ui/toast";
+import { stackedThreadToast, toastManager } from "../ui/toast";
 import type { OverviewPeekAction } from "./OverviewPeek.logic";
 import { useOverviewThreadActions } from "./useOverviewThreadActions";
 
@@ -21,13 +30,103 @@ type InputAction = Extract<OverviewPeekAction, { kind: "input" }>;
 
 const MESSAGE_PREVIEW_CHARS = 600;
 
-export function OverviewPeek(props: {
+type OverviewPeekProps = {
   readonly threadRef: ScopedThreadRef;
   readonly projectName: string;
   readonly getCard: () => HTMLElement | null;
   readonly onOpenThread: () => void;
   readonly onClose: () => void;
-}) {
+};
+
+export function OverviewPeek(props: OverviewPeekProps) {
+  const environment = useEnvironment(props.threadRef.environmentId);
+  return environment !== null && environment.connection.phase !== "connected" ? (
+    <OverviewOfflinePeek {...props} machineLabel={environment.label} />
+  ) : (
+    <OverviewLivePeek {...props} />
+  );
+}
+
+function OverviewOfflinePeek(props: OverviewPeekProps & { readonly machineLabel: string }) {
+  const title = useQuietThreadShell(props.threadRef)?.title;
+  const retryEnvironment = useAtomCommand(environmentCatalog.retryNow, { reportFailure: false });
+  const [reconnecting, setReconnecting] = useState(false);
+  const reconnect = async () => {
+    setReconnecting(true);
+    const result = await retryEnvironment(props.threadRef.environmentId);
+    setReconnecting(false);
+    if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
+      const error = squashAtomCommandFailure(result);
+      toastManager.add(
+        stackedThreadToast({
+          type: "error",
+          title: "Could not reconnect environment",
+          description: error instanceof Error ? error.message : "Failed to reconnect.",
+        }),
+      );
+    }
+  };
+  return (
+    <PeekShell {...props} title={title}>
+      <div className="flex flex-col gap-1.5 px-2 py-1.5 text-xs">
+        <p className="text-muted-foreground">{props.machineLabel} is offline.</p>
+        <div className="flex gap-1">
+          <Button size="xs" disabled={reconnecting} onClick={() => void reconnect()}>
+            Reconnect
+          </Button>
+        </div>
+      </div>
+    </PeekShell>
+  );
+}
+
+function PeekShell(
+  props: OverviewPeekProps & {
+    readonly title: string | undefined;
+    readonly children: ReactNode;
+  },
+) {
+  return (
+    <Popover
+      open
+      onOpenChange={(open, details) => {
+        if (open) return;
+        // The card's own click toggles the peek; closing here too would close and reopen it.
+        const target = details.reason === "outside-press" ? details.event.target : null;
+        if (target instanceof Node && props.getCard()?.contains(target)) return;
+        props.onClose();
+      }}
+    >
+      <PopoverPopup
+        anchor={props.getCard}
+        finalFocus={props.getCard}
+        side="bottom"
+        align="start"
+        width="md"
+        padding="none"
+        aria-label={props.title ?? "Thread"}
+      >
+        <div className="flex items-center gap-1.5 border-b border-border ps-2 pe-0.5">
+          <span className="min-w-0 flex-1 truncate py-1 text-xs font-semibold">{props.title}</span>
+          <PopoverClose render={<Button size="icon-xs" variant="ghost" aria-label="Close peek" />}>
+            <XIcon />
+          </PopoverClose>
+        </div>
+        {props.children}
+        <div className="flex items-center gap-1.5 border-t border-border px-2 py-1">
+          <Button size="xs" variant="outline" onClick={props.onOpenThread}>
+            Open in List view
+          </Button>
+          <span className="ms-auto truncate text-2xs text-muted-foreground">
+            {props.projectName}
+          </span>
+        </div>
+      </PopoverPopup>
+    </Popover>
+  );
+}
+
+function OverviewLivePeek(props: OverviewPeekProps) {
   const thread = useOverviewThreadActions(props.threadRef);
   const [reply, setReply] = useState("");
   const [inputDrafts, setInputDrafts] = useState<{
@@ -84,92 +183,57 @@ export function OverviewPeek(props: {
   };
 
   return (
-    <Popover
-      open
-      onOpenChange={(open, details) => {
-        if (open) return;
-        // The card's own click toggles the peek; closing here too would close and reopen it.
-        const target = details.reason === "outside-press" ? details.event.target : null;
-        if (target instanceof Node && props.getCard()?.contains(target)) return;
-        props.onClose();
-      }}
-    >
-      <PopoverPopup
-        anchor={props.getCard}
-        finalFocus={props.getCard}
-        side="bottom"
-        align="start"
-        width="md"
-        padding="none"
-        aria-label={thread.shell?.title ?? "Thread"}
-      >
-        <div className="flex items-center gap-1.5 border-b border-border ps-2 pe-0.5">
-          <span className="min-w-0 flex-1 truncate py-1 text-xs font-semibold">
-            {thread.shell?.title}
-          </span>
-          <PopoverClose render={<Button size="icon-xs" variant="ghost" aria-label="Close peek" />}>
-            <XIcon />
-          </PopoverClose>
-        </div>
-        <div className="flex flex-col gap-1.5 px-2 py-1.5 text-xs">
-          {thread.projection === null ? null : (
-            <p className="line-clamp-4 wrap-anywhere text-muted-foreground">
-              {lastAssistantText ?? "No replies yet."}
-            </p>
-          )}
-          {primary === undefined ? null : (
-            <OverviewPeekPrimaryAction
-              action={primary}
-              drafts={drafts}
-              busy={thread.busy}
-              onToggleOption={(questionId, value) => {
-                if (inputAction === null) return;
-                const question = inputAction.questions.find((entry) => entry.id === questionId);
-                if (question === undefined) return;
-                setInputDrafts({
-                  requestId: inputAction.requestId,
-                  drafts: {
-                    ...drafts,
-                    [questionId]: togglePendingUserInputOptionSelection(
-                      question,
-                      drafts[questionId],
-                      value,
-                    ),
-                  },
-                });
-              }}
-              onSubmitAnswer={() => void submitReply()}
-              thread={thread}
-            />
-          )}
-          {canReply ? (
-            <Input
-              size="compact"
-              value={reply}
-              disabled={thread.busy || inputAction?.canRespond === false}
-              onChange={(event) => setReply(event.target.value)}
-              onKeyDown={handleReplyKeyDown}
-              aria-label={inputAction !== null ? "Answer" : "Reply"}
-              placeholder={
-                inputAction !== null
-                  ? "Or type an answer, Enter to submit"
-                  : primary?.kind === "stop"
-                    ? "Follow-up, Enter to send"
-                    : "Reply, Enter to send"
-              }
-            />
-          ) : null}
-        </div>
-        <div className="flex items-center gap-1.5 border-t border-border px-2 py-1">
-          <Button size="xs" variant="outline" onClick={props.onOpenThread}>
-            Open in List view
-          </Button>
-          <span className="ms-auto truncate text-2xs text-muted-foreground">
-            {props.projectName}
-          </span>
-        </div>
-      </PopoverPopup>
-    </Popover>
+    <PeekShell {...props} title={thread.shell?.title}>
+      <div className="flex flex-col gap-1.5 px-2 py-1.5 text-xs">
+        {thread.projection === null ? null : (
+          <p className="line-clamp-4 wrap-anywhere text-muted-foreground">
+            {lastAssistantText ?? "No replies yet."}
+          </p>
+        )}
+        {primary === undefined ? null : (
+          <OverviewPeekPrimaryAction
+            action={primary}
+            drafts={drafts}
+            busy={thread.busy}
+            onToggleOption={(questionId, value) => {
+              if (inputAction === null) return;
+              const question = inputAction.questions.find((entry) => entry.id === questionId);
+              if (question === undefined) return;
+              setInputDrafts({
+                requestId: inputAction.requestId,
+                drafts: {
+                  ...drafts,
+                  [questionId]: togglePendingUserInputOptionSelection(
+                    question,
+                    drafts[questionId],
+                    value,
+                  ),
+                },
+              });
+            }}
+            onSubmitAnswer={() => void submitReply()}
+            thread={thread}
+          />
+        )}
+        {canReply ? (
+          <Input
+            size="compact"
+            value={reply}
+            disabled={thread.busy || inputAction?.canRespond === false}
+            onChange={(event) => setReply(event.target.value)}
+            onKeyDown={handleReplyKeyDown}
+            aria-label={inputAction !== null ? "Answer" : "Reply"}
+            placeholder={
+              inputAction !== null
+                ? "Or type an answer, Enter to submit"
+                : primary?.kind === "stop"
+                  ? "Follow-up, Enter to send"
+                  : "Reply, Enter to send"
+            }
+          />
+        ) : null}
+      </div>
+    </PeekShell>
   );
 }
 

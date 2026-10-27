@@ -15,6 +15,7 @@ import { updateClientSettings, useClientSettings } from "../../hooks/useSettings
 import { useSidebarProjectGroups } from "../../hooks/useSidebarProjectGroups";
 import { selectProjectGroupingSettings } from "../../logicalProject";
 import { resolveSidebarProjectScopeKey } from "../../sidebarProjectGrouping";
+import { useEnvironments } from "../../state/environments";
 import { useQuietThreadShells, useServerConfigs } from "../../state/entities";
 import { buildThreadRouteParams } from "../../threadRoutes";
 import { useThreadSelectionStore } from "../../threadSelectionStore";
@@ -43,7 +44,9 @@ import { SidebarInset } from "../ui/sidebar";
 import { WorkspacePageHeader } from "../WorkspacePageHeader";
 import {
   buildOverviewGrid,
+  isOverviewThreadOffline,
   moveOverviewFocus,
+  overviewOfflineNote,
   overviewProjectKeyOf,
   type OverviewColumn,
   type OverviewFocusDirection,
@@ -107,6 +110,7 @@ export function OverviewView() {
   const lastVisitedById = useUiStateStore((store) => store.threadLastVisitedAtById);
   const clearSelection = useThreadSelectionStore((store) => store.clearSelection);
   const providerEntriesByEnvironment = useAtomValue(sidebarProviderEntriesAtom);
+  const { environments } = useEnvironments();
   const clockKey = useSidebarPartitionClockKey(threads);
   const expansion = useOverviewRowExpansion();
   const [focusKey, setFocusKey] = useState<string | null>(null);
@@ -172,6 +176,24 @@ export function OverviewView() {
           : null,
       ] as const;
     }),
+  );
+  const phases = new Map(
+    environments.map((environment) => [environment.environmentId, environment.connection.phase]),
+  );
+  const labelById = new Map(
+    environments.map((environment) => [environment.environmentId, environment.label]),
+  );
+  const offlineNoteByColumn = new Map(
+    columns.map((column) => [
+      column.projectKey,
+      overviewOfflineNote(
+        rows.flatMap((row) =>
+          (row.cells.get(column.projectKey) ?? []).map((thread) => thread.environmentId),
+        ),
+        phases,
+        labelById,
+      ),
+    ]),
   );
   const focusGrid = columns.map((column) =>
     rows
@@ -283,7 +305,11 @@ export function OverviewView() {
             >
               <div role="row" className="contents">
                 {columns.map((column) => (
-                  <OverviewColumnHeader key={column.projectKey} column={column} />
+                  <OverviewColumnHeader
+                    key={column.projectKey}
+                    column={column}
+                    note={offlineNoteByColumn.get(column.projectKey)}
+                  />
                 ))}
               </div>
               {rows.map((row) => {
@@ -354,6 +380,7 @@ export function OverviewView() {
                                       lastVisitedById[key],
                                     )}
                                     wokeAt={threadWokeAt(thread, { now: partition.snoozeNow })}
+                                    offline={isOverviewThreadOffline(thread.environmentId, phases)}
                                     selected={key === selectedKey}
                                     tabbable={key === tabbableKey}
                                     onOpen={openThread}

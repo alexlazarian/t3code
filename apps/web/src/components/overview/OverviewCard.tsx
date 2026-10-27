@@ -35,6 +35,7 @@ export const OverviewCard = memo(function OverviewCard(props: {
   readonly providerName: string;
   readonly lastVisitedAt: string | undefined;
   readonly wokeAt: string | null;
+  readonly offline: boolean;
   readonly selected: boolean;
   readonly tabbable: boolean;
   readonly onOpen: (threadKey: string) => void;
@@ -96,7 +97,10 @@ export const OverviewCard = memo(function OverviewCard(props: {
       className={cn(
         "grid min-h-9 cursor-pointer grid-cols-[20px_minmax(0,1fr)] border border-border bg-card text-card-foreground outline-0 -outline-offset-1 outline-ring select-none focus-visible:outline-2",
         props.selected && "outline-2 outline-primary",
-        (props.section === "snoozed" || props.section === "settled") && "opacity-55 saturate-50",
+        props.offline
+          ? "opacity-50"
+          : (props.section === "snoozed" || props.section === "settled") &&
+              "opacity-55 saturate-50",
       )}
     >
       <span
