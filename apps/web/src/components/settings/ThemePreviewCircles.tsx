@@ -1,9 +1,6 @@
 import { MoonIcon, SunIcon } from "lucide-react";
 import type { CSSProperties } from "react";
-import {
-  STANDARD_THEME_PREVIEW_COLORS as SHARED_STANDARD_THEME_PREVIEW_COLORS,
-  THEME_PREVIEW_RENDER_SPECS,
-} from "@t3tools/shared/themePreview";
+import { THEME_PREVIEW_RENDER_SPECS } from "@t3tools/shared/themePreview";
 import { cn } from "../../lib/utils";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import {
@@ -40,18 +37,22 @@ const STANDARD_THEME_PREVIEW_COLORS: Record<
   Readonly<Record<ThemePreviewRole, string>>
 > = {
   light: {
-    sidebar: "#fafafa",
+    sidebar: "#ffffff",
+    canvas: "#dedede",
     surface: "#ffffff",
-    accentSurface: "#f4f4f5",
-    messageSurface: "#e4e4e7",
-    ...SHARED_STANDARD_THEME_PREVIEW_COLORS.light,
+    accentSurface: "#f0f0f1",
+    accent: "#1b4ed8",
+    messageSurface: "#fcfcfc",
+    messageAction: "#1b4ed8",
   },
   dark: {
-    sidebar: "#0f0f10",
-    surface: "#121212",
-    accentSurface: "#27272a",
-    messageSurface: "#27272a",
-    ...SHARED_STANDARD_THEME_PREVIEW_COLORS.dark,
+    sidebar: "#2a2826",
+    canvas: "#1f1d1b",
+    surface: "#2a2826",
+    accentSurface: "#4c4741",
+    accent: "#ffa646",
+    messageSurface: "#34312e",
+    messageAction: "#ffa646",
   },
 };
 
