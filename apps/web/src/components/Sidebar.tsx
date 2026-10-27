@@ -188,9 +188,7 @@ import {
   type SidebarListItem,
   type SidebarSection,
   resolveSidebarRowThreadId,
-  countSidebarStatusFilters,
-  resolveSidebarThreadStatus,
-  matchesSidebarStatusFilter,
+  applySidebarStatusFilter,
   type SidebarStatusFilter,
 } from "./Sidebar.logic";
 import {
@@ -318,6 +316,7 @@ interface SidebarThreadPartitionInput {
   readonly optimisticDrop: SidebarOptimisticDrop | null;
   readonly workingShelfEnabled: boolean;
   readonly statusFilter: SidebarStatusFilter;
+  readonly routeRowThreadKey: string | null;
   // Snooze wakes, the queued-turn grace and the Working shelf's exit grace depend
   // on the clock, so the minute tick, the precise snooze-wake tick and the inbox
   // tracker's expiry version are inputs: a new key repartitions.
@@ -440,6 +439,7 @@ function useSidebarThreads(input: {
     optimisticDrop,
     workingShelfEnabled,
     statusFilter,
+    routeRowThreadKey,
     clockKey: `${nowMinute}:${snoozeWakeClock}:${inboxReturnsVersion}`,
   });
 
@@ -549,20 +549,15 @@ function partitionSidebarThreads(input: SidebarThreadPartitionInput) {
     optimisticDrop,
     workingShelfEnabled,
     statusFilter,
+    routeRowThreadKey,
   } = input;
   const preciseNow = new Date().toISOString();
-  const scoped = filterSidebarV2VisibleThreads(threads, scopedProjectKeys);
-  const statusCounts = countSidebarStatusFilters(scoped);
-  const visible =
-    statusFilter === "all"
-      ? scoped
-      : scoped.filter((thread) =>
-          matchesSidebarStatusFilter(
-            resolveSidebarThreadStatus(thread),
-            thread.hasActionableProposedPlan,
-            statusFilter,
-          ),
-        );
+  const { visible, counts: statusCounts } = applySidebarStatusFilter(
+    filterSidebarV2VisibleThreads(threads, scopedProjectKeys),
+    statusFilter,
+    routeRowThreadKey,
+    threadShellKey,
+  );
   const inboxObservation = inboxReturns.observe(workingShelfEnabled ? threads : null);
   const pinned: EnvironmentThreadShell[] = [];
   const active: EnvironmentThreadShell[] = [];

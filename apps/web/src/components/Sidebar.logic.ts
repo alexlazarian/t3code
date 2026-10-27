@@ -914,19 +914,36 @@ export function matchesSidebarStatusFilter(
   );
 }
 
+export function applySidebarStatusFilter<T extends SidebarThreadSummary>(
+  threads: ReadonlyArray<T>,
+  filter: SidebarStatusFilter,
+  keepKey: string | null,
+  keyOf: (thread: T) => string,
+): { visible: T[]; counts: Record<"needs-you" | "working", number> } {
+  const counts = { "needs-you": 0, working: 0 };
+  const visible: T[] = [];
+  for (const thread of threads) {
+    const status = resolveSidebarThreadStatus(thread);
+    const needsYou = matchesSidebarStatusFilter(
+      status,
+      thread.hasActionableProposedPlan,
+      "needs-you",
+    );
+    if (needsYou) counts["needs-you"] += 1;
+    else if (status === "working") counts.working += 1;
+    const matches =
+      filter === "all" ||
+      (filter === "needs-you" ? needsYou : status === "working") ||
+      (keepKey !== null && keyOf(thread) === keepKey);
+    if (matches) visible.push(thread);
+  }
+  return { visible, counts };
+}
+
 export function countSidebarStatusFilters(
   threads: ReadonlyArray<SidebarThreadSummary>,
 ): Record<"needs-you" | "working", number> {
-  const counts = { "needs-you": 0, working: 0 };
-  for (const thread of threads) {
-    const status = resolveSidebarThreadStatus(thread);
-    if (matchesSidebarStatusFilter(status, thread.hasActionableProposedPlan, "needs-you")) {
-      counts["needs-you"] += 1;
-    } else if (status === "working") {
-      counts.working += 1;
-    }
-  }
-  return counts;
+  return applySidebarStatusFilter(threads, "all", null, () => "").counts;
 }
 
 export type SidebarV2TopStatusKind =

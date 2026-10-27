@@ -11,6 +11,7 @@ import {
   hasUnseenCompletion,
   resolveSidebarRowThreadId,
   isSidebarThreadWorking,
+  applySidebarStatusFilter,
   countSidebarStatusFilters,
   matchesSidebarStatusFilter,
   orderItemsByPreferredIds,
@@ -1391,5 +1392,15 @@ describe("status filter", () => {
     expect(
       countSidebarStatusFilters([approvalThread, workingThread, planReadyThread, doneThread]),
     ).toEqual({ "needs-you": 2, working: 1 });
+  });
+  it("keeps the route thread listed under a filter it no longer matches", () => {
+    const threads = [approvalThread, doneThread];
+    const key = (thread: { id: string }) => thread.id;
+    expect(applySidebarStatusFilter(threads, "needs-you", null, key).visible).toEqual([
+      approvalThread,
+    ]);
+    const kept = applySidebarStatusFilter(threads, "needs-you", "done", key);
+    expect(kept.visible).toEqual([approvalThread, doneThread]);
+    expect(kept.counts).toEqual({ "needs-you": 1, working: 0 });
   });
 });
