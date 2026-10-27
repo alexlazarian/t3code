@@ -31,6 +31,7 @@ import {
   supportsSharedSettingsSync,
 } from "@t3tools/client-runtime/state/shared-settings";
 import { ensureLocalApi } from "~/localApi";
+import { useActiveSidebarBackground } from "./useActiveSidebarBackground";
 import {
   getThemeDefinition,
   getThemePreviewSidebarArtwork,
@@ -388,11 +389,12 @@ export function resolveEnvironmentIdentificationMode(input: {
   settingsHydrated: boolean;
   paletteThemeActive?: boolean;
   paletteThemeAllowsArtwork?: boolean;
+  sidebarBackgroundActive?: boolean;
 }): EnvironmentIdentificationMode {
   if (!input.settingsHydrated) return "none";
-  return input.paletteThemeActive && !input.paletteThemeAllowsArtwork && input.mode === "artwork"
-    ? "pill"
-    : input.mode;
+  if (input.mode !== "artwork") return input.mode;
+  if (input.sidebarBackgroundActive) return "pill";
+  return input.paletteThemeActive && !input.paletteThemeAllowsArtwork ? "pill" : input.mode;
 }
 
 export function useEnvironmentIdentificationMode(): EnvironmentIdentificationMode {
@@ -406,11 +408,13 @@ export function useEnvironmentIdentificationMode(): EnvironmentIdentificationMod
   );
   const activeTheme = resolveThemeHalf(theme, themeHalves, resolvedTheme);
   const activeThemeDefinition = getThemeDefinition(activeTheme);
+  const sidebarBackground = useActiveSidebarBackground();
   return resolveEnvironmentIdentificationMode({
     mode,
     settingsHydrated,
     paletteThemeActive: previewSidebarArtwork !== null || activeThemeDefinition !== null,
     paletteThemeAllowsArtwork: previewSidebarArtwork ?? themeAllowsSidebarArtwork(activeTheme),
+    sidebarBackgroundActive: previewSidebarArtwork === null && sidebarBackground !== null,
   });
 }
 

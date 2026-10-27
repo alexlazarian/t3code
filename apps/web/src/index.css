@@ -1882,11 +1882,57 @@ code {
 .chat-markdown ul,
 .chat-markdown ol,
 .chat-markdown blockquote,
+.chat-markdown .chat-markdown-table-container {
+  margin: var(--chat-reading-gap, 0.65rem) 0;
+}
+
 .chat-markdown pre,
-.chat-markdown .chat-markdown-table-container,
 .composer-tiptap ul,
 .composer-tiptap ol {
   margin: 0.65rem 0;
+}
+
+/* Message spacing reaches prose in the thread (and its settings preview) only;
+   code keeps its own rhythm. */
+html[data-message-line-height] :is([data-chat-column], [data-reading-preview]) .chat-markdown {
+  --chat-reading-leading: var(--message-line-height);
+}
+html[data-message-paragraph-spacing]
+  :is([data-chat-column], [data-reading-preview])
+  .chat-markdown {
+  --chat-reading-gap: var(--message-paragraph-spacing);
+}
+.chat-markdown :is(p, li, blockquote) {
+  line-height: var(--chat-reading-leading, inherit);
+}
+
+/* Light text on dark backgrounds reads thinner than the same weight on light. */
+html.dark[data-heavier-dark-text] body {
+  font-weight: 450;
+}
+
+/* While writing, everything but the composer steps back. Fades sit on content
+   wrappers so they never replace the containers' own transitions. */
+html[data-focus-dimming]
+  :is(
+    [data-app-sidebar] > [data-slot="sidebar-inner"],
+    [data-preview-panel-mode="inline"] > *,
+    [data-chat-header] > *,
+    :has(> [data-chat-composer-overlay]) > :not([data-chat-composer-overlay])
+  ) {
+  transition: opacity 300ms ease-out;
+}
+/* :has() cannot nest, so "has text" is "no composer placeholder on the page". */
+html[data-focus-dimming]:has([data-chat-composer-form]:focus-within):not(
+    :has([data-composer-placeholder])
+  )
+  :is(
+    [data-app-sidebar] > [data-slot="sidebar-inner"],
+    [data-preview-panel-mode="inline"] > *,
+    [data-chat-header] > *,
+    :has(> [data-chat-composer-overlay]) > :not([data-chat-composer-overlay])
+  ) {
+  opacity: 0.35;
 }
 
 .chat-markdown-math-display .katex-display {

@@ -1,5 +1,9 @@
 import { scopedThreadKey, scopeThreadRef } from "@t3tools/client-runtime/environment";
-import type { ClientSettings } from "@t3tools/contracts/settings";
+import {
+  DEFAULT_MESSAGE_LINE_HEIGHT,
+  DEFAULT_MESSAGE_PARAGRAPH_SPACING,
+  type ClientSettings,
+} from "@t3tools/contracts/settings";
 import { createBrowserHistory, createHashHistory } from "@tanstack/react-router";
 
 import { applyAppearanceContrast } from "./appearanceContrast";
@@ -61,6 +65,33 @@ function startClientAppearance(): void {
     }
     if (previous?.chatWidth !== settings.chatWidth) {
       root.dataset.chatWidth = settings.chatWidth;
+    }
+    if (previous?.messageLineHeight !== settings.messageLineHeight) {
+      const custom = settings.messageLineHeight !== DEFAULT_MESSAGE_LINE_HEIGHT;
+      root.toggleAttribute("data-message-line-height", custom);
+      if (custom) {
+        root.style.setProperty("--message-line-height", String(settings.messageLineHeight / 100));
+      } else {
+        root.style.removeProperty("--message-line-height");
+      }
+    }
+    if (previous?.messageParagraphSpacing !== settings.messageParagraphSpacing) {
+      const custom = settings.messageParagraphSpacing !== DEFAULT_MESSAGE_PARAGRAPH_SPACING;
+      root.toggleAttribute("data-message-paragraph-spacing", custom);
+      if (custom) {
+        root.style.setProperty(
+          "--message-paragraph-spacing",
+          `${settings.messageParagraphSpacing / 100}rem`,
+        );
+      } else {
+        root.style.removeProperty("--message-paragraph-spacing");
+      }
+    }
+    if (previous?.heavierDarkText !== settings.heavierDarkText) {
+      root.toggleAttribute("data-heavier-dark-text", settings.heavierDarkText);
+    }
+    if (previous?.focusDimming !== settings.focusDimming) {
+      root.toggleAttribute("data-focus-dimming", settings.focusDimming);
     }
     if (previous?.appearanceContrast !== settings.appearanceContrast) {
       applyAppearanceContrast(root, settings.appearanceContrast);

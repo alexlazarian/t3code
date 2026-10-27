@@ -31,6 +31,7 @@ import {
   type SettingInheritanceState,
   type SettingOverridingProject,
 } from "./SettingInheritance";
+import { recallSettingsScroll, rememberSettingsScroll } from "./settingsLastLocation";
 
 const EMPTY_SETTING_KEYS: readonly (keyof ServerSettings)[] = [];
 
@@ -559,6 +560,7 @@ export function SettingsPageContainer({
   const highlightTarget = useLocation({
     select: (location) => location.state.settingsTargetHighlight !== false,
   });
+  const pathname = useLocation({ select: (location) => location.pathname });
   const targetId = hash.replace(/^#/, "") || null;
   const clearTargetHash = () => {
     void navigate({
@@ -577,6 +579,13 @@ export function SettingsPageContainer({
       onTargetHandled={clearTargetHash}
     >
       <div
+        ref={(element) => {
+          // Restore once per mount; a search result scrolls to its own target instead.
+          if (!element || targetId || element.dataset.scrollRestored) return;
+          element.dataset.scrollRestored = "true";
+          element.scrollTop = recallSettingsScroll(pathname);
+        }}
+        onScroll={(event) => rememberSettingsScroll(pathname, event.currentTarget.scrollTop)}
         className="topbar-scroll-fade scrollbar-gutter-both flex-1 overflow-y-auto"
         data-settings-page-scroll
       >

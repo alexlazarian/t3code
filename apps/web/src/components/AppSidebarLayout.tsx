@@ -43,6 +43,7 @@ import { SidebarBrandWidthProbe } from "./sidebar/SidebarChrome";
 import { isAppModalPage } from "./sidebar/mainAppLocation";
 import type { SidebarRouteReveal } from "./sidebar/routeReveal";
 import { useSidebarStageBackdropVariant } from "./SidebarStageBackdrop";
+import { SidebarBackgroundLayer } from "./sidebar/SidebarBackgroundLayer";
 import {
   clampThreadSidebarWidth,
   resolveInitialThreadSidebarWidth,
@@ -440,11 +441,14 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
           }}
           style={windowControlsInsetStyle}
         >
-          {legacySidebarEnabled ? (
-            <LegacyThreadSidebar routeReveal={sidebarRouteReveal} />
-          ) : (
-            <ThreadSidebar routeReveal={sidebarRouteReveal} />
-          )}
+          <SidebarBackgroundLayer />
+          <div className="relative flex min-h-0 flex-1 flex-col">
+            {legacySidebarEnabled ? (
+              <LegacyThreadSidebar routeReveal={sidebarRouteReveal} />
+            ) : (
+              <ThreadSidebar routeReveal={sidebarRouteReveal} />
+            )}
+          </div>
           <SidebarRail onDoubleClick={resetSidebarWidth} />
         </Sidebar>
         {children}
