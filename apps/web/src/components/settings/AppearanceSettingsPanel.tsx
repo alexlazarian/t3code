@@ -7,6 +7,10 @@ import {
   type EffortDisplay,
   type EnvironmentIdentificationMode,
   MAX_APPEARANCE_CONTRAST,
+  MAX_MESSAGE_LINE_HEIGHT,
+  MAX_MESSAGE_PARAGRAPH_SPACING,
+  MIN_MESSAGE_LINE_HEIGHT,
+  MIN_MESSAGE_PARAGRAPH_SPACING,
   MAX_GLASS_OPACITY,
   MAX_PANEL_ANIMATION_DURATION_MS,
   MIN_APPEARANCE_CONTRAST,
@@ -23,6 +27,7 @@ import { useTheme } from "../../hooks/useTheme";
 import { useScopedSettings, useUpdateScopedSettings } from "./useScopedSettings";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { Switch } from "../ui/switch";
+import { SidebarBackgroundSettings } from "./SidebarBackgroundSettings";
 import { ThemeLibrary } from "./ThemeSettings";
 import {
   SettingResetButton,
@@ -33,6 +38,7 @@ import {
 import { searchableSetting } from "./settingsSearch";
 import { AdvancedSettings } from "./AdvancedSettings";
 import { PanelAnimationsPreview } from "./PanelAnimationsPreview";
+import { useReadingPreview } from "./ReadingPreview";
 import { TypographySection } from "./TypographySettings";
 
 const ENVIRONMENT_IDENTIFICATION_LABELS: Record<EnvironmentIdentificationMode, string> = {
@@ -71,6 +77,60 @@ function environmentIdentificationOptions(
   ];
 }
 
+function RangeControl(props: {
+  readonly id: string;
+  readonly label: string;
+  readonly min: number;
+  readonly max: number;
+  readonly value: number;
+  readonly format: (value: number) => string;
+  readonly onChange: (value: number) => void;
+  readonly onAdjust?: (anchor: HTMLElement) => void;
+  readonly onRelease?: () => void;
+}) {
+  const ratio = (props.value - props.min) / (props.max - props.min);
+  const style = {
+    "--settings-slider-progress": `${ratio * 100}%`,
+    "--settings-slider-fill-offset": `${0.5 - ratio}rem`,
+  } as CSSProperties;
+  return (
+    <div
+      className="flex w-full items-center gap-3 sm:w-52"
+      onPointerDown={(event) => props.onAdjust?.(event.currentTarget)}
+      onPointerUp={() => props.onRelease?.()}
+      onPointerCancel={() => props.onRelease?.()}
+      onKeyUp={() => props.onRelease?.()}
+      onBlur={() => props.onRelease?.()}
+    >
+      <output
+        className="min-w-16 rounded-md bg-muted px-2 py-1 text-center font-mono text-xs font-medium tabular-nums text-foreground"
+        htmlFor={props.id}
+      >
+        {props.format(props.value)}
+      </output>
+      <input
+        aria-label={props.label}
+        className="settings-slider min-w-0 flex-1"
+        id={props.id}
+        max={props.max}
+        min={props.min}
+        onChange={(event) => {
+          const value = Number(event.currentTarget.value);
+          if (Number.isInteger(value) && value >= props.min && value <= props.max) {
+            props.onChange(value);
+            const control = event.currentTarget.parentElement;
+            if (control) props.onAdjust?.(control);
+          }
+        }}
+        step={1}
+        style={style}
+        type="range"
+        value={props.value}
+      />
+    </div>
+  );
+}
+
 const CHAT_WIDTH_LABELS: Record<ChatWidth, string> = {
   comfortable: "Comfortable",
   wide: "Wide",
@@ -94,6 +154,7 @@ export function AppearanceSettingsPanel() {
     themeHalves,
   } = useTheme();
   const customThemes = useCustomThemes();
+  const readingPreview = useReadingPreview();
   const [isImportThemeOpen, setIsImportThemeOpen] = useState(false);
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
@@ -145,6 +206,8 @@ export function AppearanceSettingsPanel() {
           />
         </div>
       </SettingsSection>
+
+      <SidebarBackgroundSettings />
 
       <SettingsSection id="appearance-interface" title="Interface">
         <SettingsRow
@@ -307,6 +370,27 @@ export function AppearanceSettingsPanel() {
           }
         />
         <SettingsRow
+          {...searchableSetting("focus-dimming")}
+          description="While you write a message, dim everything except the composer. Sending or clicking away brings it back."
+          resetAction={
+            settings.focusDimming !== DEFAULT_UNIFIED_SETTINGS.focusDimming ? (
+              <SettingResetButton
+                label="focus dimming"
+                onClick={() =>
+                  updateSettings({ focusDimming: DEFAULT_UNIFIED_SETTINGS.focusDimming })
+                }
+              />
+            ) : null
+          }
+          control={
+            <Switch
+              checked={settings.focusDimming}
+              onCheckedChange={(checked) => updateSettings({ focusDimming: Boolean(checked) })}
+              aria-label="Focus dimming"
+            />
+          }
+        />
+        <SettingsRow
           {...searchableSetting("math-rendering")}
           description="Typeset LaTeX math, such as $x^2$ or \[x^2\], in messages and Markdown previews. The composer keeps TeX source editable."
           resetAction={
@@ -465,6 +549,96 @@ export function AppearanceSettingsPanel() {
             }
           />
         </AdvancedSettings>
+      </SettingsSection>
+
+      <SettingsSection id="appearance-reading" title="Reading">
+        {readingPreview.popover}
+        <SettingsRow
+          {...searchableSetting("reading-spacing")}
+          description="Space between lines in agent messages."
+          resetAction={
+            settings.messageLineHeight !== DEFAULT_UNIFIED_SETTINGS.messageLineHeight ? (
+              <SettingResetButton
+                label="line height"
+                onClick={() =>
+                  updateSettings({ messageLineHeight: DEFAULT_UNIFIED_SETTINGS.messageLineHeight })
+                }
+              />
+            ) : null
+          }
+          control={
+            <RangeControl
+              id="message-line-height"
+              label="Line height"
+              min={MIN_MESSAGE_LINE_HEIGHT}
+              max={MAX_MESSAGE_LINE_HEIGHT}
+              value={settings.messageLineHeight}
+              format={(value) => (value / 100).toFixed(2)}
+              onChange={(messageLineHeight) => updateSettings({ messageLineHeight })}
+              onAdjust={(anchor) => readingPreview.show("Line height", anchor)}
+              onRelease={readingPreview.release}
+            />
+          }
+        />
+        <SettingsRow
+          {...searchableSetting("paragraph-spacing")}
+          description="Space between paragraphs, lists, and quotes in agent messages."
+          resetAction={
+            settings.messageParagraphSpacing !==
+            DEFAULT_UNIFIED_SETTINGS.messageParagraphSpacing ? (
+              <SettingResetButton
+                label="paragraph spacing"
+                onClick={() =>
+                  updateSettings({
+                    messageParagraphSpacing: DEFAULT_UNIFIED_SETTINGS.messageParagraphSpacing,
+                  })
+                }
+              />
+            ) : null
+          }
+          control={
+            <RangeControl
+              id="message-paragraph-spacing"
+              label="Paragraph spacing"
+              min={MIN_MESSAGE_PARAGRAPH_SPACING}
+              max={MAX_MESSAGE_PARAGRAPH_SPACING}
+              value={settings.messageParagraphSpacing}
+              format={(value) => `${(value / 100).toFixed(2)} rem`}
+              onChange={(messageParagraphSpacing) => updateSettings({ messageParagraphSpacing })}
+              onAdjust={(anchor) => readingPreview.show("Paragraph spacing", anchor)}
+              onRelease={readingPreview.release}
+            />
+          }
+        />
+        <SettingsRow
+          {...searchableSetting("heavier-dark-text")}
+          description="In dark mode, make body text slightly heavier so light-on-dark text doesn't look thin."
+          resetAction={
+            settings.heavierDarkText !== DEFAULT_UNIFIED_SETTINGS.heavierDarkText ? (
+              <SettingResetButton
+                label="heavier dark text"
+                onClick={() =>
+                  updateSettings({ heavierDarkText: DEFAULT_UNIFIED_SETTINGS.heavierDarkText })
+                }
+              />
+            ) : null
+          }
+          control={
+            <div
+              className="flex"
+              onClick={(event) => {
+                readingPreview.show("Heavier text in dark mode", event.currentTarget);
+                readingPreview.release();
+              }}
+            >
+              <Switch
+                checked={settings.heavierDarkText}
+                onCheckedChange={(checked) => updateSettings({ heavierDarkText: Boolean(checked) })}
+                aria-label="Heavier text in dark mode"
+              />
+            </div>
+          }
+        />
       </SettingsSection>
 
       <TypographySection />

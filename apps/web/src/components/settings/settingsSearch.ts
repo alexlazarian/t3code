@@ -322,6 +322,30 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["reasoning effort thinking bars graph word label level composer"],
   },
   {
+    id: "reading-spacing",
+    title: "Line height",
+    to: "/settings/appearance",
+    searchTerms: ["message spacing reading leading preview"],
+  },
+  {
+    id: "paragraph-spacing",
+    title: "Paragraph spacing",
+    to: "/settings/appearance",
+    searchTerms: ["message spacing reading gap preview"],
+  },
+  {
+    id: "heavier-dark-text",
+    title: "Heavier text in dark mode",
+    to: "/settings/appearance",
+    searchTerms: ["font weight bold thin readability dark"],
+  },
+  {
+    id: "focus-dimming",
+    title: "Focus dimming",
+    to: "/settings/appearance",
+    searchTerms: ["dim sidebar panels focus writing composer distraction"],
+  },
+  {
     id: "math-rendering",
     title: "Render math",
     to: "/settings/appearance",
@@ -331,6 +355,12 @@ export const SETTINGS_SEARCH_ITEMS = [
     id: "panel-animations",
     title: "Panel animations",
     to: "/settings/appearance",
+  },
+  {
+    id: "sidebar-background",
+    title: "Sidebar background",
+    to: "/settings/appearance",
+    searchTerms: ["image picture photo svg wallpaper pattern hex overlay tile theme"],
   },
   {
     id: "environment-identification",
