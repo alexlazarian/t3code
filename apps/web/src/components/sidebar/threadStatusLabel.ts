@@ -10,6 +10,7 @@ export type SidebarStatusLabel = {
     | "input"
     | "request"
     | "failed"
+    | "plan"
     | "woke"
     | "done";
   readonly className: string;
@@ -33,6 +34,7 @@ export function isSidebarThreadWoke(input: {
 export function resolveSidebarStatusLabel(input: {
   readonly status: SidebarThreadStatus;
   readonly goalActive: boolean;
+  readonly hasActionableProposedPlan: boolean;
   readonly isWoke: boolean;
   readonly isUnread: boolean;
 }): SidebarStatusLabel | null {
@@ -59,6 +61,9 @@ export function resolveSidebarStatusLabel(input: {
       return { label: "Limited", icon: "failed", className: "text-warning-foreground" };
     case "failed":
       return { label: "Failed", icon: "failed", className: "text-error-foreground" };
+  }
+  if (input.status === "ready" && input.hasActionableProposedPlan) {
+    return { label: "Plan ready", icon: "plan", className: "text-warning-foreground" };
   }
   if (input.isWoke) return { label: "Woke", icon: "woke", className: "text-warning-foreground" };
   if (input.isUnread) return { label: "Done", icon: "done", className: "text-success-foreground" };

@@ -220,12 +220,15 @@ import { SidebarDraftBlock } from "./sidebar/SidebarDraftBlock";
 import { sidebarProviderEntriesAtom } from "./sidebar/sidebarProviderEntries";
 import {
   SETTLED_SHELF_EXPANDED_KEY,
+  SETTLED_TAIL_INITIAL_COUNT,
+  SETTLED_TAIL_PAGE_COUNT,
   SIDEBAR_SHELF_EXPANDED_DEFAULT,
   SNOOZED_SHELF_EXPANDED_KEY,
   WORKING_SHELF_EXPANDED_KEY,
   useSidebarPartitionClockKey,
 } from "./sidebar/sidebarShelves";
 import {
+  ClearFiltersButton,
   SidebarDragBoundary,
   SidebarSectionHeader,
   SidebarSectionPlaceholder,
@@ -233,9 +236,6 @@ import {
 
 const EMPTY_PROVIDER_ENTRIES: ReadonlyMap<string, SidebarProviderEntry> = new Map();
 const EMPTY_THREADS: readonly EnvironmentThreadShell[] = [];
-
-const SETTLED_TAIL_INITIAL_COUNT = 10;
-const SETTLED_TAIL_PAGE_COUNT = 25;
 
 const NO_DRAGGED_ORDER: readonly string[] = [];
 const NO_DRAGGED_ORDERS: {
@@ -276,18 +276,6 @@ function routeThreadOnly(
   if (routeThreadKey === null) return EMPTY_THREADS;
   const routeThread = threads.find((thread) => threadShellKey(thread) === routeThreadKey);
   return routeThread === undefined ? EMPTY_THREADS : [routeThread];
-}
-
-function ClearFiltersButton(props: { readonly onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={props.onClick}
-      className="mx-auto mt-2 flex cursor-pointer items-center rounded-md border border-sidebar-border px-2.5 py-1 text-2xs font-medium text-sidebar-muted-foreground transition-colors hover:bg-sidebar-row-hover hover:text-sidebar-foreground"
-    >
-      Clear filters
-    </button>
-  );
 }
 
 // Separate hooks cache maps independently of later Sidebar hooks and preserve dnd-kit inputs.

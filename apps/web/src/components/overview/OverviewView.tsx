@@ -2,24 +2,26 @@ import { useAtomValue } from "@effect/atom-react";
 import { threadWokeAt } from "@t3tools/client-runtime/state/thread-settled";
 import { useRouter } from "@tanstack/react-router";
 import * as Schema from "effect/Schema";
-import { ChevronDownIcon } from "lucide-react";
+import { parseScopedThreadKey, scopeProjectRef } from "@t3tools/client-runtime/environment";
+import { ChevronDownIcon, PlusIcon } from "lucide-react";
 import { Fragment, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
 
+import { openCommandPalette } from "../../commandPaletteBus";
 import { isElectron } from "../../env";
+import { useNewThreadHandler } from "../../hooks/useHandleNewThread";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
+import { useStableCallback } from "../../hooks/useStableCallback";
 import { updateClientSettings, useClientSettings } from "../../hooks/useSettings";
 import { useSidebarProjectGroups } from "../../hooks/useSidebarProjectGroups";
 import { selectProjectGroupingSettings } from "../../logicalProject";
 import { resolveSidebarProjectScopeKey } from "../../sidebarProjectGrouping";
 import { useQuietThreadShells, useServerConfigs } from "../../state/entities";
 import { buildThreadRouteParams } from "../../threadRoutes";
-import type { SidebarThreadSummary } from "../../types";
+import { useThreadSelectionStore } from "../../threadSelectionStore";
 import { useUiStateStore } from "../../uiStateStore";
 import { cn } from "~/lib/utils";
 import {
-  hasUnseenCompletion,
   partitionSidebarThreads,
-  resolveSidebarThreadStatus,
   resolveThreadLastVisitedAt,
   threadShellKey,
   type SidebarSection,
@@ -27,18 +29,23 @@ import {
 import { sidebarProviderEntriesAtom } from "../sidebar/sidebarProviderEntries";
 import {
   SETTLED_SHELF_EXPANDED_KEY,
+  SETTLED_TAIL_INITIAL_COUNT,
+  SETTLED_TAIL_PAGE_COUNT,
   SIDEBAR_SHELF_EXPANDED_DEFAULT,
   SNOOZED_SHELF_EXPANDED_KEY,
   WORKING_SHELF_EXPANDED_KEY,
   useSidebarPartitionClockKey,
 } from "../sidebar/sidebarShelves";
-import { isSidebarThreadWoke, resolveSidebarStatusLabel } from "../sidebar/threadStatusLabel";
+import { ClearFiltersButton } from "../sidebar/SidebarListMarkers";
+import { Button } from "../ui/button";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "../ui/empty";
 import { SidebarInset } from "../ui/sidebar";
 import { WorkspacePageHeader } from "../WorkspacePageHeader";
 import {
   buildOverviewGrid,
   moveOverviewFocus,
   overviewProjectKeyOf,
+  type OverviewColumn,
   type OverviewFocusDirection,
 } from "./Overview.logic";
 import { OverviewCard } from "./OverviewCard";
@@ -86,18 +93,23 @@ function useOverviewRowExpansion(): Record<
 
 export function OverviewView() {
   const router = useRouter();
+  const handleNewThread = useNewThreadHandler();
   const threads = useQuietThreadShells();
   const serverConfigs = useServerConfigs();
   const projectGroups = useSidebarProjectGroups();
   const projectGroupingSettings = useClientSettings(selectProjectGroupingSettings);
   const workingShelfEnabled = useClientSettings((s) => s.sidebarWorkingShelfEnabled);
   const statusFilter = useUiStateStore((store) => store.sidebarStatusFilter);
+  const setStatusFilter = useUiStateStore((store) => store.setSidebarStatusFilter);
   const persistedScopeKey = useUiStateStore((store) => store.sidebarProjectScopeKey);
+  const setPersistedScopeKey = useUiStateStore((store) => store.setSidebarProjectScopeKey);
   const lastVisitedById = useUiStateStore((store) => store.threadLastVisitedAtById);
+  const clearSelection = useThreadSelectionStore((store) => store.clearSelection);
   const providerEntriesByEnvironment = useAtomValue(sidebarProviderEntriesAtom);
   const clockKey = useSidebarPartitionClockKey(threads);
   const expansion = useOverviewRowExpansion();
-  const [activeKey, setActiveKey] = useState<string | null>(null);
+  const [focusKey, setFocusKey] = useState<string | null>(null);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
   const scopeKey = resolveSidebarProjectScopeKey({
@@ -110,6 +122,13 @@ export function OverviewView() {
       ? null
       : (projectGroups.find((group) => group.projectKey === scopeKey) ?? null);
   const projects = scopedGroup === null ? projectGroups : [scopedGroup];
+  const [settledTail, setSettledTail] = useState({
+    scopeKey,
+    count: SETTLED_TAIL_INITIAL_COUNT,
+  });
+  if (settledTail.scopeKey !== scopeKey) {
+    setSettledTail({ scopeKey, count: SETTLED_TAIL_INITIAL_COUNT });
+  }
   const partition = partitionSidebarThreads({
     threads,
     scopedProjectKeys:
@@ -125,58 +144,63 @@ export function OverviewView() {
     routeRowThreadKey: null,
     clockKey,
   });
+  const settledTotal = partition.settledThreads.length;
+  const hiddenSettledCount = Math.max(0, settledTotal - settledTail.count);
   const { columns, rows } = buildOverviewGrid({
-    partition,
+    partition: {
+      ...partition,
+      settledThreads: partition.settledThreads.slice(0, settledTail.count),
+    },
     projects,
     projectKeyOf: overviewProjectKeyOf(projects),
     workingShelfEnabled,
   });
+  const cardCount = rows.reduce((sum, row) => sum + row.total, 0) + hiddenSettledCount;
+  const isNarrowed = statusFilter !== "all" || scopedGroup !== null;
 
+  const machineLabelsByColumn = new Map(
+    columns.map((column) => {
+      const members = column.project?.memberProjects ?? [];
+      const spans = new Set(members.map((member) => member.environmentId)).size > 1;
+      return [
+        column.projectKey,
+        spans
+          ? new Map(members.map((member) => [member.environmentId, member.environmentLabel]))
+          : null,
+      ] as const;
+    }),
+  );
   const focusGrid = columns.map((column) =>
     rows
       .filter((row) => expansion[row.section][0])
       .map((row) => (row.cells.get(column.projectKey) ?? []).map(threadShellKey)),
   );
   const allKeys = focusGrid.flat(2);
-  const tabbableKey = activeKey !== null && allKeys.includes(activeKey) ? activeKey : allKeys[0];
+  const tabbableKey = focusKey !== null && allKeys.includes(focusKey) ? focusKey : allKeys[0];
 
-  const describeStatus = (thread: SidebarThreadSummary) => {
-    const lastVisitedAt = resolveThreadLastVisitedAt(
-      thread.lastVisitedAt,
-      lastVisitedById[threadShellKey(thread)],
-    );
-    return resolveSidebarStatusLabel({
-      status: resolveSidebarThreadStatus(thread),
-      goalActive: thread.goal?.status === "active",
-      isUnread: hasUnseenCompletion({ ...thread, lastVisitedAt }),
-      isWoke: isSidebarThreadWoke({
-        wokeAt: threadWokeAt(thread, { now: partition.snoozeNow }),
-        lastVisitedAt,
-        settledOverride: thread.settledOverride,
-      }),
-    });
-  };
-  const providerNameOf = (thread: SidebarThreadSummary) => {
-    const instanceId = thread.runtime?.providerInstanceId ?? thread.modelSelection.instanceId;
-    return (
-      providerEntriesByEnvironment.get(thread.environmentId)?.get(instanceId)?.displayName ??
-      thread.runtime?.providerName ??
-      instanceId
-    );
-  };
-
-  const openThread = (thread: SidebarThreadSummary) => {
+  const openThread = useStableCallback((threadKey: string) => {
+    const ref = parseScopedThreadKey(threadKey);
+    if (ref === null) return;
     void updateClientSettings({ threadView: "list" });
-    void router.navigate({
-      to: "/$environmentId/$threadId",
-      params: buildThreadRouteParams({ environmentId: thread.environmentId, threadId: thread.id }),
-    });
+    void router.navigate({ to: "/$environmentId/$threadId", params: buildThreadRouteParams(ref) });
+  });
+  const peekThread = useStableCallback((threadKey: string) => {
+    setFocusKey(threadKey);
+    setSelectedKey(threadKey);
+  });
+  const startThreadIn = (project: NonNullable<OverviewColumn["project"]>) => {
+    void updateClientSettings({ threadView: "list" });
+    void handleNewThread(scopeProjectRef(project.environmentId, project.id));
   };
-  const peekThread = (thread: SidebarThreadSummary) => setActiveKey(threadShellKey(thread));
+  const clearFilters = () => {
+    setStatusFilter("all");
+    clearSelection();
+    setPersistedScopeKey(null);
+  };
 
   const handleGridFocus = (event: FocusEvent<HTMLDivElement>) => {
     const key = (event.target as HTMLElement).dataset.threadKey;
-    if (key !== undefined) setActiveKey(key);
+    if (key !== undefined) setFocusKey(key);
   };
   const handleGridKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const direction = ARROW_DIRECTIONS[event.key];
@@ -185,7 +209,7 @@ export function OverviewView() {
     event.preventDefault();
     const next = moveOverviewFocus(focusGrid, key, direction);
     if (next === null) return;
-    setActiveKey(next);
+    setFocusKey(next);
     gridRef.current?.querySelector<HTMLElement>(`[data-thread-key="${CSS.escape(next)}"]`)?.focus();
   };
 
@@ -195,14 +219,38 @@ export function OverviewView() {
         <WorkspacePageHeader electron={isElectron} className="border-b border-border">
           <span className="text-xs text-muted-foreground">Overview</span>
         </WorkspacePageHeader>
-        {columns.length === 1 ? (
+        {columns.length === 1 && scopedGroup === null ? (
           <p className="border-b border-border px-2 py-1 text-2xs text-muted-foreground">
             With one project, List has more room.
           </p>
         ) : null}
-        {columns.length === 0 ? null : (
+        {cardCount === 0 && isNarrowed ? (
+          <div
+            role="status"
+            className="flex flex-col items-center gap-2 border-b border-border px-2 py-6 text-center text-xs text-muted-foreground"
+          >
+            <span>No threads match</span>
+            <ClearFiltersButton onClick={clearFilters} />
+          </div>
+        ) : null}
+        {columns.length === 0 ? (
+          <Empty role="status" className="flex-1">
+            <EmptyHeader className="max-w-none">
+              <EmptyTitle>What should we work on?</EmptyTitle>
+              <EmptyDescription>Add a project to start your first thread.</EmptyDescription>
+              <div className="mt-6 flex justify-center">
+                <Button size="sm" onClick={() => openCommandPalette({ open: "add-project" })}>
+                  <PlusIcon className="size-4" />
+                  Add project
+                </Button>
+              </div>
+            </EmptyHeader>
+          </Empty>
+        ) : (
           <div
             ref={gridRef}
+            role="grid"
+            aria-label="Overview"
             className="min-h-0 flex-1 overflow-auto"
             onFocus={handleGridFocus}
             onKeyDown={handleGridKeyDown}
@@ -211,65 +259,145 @@ export function OverviewView() {
               className="grid min-w-full"
               style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(180px, 1fr))` }}
             >
-              {columns.map((column) => (
-                <OverviewColumnHeader key={column.projectKey} column={column} />
-              ))}
+              <div role="row" className="contents">
+                {columns.map((column) => (
+                  <OverviewColumnHeader key={column.projectKey} column={column} />
+                ))}
+              </div>
               {rows.map((row) => {
                 const [expanded, setExpanded] = expansion[row.section];
                 const label = SECTION_LABELS[row.section];
+                const showMore = expanded && row.section === "settled" && hiddenSettledCount > 0;
                 return (
                   <Fragment key={row.section}>
-                    <div className="col-span-full border-b border-border bg-muted">
-                      <button
-                        type="button"
-                        aria-expanded={expanded}
-                        onClick={() => setExpanded(!expanded)}
-                        className="sticky left-0 flex h-5 cursor-pointer items-center gap-1.5 px-2 text-3xs whitespace-nowrap"
+                    <div role="row" className="contents">
+                      <div
+                        role="rowheader"
+                        className="col-span-full border-b border-border bg-muted"
                       >
-                        <ChevronDownIcon
-                          aria-hidden
-                          className={cn("size-3 text-muted-foreground", !expanded && "-rotate-90")}
-                        />
-                        <span className="font-semibold tracking-wide text-foreground uppercase">
-                          {label.name}
-                        </span>
-                        <span className="text-muted-foreground tabular-nums">{row.total}</span>
-                        <span className="text-muted-foreground/70">{label.why}</span>
-                      </button>
+                        <button
+                          type="button"
+                          aria-expanded={expanded}
+                          onClick={() => setExpanded(!expanded)}
+                          className="sticky left-0 flex h-5 cursor-pointer items-center gap-1.5 px-2 text-3xs whitespace-nowrap"
+                        >
+                          <ChevronDownIcon
+                            aria-hidden
+                            className={cn(
+                              "size-3 text-muted-foreground",
+                              !expanded && "-rotate-90",
+                            )}
+                          />
+                          <span className="font-semibold tracking-wide text-foreground uppercase">
+                            {label.name}
+                          </span>
+                          <span className="text-muted-foreground tabular-nums">
+                            {row.section === "settled" ? settledTotal : row.total}
+                          </span>
+                          <span className="text-muted-foreground/70">{label.why}</span>
+                        </button>
+                      </div>
+                      {expanded
+                        ? columns.map((column) => (
+                            <div
+                              key={column.projectKey}
+                              role="gridcell"
+                              className="flex min-h-2.5 min-w-0 flex-col gap-0.75 border-r border-b border-border p-0.75"
+                            >
+                              {(row.cells.get(column.projectKey) ?? []).map((thread) => {
+                                const key = threadShellKey(thread);
+                                const instanceId =
+                                  thread.runtime?.providerInstanceId ??
+                                  thread.modelSelection.instanceId;
+                                return (
+                                  <OverviewCard
+                                    key={key}
+                                    thread={thread}
+                                    section={row.section}
+                                    projectName={column.displayName}
+                                    machineLabel={
+                                      machineLabelsByColumn
+                                        .get(column.projectKey)
+                                        ?.get(thread.environmentId) ?? null
+                                    }
+                                    providerName={
+                                      providerEntriesByEnvironment
+                                        .get(thread.environmentId)
+                                        ?.get(instanceId)?.displayName ??
+                                      thread.runtime?.providerName ??
+                                      instanceId
+                                    }
+                                    lastVisitedAt={resolveThreadLastVisitedAt(
+                                      thread.lastVisitedAt,
+                                      lastVisitedById[key],
+                                    )}
+                                    wokeAt={threadWokeAt(thread, { now: partition.snoozeNow })}
+                                    selected={key === selectedKey}
+                                    tabbable={key === tabbableKey}
+                                    onOpen={openThread}
+                                    onPeek={peekThread}
+                                  />
+                                );
+                              })}
+                            </div>
+                          ))
+                        : null}
                     </div>
-                    {expanded
-                      ? columns.map((column) => (
-                          <div
-                            key={column.projectKey}
-                            className="flex min-h-2.5 min-w-0 flex-col gap-0.75 border-r border-b border-border p-0.75"
+                    {showMore ? (
+                      <div role="row" className="contents">
+                        <div role="gridcell" className="col-span-full border-b border-border">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSettledTail((current) => ({
+                                scopeKey: current.scopeKey,
+                                count: current.count + SETTLED_TAIL_PAGE_COUNT,
+                              }))
+                            }
+                            className="sticky left-0 flex h-6 cursor-pointer items-center gap-1.5 px-2 text-2xs text-muted-foreground hover:text-foreground"
                           >
-                            {(row.cells.get(column.projectKey) ?? []).map((thread) => {
-                              const key = threadShellKey(thread);
-                              return (
-                                <OverviewCard
-                                  key={key}
-                                  thread={thread}
-                                  column={column}
-                                  selected={key === activeKey}
-                                  tabbable={key === tabbableKey}
-                                  parked={row.section === "snoozed" || row.section === "settled"}
-                                  status={describeStatus(thread)}
-                                  providerName={providerNameOf(thread)}
-                                  onOpen={openThread}
-                                  onPeek={peekThread}
-                                />
-                              );
-                            })}
-                          </div>
-                        ))
-                      : null}
+                            <ChevronDownIcon aria-hidden className="size-3" />
+                            Show {Math.min(hiddenSettledCount, SETTLED_TAIL_PAGE_COUNT)} more
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
                   </Fragment>
                 );
               })}
+              <div role="row" className="contents">
+                {columns.map(({ projectKey, project, displayName }) => (
+                  <div key={projectKey} role="gridcell" className="border-r border-border p-0.75">
+                    {project === null ? null : (
+                      <NewThreadInColumnButton
+                        projectName={displayName}
+                        onClick={() => startThreadIn(project)}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
       </div>
     </SidebarInset>
+  );
+}
+
+function NewThreadInColumnButton(props: {
+  readonly projectName: string;
+  readonly onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={`New thread in ${props.projectName}`}
+      onClick={props.onClick}
+      className="flex h-6 w-full cursor-pointer items-center justify-center gap-1 border border-dashed border-border text-2xs text-muted-foreground hover:border-muted-foreground hover:text-foreground"
+    >
+      <PlusIcon aria-hidden className="size-3" />
+      New thread
+    </button>
   );
 }

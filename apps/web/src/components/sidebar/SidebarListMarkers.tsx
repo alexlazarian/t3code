@@ -139,3 +139,15 @@ export function SidebarSectionHeader(props: {
     </SortableSidebarMarker>
   );
 }
+
+export function ClearFiltersButton(props: { readonly onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={props.onClick}
+      className="mx-auto mt-2 flex cursor-pointer items-center rounded-md border border-sidebar-border px-2.5 py-1 text-2xs font-medium text-sidebar-muted-foreground transition-colors hover:bg-sidebar-row-hover hover:text-sidebar-foreground"
+    >
+      Clear filters
+    </button>
+  );
+}

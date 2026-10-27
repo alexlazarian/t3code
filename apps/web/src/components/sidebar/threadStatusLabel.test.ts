@@ -2,7 +2,12 @@ import { describe, expect, it } from "vite-plus/test";
 
 import { isSidebarThreadWoke, resolveSidebarStatusLabel } from "./threadStatusLabel";
 
-const quiet = { goalActive: false, isWoke: false, isUnread: false };
+const quiet = {
+  goalActive: false,
+  hasActionableProposedPlan: false,
+  isWoke: false,
+  isUnread: false,
+};
 
 describe("resolveSidebarStatusLabel", () => {
   it("uses the sidebar's words for each live status", () => {
@@ -24,6 +29,7 @@ describe("resolveSidebarStatusLabel", () => {
       resolveSidebarStatusLabel({
         status: "approval",
         goalActive: false,
+        hasActionableProposedPlan: true,
         isWoke: true,
         isUnread: true,
       })?.label,
@@ -38,6 +44,22 @@ describe("resolveSidebarStatusLabel", () => {
       "Done",
     );
     expect(resolveSidebarStatusLabel({ ...quiet, status: "ready" })).toBeNull();
+  });
+
+  it("shows Plan ready for a ready thread with an actionable plan, ahead of Woke and Done", () => {
+    expect(
+      resolveSidebarStatusLabel({
+        ...quiet,
+        status: "ready",
+        hasActionableProposedPlan: true,
+        isWoke: true,
+        isUnread: true,
+      }),
+    ).toEqual({ label: "Plan ready", icon: "plan", className: "text-warning-foreground" });
+    expect(
+      resolveSidebarStatusLabel({ ...quiet, status: "waiting", hasActionableProposedPlan: true })
+        ?.label,
+    ).toBe("Waiting");
   });
 
   it("files limited under the failed icon", () => {

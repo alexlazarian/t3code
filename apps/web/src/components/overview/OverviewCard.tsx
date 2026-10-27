@@ -1,39 +1,58 @@
 import { resolveThreadCurrentPullRequestLink } from "@t3tools/client-runtime/thread-pull-requests";
-import type { KeyboardEvent, MouseEvent } from "react";
+import { resolveSettledThreadTimestamp } from "@t3tools/client-runtime/state/thread-sort";
+import { memo, type KeyboardEvent, type MouseEvent } from "react";
 
 import { readLocalApi } from "../../localApi";
 import { cn } from "~/lib/utils";
 import type { SidebarThreadSummary } from "../../types";
-import type { SidebarStatusLabel } from "../sidebar/threadStatusLabel";
-import { threadShellKey } from "../Sidebar.logic";
-import type { OverviewColumn } from "./Overview.logic";
+import { RelativeTimeLabel, threadTimeTimestamp } from "../sidebar/RelativeTimeLabel";
+import {
+  isSidebarThreadWoke,
+  resolveSidebarStatusLabel,
+  type SidebarStatusLabel,
+} from "../sidebar/threadStatusLabel";
+import {
+  hasUnseenCompletion,
+  resolveSidebarThreadStatus,
+  threadShellKey,
+  type SidebarSection,
+} from "../Sidebar.logic";
 
 const STRIP_BY_ICON: Partial<Record<SidebarStatusLabel["icon"], string>> = {
   working: "bg-status-working",
   approval: "bg-status-needs-you",
   input: "bg-status-needs-you",
   request: "bg-status-needs-you",
+  plan: "bg-status-needs-you",
   failed: "bg-status-failed",
 };
 
-export function OverviewCard(props: {
+export const OverviewCard = memo(function OverviewCard(props: {
   readonly thread: SidebarThreadSummary;
-  readonly column: OverviewColumn;
+  readonly section: SidebarSection;
+  readonly projectName: string;
+  readonly machineLabel: string | null;
+  readonly providerName: string;
+  readonly lastVisitedAt: string | undefined;
+  readonly wokeAt: string | null;
   readonly selected: boolean;
   readonly tabbable: boolean;
-  readonly parked: boolean;
-  readonly status: SidebarStatusLabel | null;
-  readonly providerName: string;
-  readonly onOpen: (thread: SidebarThreadSummary) => void;
-  readonly onPeek: (thread: SidebarThreadSummary) => void;
+  readonly onOpen: (threadKey: string) => void;
+  readonly onPeek: (threadKey: string) => void;
 }) {
-  const { thread, column, status } = props;
-  const members = column.project?.memberProjects ?? [];
-  const spansEnvironments = new Set(members.map((member) => member.environmentId)).size > 1;
-  const machineLabel = spansEnvironments
-    ? (members.find((member) => member.environmentId === thread.environmentId)?.environmentLabel ??
-      null)
-    : null;
+  const { thread, lastVisitedAt } = props;
+  const threadKey = threadShellKey(thread);
+  const status = resolveSidebarStatusLabel({
+    status: resolveSidebarThreadStatus(thread),
+    goalActive: thread.goal?.status === "active",
+    hasActionableProposedPlan: thread.hasActionableProposedPlan,
+    isUnread: hasUnseenCompletion({ ...thread, lastVisitedAt }),
+    isWoke: isSidebarThreadWoke({
+      wokeAt: props.wokeAt,
+      lastVisitedAt,
+      settledOverride: thread.settledOverride,
+    }),
+  });
   const prNumber = (
     resolveThreadCurrentPullRequestLink(thread.pullRequests) ??
     thread.linkedPullRequest ??
@@ -43,10 +62,10 @@ export function OverviewCard(props: {
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.key === "Enter") {
       event.preventDefault();
-      props.onOpen(thread);
+      props.onOpen(threadKey);
     } else if (event.key === " ") {
       event.preventDefault();
-      props.onPeek(thread);
+      props.onPeek(threadKey);
     }
   };
   const handleContextMenu = (event: MouseEvent) => {
@@ -59,7 +78,7 @@ export function OverviewCard(props: {
         y: event.clientY,
       })
       .then((action) => {
-        if (action === "open-in-list") props.onOpen(thread);
+        if (action === "open-in-list") props.onOpen(threadKey);
       });
   };
 
@@ -67,16 +86,17 @@ export function OverviewCard(props: {
     <div
       role="button"
       tabIndex={props.tabbable ? 0 : -1}
-      data-thread-key={threadShellKey(thread)}
-      aria-current={props.selected ? "true" : undefined}
-      onClick={() => props.onPeek(thread)}
-      onDoubleClick={() => props.onOpen(thread)}
+      data-thread-key={threadKey}
+      aria-label={[thread.title, props.projectName, status?.label].filter(Boolean).join(", ")}
+      aria-pressed={props.selected}
+      onClick={() => props.onPeek(threadKey)}
+      onDoubleClick={() => props.onOpen(threadKey)}
       onKeyDown={handleKeyDown}
       onContextMenu={handleContextMenu}
       className={cn(
-        "grid min-h-9 cursor-pointer grid-cols-[20px_minmax(0,1fr)] border border-border bg-card text-card-foreground outline-0 -outline-offset-1 outline-primary select-none focus-visible:outline-2",
-        props.selected && "outline-2",
-        props.parked && "opacity-55 saturate-50",
+        "grid min-h-9 cursor-pointer grid-cols-[20px_minmax(0,1fr)] border border-border bg-card text-card-foreground outline-0 -outline-offset-1 outline-ring select-none focus-visible:outline-2",
+        props.selected && "outline-2 outline-primary",
+        (props.section === "snoozed" || props.section === "settled") && "opacity-55 saturate-50",
       )}
     >
       <span
@@ -89,12 +109,24 @@ export function OverviewCard(props: {
       <span className="min-w-0 px-1.5 py-0.75">
         <span className="block truncate text-xs font-semibold">{thread.title}</span>
         <span className="flex gap-1.5 overflow-hidden text-3xs whitespace-nowrap text-muted-foreground">
-          {status ? <span className="font-semibold text-foreground">{status.label}</span> : null}
+          <span className="font-semibold text-foreground">
+            {status ? (
+              status.label
+            ) : (
+              <RelativeTimeLabel
+                timestamp={
+                  props.section === "settled"
+                    ? resolveSettledThreadTimestamp(thread)
+                    : threadTimeTimestamp(thread)
+                }
+              />
+            )}
+          </span>
           <span className="truncate">{props.providerName}</span>
-          {machineLabel ? <span className="truncate">{machineLabel}</span> : null}
+          {props.machineLabel ? <span className="truncate">{props.machineLabel}</span> : null}
           {prNumber === undefined ? null : <span>#{prNumber}</span>}
         </span>
       </span>
     </div>
   );
-}
+});
