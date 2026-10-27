@@ -13,11 +13,20 @@ export function isOverviewPathname(pathname: string): boolean {
   return pathname === "/overview";
 }
 
-function readLastVisitedThread() {
-  let latest: { ref: Parameters<typeof buildThreadRouteParams>[0]; at: number } | null = null;
-  for (const shell of readThreadShells()) {
+type ThreadRouteRef = Parameters<typeof buildThreadRouteParams>[0];
+
+interface VisitedShell {
+  readonly environmentId: ThreadRouteRef["environmentId"];
+  readonly id: ThreadRouteRef["threadId"];
+  readonly archivedAt: unknown;
+  readonly lastVisitedAt?: string | null | undefined;
+}
+
+export function pickLastVisitedThread(shells: ReadonlyArray<VisitedShell>): ThreadRouteRef | null {
+  let latest: { ref: ThreadRouteRef; at: number } | null = null;
+  for (const shell of shells) {
     if (shell.archivedAt !== null || !shell.lastVisitedAt) continue;
-    const at = Date.parse(String(shell.lastVisitedAt));
+    const at = Date.parse(shell.lastVisitedAt);
     if (Number.isNaN(at) || (latest !== null && latest.at >= at)) continue;
     latest = { ref: { environmentId: shell.environmentId, threadId: shell.id }, at };
   }
@@ -30,7 +39,7 @@ export function switchThreadView(router: Pick<AnyRouter, "navigate">, view: Thre
     void router.navigate({ to: "/overview" });
     return;
   }
-  const last = readLastVisitedThread();
+  const last = pickLastVisitedThread(readThreadShells());
   if (last === null) {
     void router.navigate({ to: "/" });
     return;
