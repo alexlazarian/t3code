@@ -1493,6 +1493,7 @@ function OpenCommandPaletteDialog(props: {
       searchTerms: viewSearchTerms,
       title: "Switch to List",
       icon: <ListIcon className={ITEM_ICON_CLASS} />,
+      shortcutCommand: "view.toggleOverview",
       run: async () => {
         setThreadView("list");
       },

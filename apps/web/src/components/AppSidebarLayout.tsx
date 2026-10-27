@@ -7,7 +7,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
-import { useLocation, useRouter, type AnyRouter } from "@tanstack/react-router";
+import { useLocation, useParams, useRouter, type AnyRouter } from "@tanstack/react-router";
 
 import { isCommandPaletteOpen } from "../commandPaletteBus";
 import { isElectron } from "../env";
@@ -317,6 +317,10 @@ function SidebarControl() {
     context: { usagePageOpen },
   });
   const overviewOpen = useLocation({ select: (location) => isOverviewPathname(location.pathname) });
+  const onThreadRoute = useParams({
+    strict: false,
+    select: (params) => "threadId" in params || "draftId" in params,
+  });
   const setThreadView = useSwitchThreadView();
   const viewShortcutLabel = shortcutLabelForCommand(keybindings, "view.toggleOverview");
 
@@ -394,7 +398,9 @@ function SidebarControl() {
       </Tooltip>
       <Tooltip>
         <TooltipTrigger
-          render={<div className="pointer-events-auto ml-2 [-webkit-app-region:no-drag]" />}
+          render={
+            <div className="pointer-events-auto ml-2 max-md:hidden [-webkit-app-region:no-drag]" />
+          }
         >
           <ToggleGroup
             aria-label="Thread view"
@@ -405,7 +411,14 @@ function SidebarControl() {
               if (view === "list" || view === "overview") setThreadView(view);
             }}
           >
-            <Toggle value="list">List</Toggle>
+            <Toggle
+              value="list"
+              onClick={() => {
+                if (!overviewOpen && !onThreadRoute) setThreadView("list");
+              }}
+            >
+              List
+            </Toggle>
             <Toggle value="overview">Overview</Toggle>
           </ToggleGroup>
         </TooltipTrigger>

@@ -141,6 +141,10 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
     --workspace-gutter: 1.25rem;
   }
 
+  @variant max-md {
+    --workspace-view-switch-width: 0px;
+  }
+
   @variant dark {
     --appearance-contrast-target: white;
     --app-scrollbar-thumb: rgb(255 255 255 / 8%);
