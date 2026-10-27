@@ -87,12 +87,26 @@ function resolvePrimaryAction(
         return { kind: "implement", planId: plan.id };
       }
     }
-    const resumableRunId = resolveResumableRunId(projection);
-    if (resumableRunId !== null) return { kind: "resume", mode: "continue", runId: resumableRunId };
-    if (hasHeldQueuedRuns(projection)) return { kind: "resume", mode: "queue", runId: null };
   }
   const runtime = projection === null ? shell.runtime : deriveThreadStructureRuntime(projection);
-  return deriveCanInterruptRunningThread(true, runtime) ? { kind: "stop" } : null;
+  if (deriveCanInterruptRunningThread(true, runtime)) return { kind: "stop" };
+  if (projection === null) return null;
+  const resumableRunId = resolveResumableRunId(projection);
+  if (resumableRunId !== null) return { kind: "resume", mode: "continue", runId: resumableRunId };
+  return hasHeldQueuedRuns(projection) ? { kind: "resume", mode: "queue", runId: null } : null;
+}
+
+/** Whether the peek may answer this approval or question; stale requests cannot be answered. */
+export function canRespondToPeekRequest(
+  actions: ReadonlyArray<OverviewPeekAction>,
+  requestId: RuntimeRequestId,
+): boolean {
+  return actions.some(
+    (action) =>
+      (action.kind === "approval" || action.kind === "input") &&
+      action.requestId === requestId &&
+      action.canRespond,
+  );
 }
 
 export function resolveOverviewPeekActions(input: {

@@ -11,7 +11,7 @@ import type {
   RuntimeRequestId,
   ScopedThreadRef,
 } from "@t3tools/contracts";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { newMessageId } from "~/lib/utils";
 import { buildPlanImplementationPrompt } from "../../proposedPlan";
@@ -20,7 +20,11 @@ import { useEnvironment } from "../../state/environments";
 import { threadEnvironment } from "../../state/threads";
 import { useOrchestrationCommand } from "../../state/use-orchestration-command";
 import { toastManager } from "../ui/toast";
-import { hasHeldQueuedRuns, resolveOverviewPeekActions } from "./OverviewPeek.logic";
+import {
+  canRespondToPeekRequest,
+  hasHeldQueuedRuns,
+  resolveOverviewPeekActions,
+} from "./OverviewPeek.logic";
 
 const CONTINUE_TEXT = "Continue where you left off.";
 
@@ -33,6 +37,7 @@ export function useOverviewThreadActions(ref: ScopedThreadRef) {
   const actions =
     shell === null ? [] : resolveOverviewPeekActions({ shell, projection, connected });
   const [busy, setBusy] = useState(false);
+  const inFlight = useRef(false);
   const options = { reportFailure: false };
   const respondToApproval = useOrchestrationCommand(threadEnvironment.respondToApproval, options);
   const respondToUserInput = useOrchestrationCommand(threadEnvironment.respondToUserInput, options);
@@ -46,10 +51,7 @@ export function useOverviewThreadActions(ref: ScopedThreadRef) {
     fallbackMessage: string,
     execute: () => Promise<AtomCommandResult<unknown, unknown>>,
   ): Promise<boolean> => {
-    if (busy) return false;
-    setBusy(true);
     const result = await execute();
-    setBusy(false);
     if (result._tag === "Success") return true;
     if (!isAtomCommandInterrupted(result)) {
       const error = squashAtomCommandFailure(result);
@@ -60,6 +62,17 @@ export function useOverviewThreadActions(ref: ScopedThreadRef) {
       });
     }
     return false;
+  };
+  const exclusive = async (operation: () => Promise<boolean>): Promise<boolean> => {
+    if (inFlight.current) return false;
+    inFlight.current = true;
+    setBusy(true);
+    try {
+      return await operation();
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
   };
 
   const sendMessage = (
@@ -87,56 +100,65 @@ export function useOverviewThreadActions(ref: ScopedThreadRef) {
     projection,
     actions,
     busy,
-    respondToApproval: (requestId: RuntimeRequestId, decision: ProviderApprovalDecision) => {
-      const action = actions.find(
-        (candidate) => candidate.kind === "approval" && candidate.requestId === requestId,
-      );
-      if (action?.kind !== "approval" || !action.canRespond) return Promise.resolve(false);
-      return run("Could not submit the approval decision.", () =>
-        respondToApproval({ environmentId, input: { threadId, requestId, decision } }),
-      );
-    },
+    respondToApproval: (requestId: RuntimeRequestId, decision: ProviderApprovalDecision) =>
+      exclusive(async () =>
+        canRespondToPeekRequest(actions, requestId)
+          ? run("Could not submit the approval decision.", () =>
+              respondToApproval({ environmentId, input: { threadId, requestId, decision } }),
+            )
+          : false,
+      ),
     answer: (requestId: RuntimeRequestId, answers: ProviderUserInputAnswers) =>
-      run("Could not submit the answer.", () =>
-        respondToUserInput({ environmentId, input: { threadId, requestId, answers } }),
+      exclusive(async () =>
+        canRespondToPeekRequest(actions, requestId)
+          ? run("Could not submit the answer.", () =>
+              respondToUserInput({ environmentId, input: { threadId, requestId, answers } }),
+            )
+          : false,
       ),
     dismiss: (requestId: RuntimeRequestId) =>
-      run("Could not dismiss the question.", () =>
-        dismissUserInput({ environmentId, input: { threadId, requestId } }),
+      exclusive(() =>
+        run("Could not dismiss the question.", () =>
+          dismissUserInput({ environmentId, input: { threadId, requestId } }),
+        ),
       ),
     stop: () =>
-      run("Could not stop the thread.", () =>
-        interruptTurn({ environmentId, input: { threadId } }),
+      exclusive(() =>
+        run("Could not stop the thread.", () =>
+          interruptTurn({ environmentId, input: { threadId } }),
+        ),
       ),
-    implement: async (planId: PlanId) => {
-      const plan = projection?.plans.find((candidate) => candidate.id === planId);
-      if (shell === null || plan?.kind !== "proposed_plan") return false;
-      if (shell.interactionMode !== "default") {
-        const switched = await run("Could not switch the thread out of plan mode.", () =>
-          setInteractionMode({ environmentId, input: { threadId, interactionMode: "default" } }),
-        );
-        if (!switched) return false;
-      }
-      return sendMessage(buildPlanImplementationPrompt(plan.markdown), {
-        interactionMode: "default",
-        sourceProposedPlan: { threadId, planId },
-      });
-    },
-    resume: async (mode: "queue" | "continue", runId: RunId | null) => {
-      if (mode === "queue" || runId === null) {
-        return run("Could not resume the thread.", () =>
+    implement: (planId: PlanId) =>
+      exclusive(async () => {
+        const plan = projection?.plans.find((candidate) => candidate.id === planId);
+        if (shell === null || plan?.kind !== "proposed_plan") return false;
+        if (shell.interactionMode !== "default") {
+          const switched = await run("Could not switch the thread out of plan mode.", () =>
+            setInteractionMode({ environmentId, input: { threadId, interactionMode: "default" } }),
+          );
+          if (!switched) return false;
+        }
+        return sendMessage(buildPlanImplementationPrompt(plan.markdown), {
+          interactionMode: "default",
+          sourceProposedPlan: { threadId, planId },
+        });
+      }),
+    resume: (mode: "queue" | "continue", runId: RunId | null) =>
+      exclusive(async () => {
+        if (mode === "queue" || runId === null) {
+          return run("Could not resume the thread.", () =>
+            resumeThreadQueue({ environmentId, input: { threadId } }),
+          );
+        }
+        const continued = await sendMessage(CONTINUE_TEXT, {
+          manualContinuationOfRunId: runId,
+          dispatchMode: "start",
+        });
+        if (!continued || !hasHeldQueuedRuns(projection)) return continued;
+        return run("Could not release the queued messages.", () =>
           resumeThreadQueue({ environmentId, input: { threadId } }),
         );
-      }
-      const continued = await sendMessage(CONTINUE_TEXT, {
-        manualContinuationOfRunId: runId,
-        dispatchMode: "start",
-      });
-      if (!continued || !hasHeldQueuedRuns(projection)) return continued;
-      return run("Could not release the queued messages.", () =>
-        resumeThreadQueue({ environmentId, input: { threadId } }),
-      );
-    },
-    reply: (text: string) => sendMessage(text, { dispatchMode: "auto" }),
+      }),
+    reply: (text: string) => exclusive(() => sendMessage(text, { dispatchMode: "auto" })),
   };
 }

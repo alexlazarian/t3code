@@ -4,7 +4,7 @@ import { useRouter } from "@tanstack/react-router";
 import * as Schema from "effect/Schema";
 import { parseScopedThreadKey, scopeProjectRef } from "@t3tools/client-runtime/environment";
 import { ChevronDownIcon, PlusIcon } from "lucide-react";
-import { Fragment, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
+import { Fragment, useEffect, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
 
 import { openCommandPalette } from "../../commandPaletteBus";
 import { isElectron } from "../../env";
@@ -111,6 +111,8 @@ export function OverviewView() {
   const expansion = useOverviewRowExpansion();
   const [focusKey, setFocusKey] = useState<string | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [lostPeekCount, setLostPeekCount] = useState(0);
+  const handledLostPeekCount = useRef(0);
   const gridRef = useRef<HTMLDivElement>(null);
 
   const scopeKey = resolveSidebarProjectScopeKey({
@@ -185,10 +187,18 @@ export function OverviewView() {
   const peekRef = selectedKey === null ? null : parseScopedThreadKey(selectedKey);
   if (selectedKey !== null && (peekColumn === undefined || peekRef === null)) {
     setSelectedKey(null);
+    setLostPeekCount((count) => count + 1);
   }
   const findCard = (threadKey: string) =>
     gridRef.current?.querySelector<HTMLElement>(`[data-thread-key="${CSS.escape(threadKey)}"]`) ??
     null;
+  // oxlint-disable-next-line t3code/react-effect-budget -- a peek whose card vanished unmounts without closing, so focus must be moved in the DOM after commit
+  useEffect(() => {
+    if (lostPeekCount === handledLostPeekCount.current) return;
+    handledLostPeekCount.current = lostPeekCount;
+    if (tabbableKey === undefined || document.activeElement !== document.body) return;
+    findCard(tabbableKey)?.focus();
+  });
 
   const openThread = useStableCallback((threadKey: string) => {
     const ref = parseScopedThreadKey(threadKey);
@@ -198,7 +208,7 @@ export function OverviewView() {
   });
   const peekThread = useStableCallback((threadKey: string) => {
     setFocusKey(threadKey);
-    setSelectedKey(threadKey);
+    setSelectedKey((current) => (current === threadKey ? null : threadKey));
   });
   const startThreadIn = (project: NonNullable<OverviewColumn["project"]>) => {
     void updateClientSettings({ threadView: "list" });

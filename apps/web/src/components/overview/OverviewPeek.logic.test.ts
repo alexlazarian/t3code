@@ -4,6 +4,7 @@ import {
   PlanId,
   RunId,
   RuntimeRequestId,
+  TurnItemId,
   type OrchestrationV2RunStatus,
   type OrchestrationV2ThreadProjection,
 } from "@t3tools/contracts";
@@ -11,7 +12,7 @@ import * as DateTime from "effect/DateTime";
 import { describe, expect, it } from "vite-plus/test";
 
 import { makeThreadFixture, makeThreadProjectionFixture } from "../../test-fixtures";
-import { resolveOverviewPeekActions } from "./OverviewPeek.logic";
+import { canRespondToPeekRequest, resolveOverviewPeekActions } from "./OverviewPeek.logic";
 
 const now = DateTime.makeUnsafe("2026-01-01T00:00:00.000Z");
 const base = makeThreadProjectionFixture();
@@ -122,6 +123,73 @@ describe("resolveOverviewPeekActions", () => {
       connected: true,
     });
     expect(actions).toEqual([{ kind: "resume", mode: "queue", runId: null }, { kind: "reply" }]);
+  });
+
+  it("working with a held queue offers stop", () => {
+    const actions = resolveOverviewPeekActions({
+      shell: makeThreadFixture(),
+      projection: projection({
+        runs: [run("run-1", 1, "running"), { ...run("run-2", 2, "queued"), queueHeld: true }],
+      }),
+      connected: true,
+    });
+    expect(actions).toEqual([{ kind: "stop" }, { kind: "reply" }]);
+  });
+
+  it("a question that is not resumable cannot be answered from peek", () => {
+    const requestId = RuntimeRequestId.make("question-1");
+    const nodeId = NodeId.make("node-1");
+    const actions = resolveOverviewPeekActions({
+      shell: makeThreadFixture({ hasPendingUserInput: true }),
+      projection: projection({
+        runs: [run("run-1", 1, "waiting")],
+        runtimeRequests: [
+          {
+            id: requestId,
+            nodeId,
+            providerTurnId: null,
+            nativeRequestRef: null,
+            kind: "user_input",
+            status: "pending",
+            responseCapability: { type: "not_resumable", reason: "provider exited" },
+            createdAt: now,
+            resolvedAt: null,
+          },
+        ],
+        turnItems: [
+          {
+            id: TurnItemId.make("question-item"),
+            threadId: base.thread.id,
+            runId,
+            nodeId,
+            providerThreadId: null,
+            providerTurnId: null,
+            nativeItemRef: null,
+            parentItemId: null,
+            ordinal: 0,
+            status: "completed",
+            title: null,
+            startedAt: now,
+            completedAt: now,
+            updatedAt: now,
+            type: "user_input_request",
+            requestId,
+            questions: [
+              {
+                id: "next",
+                header: "Next",
+                question: "What next?",
+                required: true,
+                options: [{ label: "Continue", description: "Keep going" }],
+              },
+            ],
+          },
+        ],
+      }),
+      connected: true,
+    });
+    expect(actions[0]).toMatchObject({ kind: "input", requestId, canRespond: false });
+    expect(canRespondToPeekRequest(actions, requestId)).toBe(false);
   });
 
   it("disconnected environment offers no actions", () => {

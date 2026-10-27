@@ -69,7 +69,7 @@ export function OverviewPeek(props: {
 
   const submitReply = async () => {
     const text = reply.trim();
-    if (thread.busy) return;
+    if (inputAction?.canRespond === false) return;
     const sent =
       inputAction !== null
         ? await submitAnswer(inputAction, text)
@@ -86,8 +86,12 @@ export function OverviewPeek(props: {
   return (
     <Popover
       open
-      onOpenChange={(open) => {
-        if (!open) props.onClose();
+      onOpenChange={(open, details) => {
+        if (open) return;
+        // The card's own click toggles the peek; closing here too would close and reopen it.
+        const target = details.reason === "outside-press" ? details.event.target : null;
+        if (target instanceof Node && props.getCard()?.contains(target)) return;
+        props.onClose();
       }}
     >
       <PopoverPopup
@@ -142,7 +146,7 @@ export function OverviewPeek(props: {
             <Input
               size="compact"
               value={reply}
-              disabled={thread.busy}
+              disabled={thread.busy || inputAction?.canRespond === false}
               onChange={(event) => setReply(event.target.value)}
               onKeyDown={handleReplyKeyDown}
               aria-label={inputAction !== null ? "Answer" : "Reply"}
