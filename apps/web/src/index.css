@@ -1161,7 +1161,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   --error-surface: color-mix(in srgb, var(--error) 8%, transparent);
   --destructive: var(--error);
   --border: color-mix(in oklab, #e4e4e7, black 14%);
-  --input: var(--border);
+  --input: color-mix(in oklab, #e4e4e7, black 38%);
   --ring: var(--primary);
   --destructive-foreground: var(--error-foreground);
   --info: var(--color-blue-500);
@@ -1175,8 +1175,8 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   --warning: var(--color-amber-500);
   --warning-foreground: var(--color-amber-700);
   --warning-surface: color-mix(in srgb, var(--warning) 8%, transparent);
-  --update: var(--primary);
-  --update-foreground: var(--primary);
+  --update: #1b4ed8;
+  --update-foreground: var(--update);
   --update-surface: color-mix(in srgb, var(--update) 12%, transparent);
   --status-working: color-mix(in oklab, #7fd34e, black 48%);
   --status-needs-you: color-mix(in oklab, #fe9a00, black 48%);
@@ -1217,12 +1217,13 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
     --tool-error-icon: #fca5a5;
     --error-surface: color-mix(in srgb, var(--error) 16%, transparent);
     --border: #141312;
+    --input: #878077;
     --info-foreground: var(--color-blue-400);
     --guest-foreground: var(--color-fuchsia-300);
     --success-foreground: var(--color-emerald-400);
     --warning-foreground: var(--color-amber-400);
     --warning-surface: color-mix(in srgb, var(--warning) 16%, transparent);
-    --update-foreground: var(--color-blue-400);
+    --update: var(--color-blue-400);
     --update-surface: color-mix(in srgb, var(--update) 18%, transparent);
     --status-working: #7fd34e;
     --status-needs-you: #ffcf3d;
