@@ -50,6 +50,7 @@ import {
 } from "./Overview.logic";
 import { OverviewCard } from "./OverviewCard";
 import { OverviewColumnHeader } from "./OverviewColumnHeader";
+import { OverviewPeek } from "./OverviewPeek";
 
 const SECTION_LABELS: Record<SidebarSection, { readonly name: string; readonly why: string }> = {
   pinned: { name: "Pinned", why: "kept above everything else" },
@@ -177,6 +178,17 @@ export function OverviewView() {
   );
   const allKeys = focusGrid.flat(2);
   const tabbableKey = focusKey !== null && allKeys.includes(focusKey) ? focusKey : allKeys[0];
+  const peekColumn =
+    selectedKey === null
+      ? undefined
+      : columns[focusGrid.findIndex((cells) => cells.some((keys) => keys.includes(selectedKey)))];
+  const peekRef = selectedKey === null ? null : parseScopedThreadKey(selectedKey);
+  if (selectedKey !== null && (peekColumn === undefined || peekRef === null)) {
+    setSelectedKey(null);
+  }
+  const findCard = (threadKey: string) =>
+    gridRef.current?.querySelector<HTMLElement>(`[data-thread-key="${CSS.escape(threadKey)}"]`) ??
+    null;
 
   const openThread = useStableCallback((threadKey: string) => {
     const ref = parseScopedThreadKey(threadKey);
@@ -210,7 +222,7 @@ export function OverviewView() {
     const next = moveOverviewFocus(focusGrid, key, direction);
     if (next === null) return;
     setFocusKey(next);
-    gridRef.current?.querySelector<HTMLElement>(`[data-thread-key="${CSS.escape(next)}"]`)?.focus();
+    findCard(next)?.focus();
   };
 
   return (
@@ -381,6 +393,16 @@ export function OverviewView() {
           </div>
         )}
       </div>
+      {selectedKey !== null && peekColumn !== undefined && peekRef !== null ? (
+        <OverviewPeek
+          key={selectedKey}
+          threadRef={peekRef}
+          projectName={peekColumn.displayName}
+          getCard={() => findCard(selectedKey)}
+          onOpenThread={() => openThread(selectedKey)}
+          onClose={() => setSelectedKey(null)}
+        />
+      ) : null}
     </SidebarInset>
   );
 }
