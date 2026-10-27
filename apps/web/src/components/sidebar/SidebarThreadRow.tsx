@@ -909,7 +909,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
   };
 
   const rowSurfaceClassName = cn(
-    "group/sidebar-row relative w-full cursor-pointer overflow-hidden rounded-none text-left outline-none select-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+    "group/sidebar-row relative w-full cursor-pointer overflow-hidden rounded-none text-left sm:border-b sm:border-sidebar-border outline-none select-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
     variantAction === "unsettle" &&
       !props.isActive &&
       "[&:not(:hover):not(:focus-within)_*]:text-secondary-label",
@@ -1096,7 +1096,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
         {...sortableRootProps}
         {...(fileDropHandlers ?? {})}
         className={cn(
-          "list-none [content-visibility:auto] [contain-intrinsic-size:auto_36px]",
+          "list-none [content-visibility:auto] [contain-intrinsic-size:auto_36px] sm:[contain-intrinsic-size:auto_24px]",
           sortable?.isDragging && "relative z-20",
         )}
       >
@@ -1258,13 +1258,30 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
     !isRemote &&
     runningTerminalIds.length === 0;
 
+  const cardLeading = (
+    <>
+      {draftIndicator}
+      {props.project ? (
+        <ProjectFavicon project={props.project} className="size-4 shrink-0" />
+      ) : null}
+      {/* Left of the status slot, the pin would slide when hover swaps the
+        label for the wider row controls. */}
+      {pinIndicator}
+      {props.projectDisplayName ? (
+        <span className="min-w-0 truncate font-normal text-secondary-label text-xs">
+          {props.projectDisplayName}
+        </span>
+      ) : null}
+    </>
+  );
+
   return (
     <li
       data-thread-item={threadKey}
       {...sortableRootProps}
       {...(fileDropHandlers ?? {})}
       className={cn(
-        "list-none py-0 [content-visibility:auto] [contain-intrinsic-size:auto_78px]",
+        "list-none py-0 [content-visibility:auto] [contain-intrinsic-size:auto_78px] sm:[contain-intrinsic-size:auto_36px]",
         metaLineEmpty && "[contain-intrinsic-size:auto_58px]",
         sortable?.isDragging && "relative z-20",
       )}
@@ -1291,27 +1308,13 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
           {accessibleTitle}
           <div
             className={cn(
-              "relative z-10 h-[4.875rem] px-(--sidebar-row-content-inset) py-(--sidebar-content-inset)",
-              metaLineEmpty && "h-auto",
+              "relative z-10 h-[4.875rem] px-(--sidebar-row-content-inset) py-(--sidebar-content-inset) sm:grid sm:h-9 sm:grid-cols-[minmax(0,1fr)_auto] sm:content-center sm:px-1.75 sm:py-0 sm:leading-4",
+              metaLineEmpty && "h-auto sm:h-9",
             )}
           >
-            <div className="flex h-5 min-w-0 items-center gap-1.5">
-              {draftIndicator}
-              {props.project ? (
-                <ProjectFavicon project={props.project} className="size-4 shrink-0" />
-              ) : null}
-              {/* Left of the status slot, the pin would slide when hover swaps the
-                label for the wider row controls. */}
-              {pinIndicator}
-              {props.projectDisplayName ? (
-                <span
-                  className={cn("min-w-0 flex-1 truncate font-normal text-secondary-label text-xs")}
-                >
-                  {props.projectDisplayName}
-                </span>
-              ) : (
-                <span className="flex-1" />
-              )}
+            <div className="flex h-5 min-w-0 items-center gap-1.5 sm:col-start-2 sm:row-start-1 sm:h-4 sm:justify-end">
+              <span className="contents sm:hidden">{cardLeading}</span>
+              <span className="flex-1 sm:hidden" />
               {sortable?.isDragging ? (
                 dragDestination
               ) : (
@@ -1451,7 +1454,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
               )}
               {props.sweepAction !== null ? dragDestination : null}
             </div>
-            <div className="mt-1 flex min-w-0 items-center gap-1.5">
+            <div className="mt-1 flex min-w-0 items-center gap-1.5 sm:col-start-1 sm:row-start-1 sm:mt-0">
               {title}
               {isRegeneratingTitle ? (
                 <span role="status" className="sr-only">
@@ -1467,59 +1470,69 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
                 </span>
               ) : null}
             </div>
-            {metaLineEmpty ? null : (
-              <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-secondary-label text-xs">
-                {thread.branch ? (
-                  <>
-                    <ThreadWorktreeIndicator thread={thread} />
-                    <span className="flex min-w-0 flex-1">
-                      <MiddleTruncate value={thread.branch} showTitle={false} />
-                    </span>
-                  </>
-                ) : showsScratchMachine ? (
-                  <>
-                    <EnvironmentMachineIcon
-                      aria-hidden
-                      kind={props.environmentMachine}
-                      className="size-3 shrink-0"
-                    />
-                    <span className="min-w-0 flex-1 truncate">{props.scratchMachineLabel}</span>
-                  </>
-                ) : (
-                  <span className="flex-1" />
-                )}
-                {terminalStatusIcon}
-                {prBadge}
-                {diff ? (
-                  <span className="shrink-0 font-mono">
-                    <span className="text-diff-addition-foreground">
-                      +{formatDiffCount(diff.insertions)}
-                    </span>{" "}
-                    <span className="text-diff-deletion-foreground">
-                      −{formatDiffCount(diff.deletions)}
-                    </span>
-                  </span>
-                ) : null}
-                <span
-                  aria-hidden
-                  className="pointer-events-none ml-auto inline-flex shrink-0 items-center gap-1"
-                >
-                  {isRemote && !showsScratchMachine ? (
-                    <span className="inline-flex shrink-0 items-center text-sidebar-muted-foreground/70">
+            <div
+              className={cn(
+                "mt-0.5 flex min-w-0 items-center gap-1.5 text-secondary-label text-xs sm:col-span-2 sm:row-start-2 sm:mt-0",
+                metaLineEmpty && "hidden sm:flex",
+              )}
+            >
+              <span className="hidden items-center gap-1.5 sm:flex sm:min-w-0 sm:max-w-[40%] sm:shrink-0">
+                {cardLeading}
+              </span>
+              {metaLineEmpty ? null : (
+                <>
+                  {thread.branch ? (
+                    <>
+                      <ThreadWorktreeIndicator thread={thread} />
+                      <span className="flex min-w-0 flex-1">
+                        <MiddleTruncate value={thread.branch} showTitle={false} />
+                      </span>
+                    </>
+                  ) : showsScratchMachine ? (
+                    <>
                       <EnvironmentMachineIcon
                         aria-hidden
                         kind={props.environmentMachine}
-                        className="size-3.5"
+                        className="size-3 shrink-0"
                       />
+                      <span className="min-w-0 flex-1 truncate">{props.scratchMachineLabel}</span>
+                    </>
+                  ) : (
+                    <span className="flex-1" />
+                  )}
+                  {terminalStatusIcon}
+                  {prBadge}
+                  {diff ? (
+                    <span className="shrink-0 font-mono">
+                      <span className="text-diff-addition-foreground">
+                        +{formatDiffCount(diff.insertions)}
+                      </span>{" "}
+                      <span className="text-diff-deletion-foreground">
+                        −{formatDiffCount(diff.deletions)}
+                      </span>
                     </span>
                   ) : null}
-                  <SidebarProviderStack
-                    thread={thread}
-                    providerEntryByInstanceId={props.providerEntryByInstanceId}
-                  />
-                </span>
-              </div>
-            )}
+                  <span
+                    aria-hidden
+                    className="pointer-events-none ml-auto inline-flex shrink-0 items-center gap-1"
+                  >
+                    {isRemote && !showsScratchMachine ? (
+                      <span className="inline-flex shrink-0 items-center text-sidebar-muted-foreground/70">
+                        <EnvironmentMachineIcon
+                          aria-hidden
+                          kind={props.environmentMachine}
+                          className="size-3.5"
+                        />
+                      </span>
+                    ) : null}
+                    <SidebarProviderStack
+                      thread={thread}
+                      providerEntryByInstanceId={props.providerEntryByInstanceId}
+                    />
+                  </span>
+                </>
+              )}
+            </div>
           </div>
           {props.jumpLabel ? <JumpHintBadge label={props.jumpLabel} /> : null}
         </TooltipTrigger>
@@ -1641,7 +1654,7 @@ export const SidebarSearchResultRow = memo(function SidebarSearchResultRow(props
               onMouseMove={props.onHighlight}
               onClick={props.onSelect}
               className={cn(
-                "group/sidebar-row group/v2-row flex min-h-9 w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-1 text-left text-sm outline-none",
+                "group/sidebar-row group/v2-row flex min-h-9 w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-1 text-left text-sm outline-none sm:min-h-6 sm:rounded-none sm:py-0.5",
                 props.isHighlighted || props.isRouteActive
                   ? "bg-sidebar-row-active text-sidebar-foreground"
                   : "text-sidebar-muted-foreground/75 hover:bg-sidebar-row-hover hover:text-sidebar-foreground",
