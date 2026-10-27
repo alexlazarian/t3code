@@ -63,6 +63,7 @@ import { useRightPanelStore } from "../../rightPanelStore";
 import { useOpenPrLink } from "../../lib/openPullRequestLink";
 import { useUiStateStore } from "../../uiStateStore";
 import { useThreadSelectionStore } from "../../threadSelectionStore";
+import { useProjectAccentColor } from "../../hooks/useProjectAccentColor";
 import { useNowSecond } from "../../hooks/useNowSecond";
 import { vcsEnvironment } from "../../state/vcs";
 import { useEnvironmentQuery } from "../../state/query";
@@ -609,6 +610,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
     variant,
     variantAction,
   } = props;
+  const projectAccentColor = useProjectAccentColor(props.project);
   const threadRef = scopeThreadRef(thread.environmentId, thread.id);
   const threadKey = scopedThreadKey(threadRef);
   const canOperateThread = useEnvironmentScope(thread.environmentId, AuthOrchestrationOperateScope);
@@ -839,6 +841,13 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
     }
   };
 
+  const projectEdge = projectAccentColor ? (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-y-0 left-0 z-10 w-0.5"
+      style={{ backgroundColor: projectAccentColor }}
+    />
+  ) : null;
   const rowSurfaceClassName = cn(
     "group/sidebar-row relative w-full cursor-pointer overflow-hidden rounded-none text-left sm:border-b sm:border-sidebar-border outline-none select-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
     variantAction === "unsettle" &&
@@ -1051,6 +1060,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
             }
           >
             {accessibleTitle}
+            {projectEdge}
             <span
               className={cn(
                 "flex shrink-0 items-center transition-opacity",
@@ -1237,6 +1247,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
           }
         >
           {accessibleTitle}
+          {projectEdge}
           <div
             className={cn(
               "relative z-10 h-[4.875rem] px-(--sidebar-row-content-inset) py-(--sidebar-content-inset) sm:grid sm:h-9 sm:grid-cols-[minmax(0,1fr)_auto] sm:content-center sm:px-1.75 sm:py-0 sm:leading-4",
