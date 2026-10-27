@@ -405,6 +405,16 @@ export function useSettingsRestore(onRestored?: () => void) {
     ...(settings.effortDisplay !== DEFAULT_UNIFIED_SETTINGS.effortDisplay
       ? ["Effort display"]
       : []),
+    ...(settings.messageLineHeight !== DEFAULT_UNIFIED_SETTINGS.messageLineHeight
+      ? ["Line height"]
+      : []),
+    ...(settings.messageParagraphSpacing !== DEFAULT_UNIFIED_SETTINGS.messageParagraphSpacing
+      ? ["Paragraph spacing"]
+      : []),
+    ...(settings.heavierDarkText !== DEFAULT_UNIFIED_SETTINGS.heavierDarkText
+      ? ["Heavier text in dark mode"]
+      : []),
+    ...(settings.focusDimming !== DEFAULT_UNIFIED_SETTINGS.focusDimming ? ["Focus dimming"] : []),
     ...(settings.mathRenderingEnabled !== DEFAULT_UNIFIED_SETTINGS.mathRenderingEnabled
       ? ["Render math"]
       : []),
@@ -578,6 +588,10 @@ export function useSettingsRestore(onRestored?: () => void) {
       diffColorScheme: DEFAULT_UNIFIED_SETTINGS.diffColorScheme,
       chatWidth: DEFAULT_UNIFIED_SETTINGS.chatWidth,
       effortDisplay: DEFAULT_UNIFIED_SETTINGS.effortDisplay,
+      messageLineHeight: DEFAULT_UNIFIED_SETTINGS.messageLineHeight,
+      messageParagraphSpacing: DEFAULT_UNIFIED_SETTINGS.messageParagraphSpacing,
+      heavierDarkText: DEFAULT_UNIFIED_SETTINGS.heavierDarkText,
+      focusDimming: DEFAULT_UNIFIED_SETTINGS.focusDimming,
       mathRenderingEnabled: DEFAULT_UNIFIED_SETTINGS.mathRenderingEnabled,
       timestampFormat: DEFAULT_UNIFIED_SETTINGS.timestampFormat,
       notificationMode: DEFAULT_UNIFIED_SETTINGS.notificationMode,

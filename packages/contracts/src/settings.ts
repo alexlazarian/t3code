@@ -329,6 +329,25 @@ export type ChatWidth = typeof ChatWidth.Type;
 /** How the composer shows reasoning effort: the level's name, or rising bars. */
 export const EffortDisplay = Schema.Literals(["label", "bars"]);
 export type EffortDisplay = typeof EffortDisplay.Type;
+/** Line height of agent messages in hundredths; the default leaves the built-in spacing alone. */
+export const MIN_MESSAGE_LINE_HEIGHT = 140;
+export const MAX_MESSAGE_LINE_HEIGHT = 240;
+export const DEFAULT_MESSAGE_LINE_HEIGHT = 163;
+export const MessageLineHeight = Schema.Int.check(
+  Schema.isBetween({ minimum: MIN_MESSAGE_LINE_HEIGHT, maximum: MAX_MESSAGE_LINE_HEIGHT }),
+);
+export type MessageLineHeight = typeof MessageLineHeight.Type;
+/** Space between paragraphs of agent messages in hundredths of a rem. */
+export const MIN_MESSAGE_PARAGRAPH_SPACING = 20;
+export const MAX_MESSAGE_PARAGRAPH_SPACING = 250;
+export const DEFAULT_MESSAGE_PARAGRAPH_SPACING = 65;
+export const MessageParagraphSpacing = Schema.Int.check(
+  Schema.isBetween({
+    minimum: MIN_MESSAGE_PARAGRAPH_SPACING,
+    maximum: MAX_MESSAGE_PARAGRAPH_SPACING,
+  }),
+);
+export type MessageParagraphSpacing = typeof MessageParagraphSpacing.Type;
 
 export const ModelFavorite = Schema.Struct({
   provider: ProviderInstanceId,
@@ -357,6 +376,14 @@ export const ClientSettingsSchema = Schema.Struct({
   ),
   chatWidth: ChatWidth.pipe(Schema.withDecodingDefault(Effect.succeed("comfortable" as const))),
   effortDisplay: EffortDisplay.pipe(Schema.withDecodingDefault(Effect.succeed("label" as const))),
+  messageLineHeight: MessageLineHeight.pipe(
+    Schema.withDecodingDefault(Effect.succeed(DEFAULT_MESSAGE_LINE_HEIGHT)),
+  ),
+  messageParagraphSpacing: MessageParagraphSpacing.pipe(
+    Schema.withDecodingDefault(Effect.succeed(DEFAULT_MESSAGE_PARAGRAPH_SPACING)),
+  ),
+  heavierDarkText: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
+  focusDimming: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
   loadBalancingEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
   loadBalancingWeights: LoadBalancingWeights.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
   appearanceContrast: AppearanceContrast.pipe(
@@ -1657,6 +1684,10 @@ export const ClientSettingsPatch = Schema.Struct({
   diffColorScheme: Schema.optionalKey(DiffColorScheme),
   chatWidth: Schema.optionalKey(ChatWidth),
   effortDisplay: Schema.optionalKey(EffortDisplay),
+  messageLineHeight: Schema.optionalKey(MessageLineHeight),
+  messageParagraphSpacing: Schema.optionalKey(MessageParagraphSpacing),
+  heavierDarkText: Schema.optionalKey(Schema.Boolean),
+  focusDimming: Schema.optionalKey(Schema.Boolean),
   loadBalancingEnabled: Schema.optionalKey(Schema.Boolean),
   loadBalancingWeights: Schema.optionalKey(LoadBalancingWeights),
   appearanceContrast: Schema.optionalKey(AppearanceContrast),

@@ -31,6 +31,7 @@ import {
   supportsSharedSettingsSync,
 } from "@t3tools/client-runtime/state/shared-settings";
 import { ensureLocalApi } from "~/localApi";
+import { useActiveSidebarBackground } from "./useActiveSidebarBackground";
 import {
   getThemeDefinition,
   getThemePreviewSidebarArtwork,
@@ -383,17 +384,18 @@ export function useMergedSettings<T = UnifiedSettings>(
   });
 }
 
-function resolveEnvironmentIdentificationMode(input: {
+export function resolveEnvironmentIdentificationMode(input: {
   mode: EnvironmentIdentificationMode;
   settingsHydrated: boolean;
   paletteThemeActive?: boolean;
   paletteThemeAllowsArtwork?: boolean;
+  sidebarBackgroundActive?: boolean;
 }): EnvironmentIdentificationMode {
   if (!input.settingsHydrated) return "none";
   const isArtwork = input.mode !== "pill" && input.mode !== "none";
-  return input.paletteThemeActive && !input.paletteThemeAllowsArtwork && isArtwork
-    ? "pill"
-    : input.mode;
+  if (!isArtwork) return input.mode;
+  if (input.sidebarBackgroundActive) return "pill";
+  return input.paletteThemeActive && !input.paletteThemeAllowsArtwork ? "pill" : input.mode;
 }
 
 export function useEnvironmentIdentificationMode(): EnvironmentIdentificationMode {
@@ -407,11 +409,13 @@ export function useEnvironmentIdentificationMode(): EnvironmentIdentificationMod
   );
   const activeTheme = resolveThemeHalf(theme, themeHalves, resolvedTheme);
   const activeThemeDefinition = getThemeDefinition(activeTheme);
+  const sidebarBackground = useActiveSidebarBackground();
   return resolveEnvironmentIdentificationMode({
     mode,
     settingsHydrated,
     paletteThemeActive: previewSidebarArtwork !== null || activeThemeDefinition !== null,
     paletteThemeAllowsArtwork: previewSidebarArtwork ?? themeAllowsSidebarArtwork(activeTheme),
+    sidebarBackgroundActive: previewSidebarArtwork === null && sidebarBackground !== null,
   });
 }
 

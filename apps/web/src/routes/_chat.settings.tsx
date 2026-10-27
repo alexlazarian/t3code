@@ -17,6 +17,10 @@ import { SettingsScopeNotice } from "../components/settings/SettingsScopeNotice"
 import { SETTINGS_DEVICE_ONLY_PATHS } from "../components/settings/SettingsScopeSentence";
 import { SettingsPageContainer } from "../components/settings/settingsLayout";
 import {
+  rememberSettingsPath,
+  resolveSettingsEntryPath,
+} from "../components/settings/settingsLastLocation";
+import {
   retainSettingsScope,
   validateSettingsRouteSearch,
 } from "../components/settings/settingsScopeNavigation";
@@ -173,12 +177,13 @@ function SettingsRouteLayout() {
 export const Route = createFileRoute("/_chat/settings")({
   validateSearch: validateSettingsRouteSearch,
   search: { middlewares: [retainSettingsScope] },
-  beforeLoad: async ({ location }) => {
+  beforeLoad: async ({ location, preload }) => {
     if (location.pathname === "/settings") {
-      throw redirect({ to: "/settings/general", replace: true });
+      throw redirect({ to: resolveSettingsEntryPath(), replace: true });
     }
     const moved = movedSettingsPath(location.pathname, location.hash);
     if (moved) throw redirect({ to: moved, search: true, hash: true, replace: true });
+    if (!preload) rememberSettingsPath(location.pathname);
   },
   component: SettingsRouteLayout,
 });
