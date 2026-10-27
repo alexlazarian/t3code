@@ -9,8 +9,6 @@ import {
 import { discardComposerDraft } from "../lib/discardComposerDraft";
 import { requestCustomSnooze } from "./CustomSnoozeDialog";
 import { useAtomValue } from "@effect/atom-react";
-import * as Option from "effect/Option";
-import { Atom } from "effect/reactivity";
 import * as Schema from "effect/Schema";
 import {
   DndContext,
@@ -62,7 +60,6 @@ import {
   useReducer,
   useRef,
   useState,
-  useSyncExternalStore,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
@@ -113,7 +110,6 @@ import { startNewThreadFromContext } from "../lib/chatThreadActions";
 import { useClientSettings } from "../hooks/useSettings";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { useLocalStorage } from "../hooks/useLocalStorage";
-import { useNowMinute } from "../hooks/useNowMinute";
 import {
   useEnvironmentIdentities,
   useConnectedEnvironmentIds,
@@ -127,7 +123,6 @@ import {
   useServerConfigs,
   useQuietThreadShells,
 } from "../state/entities";
-import { environmentPresentations } from "../state/presentation";
 import { primaryServerKeybindingsAtom } from "../state/server";
 import { environmentProjects } from "../state/projects";
 import { threadEnvironment } from "../state/threads";
@@ -172,7 +167,6 @@ import {
   sidebarListItemId,
   sidebarThreadKeyAtY,
   sortInboxThreadsByReturn,
-  useSnoozeWakeClock,
   useThreadJumpHintsVisible,
   type SidebarListItem,
   type SidebarSection,
@@ -192,7 +186,6 @@ import { SidebarPointerSensor } from "./Sidebar.pointer";
 import { createSidebarListMotion } from "./Sidebar.motion";
 import { resolveSnoozePresets, snoozeWakeLabel, type SnoozePreset } from "./Sidebar.snooze";
 import { ProjectFavicon } from "./ProjectFavicon";
-import { deriveProviderEntriesByEnvironment } from "../providerInstances";
 import { useStableCallback } from "../hooks/useStableCallback";
 import {
   resolveSidebarRouteReveal,
@@ -224,69 +217,25 @@ import {
   type SidebarSweepAction,
 } from "./sidebar/SidebarThreadRow";
 import { SidebarDraftBlock } from "./sidebar/SidebarDraftBlock";
+import { sidebarProviderEntriesAtom } from "./sidebar/sidebarProviderEntries";
+import {
+  SETTLED_SHELF_EXPANDED_KEY,
+  SIDEBAR_SHELF_EXPANDED_DEFAULT,
+  SNOOZED_SHELF_EXPANDED_KEY,
+  WORKING_SHELF_EXPANDED_KEY,
+  useSidebarPartitionClockKey,
+} from "./sidebar/sidebarShelves";
 import {
   SidebarDragBoundary,
   SidebarSectionHeader,
   SidebarSectionPlaceholder,
 } from "./sidebar/SidebarListMarkers";
 
-function sameSidebarProviderEntries(
-  left: ReadonlyMap<string, SidebarProviderEntry>,
-  right: ReadonlyMap<string, SidebarProviderEntry>,
-): boolean {
-  if (left.size !== right.size) return false;
-  for (const [instanceId, entry] of right) {
-    const other = left.get(instanceId);
-    if (
-      other === undefined ||
-      other.driverKind !== entry.driverKind ||
-      other.enabled !== entry.enabled ||
-      other.displayName !== entry.displayName ||
-      other.accentColor !== entry.accentColor ||
-      other.acpRegistryAgentId !== entry.acpRegistryAgentId ||
-      other.acpRegistryIconUrl !== entry.acpRegistryIconUrl ||
-      other.models !== entry.models
-    ) {
-      return false;
-    }
-  }
-  return true;
-}
-
-// Resolve providers per environment because default instance ids collide across environments.
-const sidebarProviderEntriesAtom = Atom.make((get) => {
-  const providersByEnvironment = get(environmentPresentations.providersByEnvironmentAtom);
-  const derived = deriveProviderEntriesByEnvironment(
-    [...get(environmentPresentations.serverConfigsAtom)].map(
-      ([environmentId, config]) =>
-        [environmentId, providersByEnvironment.get(environmentId) ?? [], config.settings] as const,
-    ),
-  );
-  const previous = Option.getOrNull(
-    get.self<ReadonlyMap<string, ReadonlyMap<string, SidebarProviderEntry>>>(),
-  );
-  const next = new Map<string, ReadonlyMap<string, SidebarProviderEntry>>();
-  let changed = previous === null || previous.size !== derived.size;
-  for (const [environmentId, entries] of derived) {
-    const prior = previous?.get(environmentId);
-    if (prior !== undefined && sameSidebarProviderEntries(prior, entries)) {
-      next.set(environmentId, prior);
-    } else {
-      next.set(environmentId, entries);
-      changed = true;
-    }
-  }
-  return !changed && previous !== null ? previous : next;
-}).pipe(Atom.withLabel("sidebar-provider-entries"));
-
 const EMPTY_PROVIDER_ENTRIES: ReadonlyMap<string, SidebarProviderEntry> = new Map();
 const EMPTY_THREADS: readonly EnvironmentThreadShell[] = [];
 
 const SETTLED_TAIL_INITIAL_COUNT = 10;
 const SETTLED_TAIL_PAGE_COUNT = 25;
-const SETTLED_SHELF_EXPANDED_KEY = "t3code:sidebar:settled-expanded";
-const SNOOZED_SHELF_EXPANDED_KEY = "t3code:sidebar:snoozed-expanded";
-const WORKING_SHELF_EXPANDED_KEY = "t3code:sidebar:working-expanded";
 
 const NO_DRAGGED_ORDER: readonly string[] = [];
 const NO_DRAGGED_ORDERS: {
@@ -361,26 +310,20 @@ function useSidebarThreads(input: {
     statusFilter,
   } = input;
   const workingShelfEnabled = useClientSettings((s) => s.sidebarWorkingShelfEnabled);
-  const inboxReturnsVersion = useSyncExternalStore(
-    inboxReturns.subscribe,
-    inboxReturns.getSnapshot,
-  );
-  const nowMinute = useNowMinute();
-  // Minute-quantized clocks would delay second-precise snooze wakes by up to a minute.
-  const snoozeWakeClock = useSnoozeWakeClock(threads);
+  const clockKey = useSidebarPartitionClockKey(threads);
   const [settledShelfExpanded, setSettledShelfExpanded] = useLocalStorage(
     SETTLED_SHELF_EXPANDED_KEY,
-    false,
+    SIDEBAR_SHELF_EXPANDED_DEFAULT,
     Schema.Boolean,
   );
   const [snoozedShelfExpanded, setSnoozedShelfExpanded] = useLocalStorage(
     SNOOZED_SHELF_EXPANDED_KEY,
-    false,
+    SIDEBAR_SHELF_EXPANDED_DEFAULT,
     Schema.Boolean,
   );
   const [workingShelfExpanded, setWorkingShelfExpanded] = useLocalStorage(
     WORKING_SHELF_EXPANDED_KEY,
-    false,
+    SIDEBAR_SHELF_EXPANDED_DEFAULT,
     Schema.Boolean,
   );
   const [settledTail, setSettledTail] = useState({
@@ -401,7 +344,7 @@ function useSidebarThreads(input: {
     workingShelfEnabled,
     statusFilter,
     routeRowThreadKey,
-    clockKey: `${nowMinute}:${snoozeWakeClock}:${inboxReturnsVersion}`,
+    clockKey,
   });
 
   const { pinnedThreads, activeThreads, workingThreads, snoozedThreads, settledThreads } =

@@ -6,7 +6,12 @@ import { buildSidebarProjectSnapshots } from "../../sidebarProjectGrouping";
 import { makeThreadFixture, type ThreadFixtureOverrides } from "../../test-fixtures";
 import type { Project } from "../../types";
 import { partitionSidebarThreads } from "../Sidebar.logic";
-import { buildOverviewGrid, NO_PROJECT_KEY, overviewProjectKeyOf } from "./Overview.logic";
+import {
+  buildOverviewGrid,
+  moveOverviewFocus,
+  NO_PROJECT_KEY,
+  overviewProjectKeyOf,
+} from "./Overview.logic";
 
 const envA = EnvironmentId.make("env-a");
 const envB = EnvironmentId.make("env-b");
@@ -202,5 +207,42 @@ describe("buildOverviewGrid", () => {
       NO_PROJECT_KEY,
     ]);
     expect(grid.columns[1]?.counts.open).toBe(1);
+  });
+});
+
+describe("moveOverviewFocus", () => {
+  // Two rows; column a has a1,a2 then a3; column b is empty in row 0; column c has c1 then nothing.
+  const grid = [
+    [["a1", "a2"], ["a3"]],
+    [[], ["b1"]],
+    [["c1"], []],
+    [[], []],
+  ];
+
+  it("moves up and down through a column across rows", () => {
+    expect(moveOverviewFocus(grid, "a2", "down")).toBe("a3");
+    expect(moveOverviewFocus(grid, "a3", "up")).toBe("a2");
+    expect(moveOverviewFocus(grid, "a1", "up")).toBeNull();
+    expect(moveOverviewFocus(grid, "a3", "down")).toBeNull();
+  });
+
+  it("moves sideways within the same row, keeping the position when it can", () => {
+    expect(moveOverviewFocus(grid, "a3", "right")).toBe("b1");
+    expect(moveOverviewFocus(grid, "b1", "left")).toBe("a3");
+  });
+
+  it("falls back to the nearest row when the neighbouring cell is empty", () => {
+    expect(moveOverviewFocus(grid, "a2", "right")).toBe("b1");
+    expect(moveOverviewFocus(grid, "b1", "right")).toBe("c1");
+  });
+
+  it("skips empty columns and stops at the edges", () => {
+    expect(moveOverviewFocus(grid, "c1", "right")).toBeNull();
+    expect(moveOverviewFocus(grid, "a1", "left")).toBeNull();
+    expect(moveOverviewFocus([[["x"]], [[]], [["y"]]], "x", "right")).toBe("y");
+  });
+
+  it("returns null for a key that is not on the grid", () => {
+    expect(moveOverviewFocus(grid, "missing", "down")).toBeNull();
   });
 });

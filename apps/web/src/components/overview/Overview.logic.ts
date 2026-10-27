@@ -94,3 +94,48 @@ export function buildOverviewGrid(input: {
   }
   return { columns, rows };
 }
+
+export type OverviewFocusDirection = "up" | "down" | "left" | "right";
+
+/** `grid[column][row]` lists the card keys of each visible cell. */
+export type OverviewFocusGrid = ReadonlyArray<ReadonlyArray<ReadonlyArray<string>>>;
+
+export function moveOverviewFocus(
+  grid: OverviewFocusGrid,
+  key: string,
+  direction: OverviewFocusDirection,
+): string | null {
+  for (const [column, cells] of grid.entries()) {
+    for (const [row, cell] of cells.entries()) {
+      const index = cell.indexOf(key);
+      if (index === -1) continue;
+      if (direction === "up" || direction === "down") {
+        const stack = cells.flat();
+        return stack[stack.indexOf(key) + (direction === "down" ? 1 : -1)] ?? null;
+      }
+      const step = direction === "right" ? 1 : -1;
+      for (let next = column + step; next >= 0 && next < grid.length; next += step) {
+        const target = nearestCard(grid[next]!, row, index);
+        if (target !== null) return target;
+      }
+      return null;
+    }
+  }
+  return null;
+}
+
+function nearestCard(
+  cells: ReadonlyArray<ReadonlyArray<string>>,
+  row: number,
+  index: number,
+): string | null {
+  const same = cells[row] ?? [];
+  if (same.length > 0) return same[Math.min(index, same.length - 1)]!;
+  for (let distance = 1; distance < cells.length; distance += 1) {
+    const above = cells[row - distance];
+    if (above !== undefined && above.length > 0) return above.at(-1)!;
+    const below = cells[row + distance];
+    if (below !== undefined && below.length > 0) return below[0]!;
+  }
+  return null;
+}
