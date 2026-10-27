@@ -755,7 +755,7 @@ function GuestComposer({
           type="submit"
           aria-label="Send"
           disabled={sending || (text.trim() === "" && files.length === 0)}
-          className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-message-action text-message-action-foreground shadow-xs hover:bg-message-action-hover focus-visible:outline-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-64"
+          className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-none bg-message-action text-message-action-foreground shadow-xs hover:bg-message-action-hover focus-visible:outline-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-64"
         >
           <ArrowUpIcon aria-hidden className="size-4" />
         </button>

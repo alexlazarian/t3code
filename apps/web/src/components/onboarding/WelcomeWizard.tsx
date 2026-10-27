@@ -1113,7 +1113,7 @@ function AgentInstallTerminal({
             "This connection cannot control terminals."
           ) : setupState === "writeFailed" ? (
             <>
-              Run <code className="rounded bg-muted px-1 font-mono">{command}</code> in this
+              Run <code className="rounded-none bg-muted px-1 font-mono">{command}</code> in this
               terminal.
             </>
           ) : setupState === "ready" ? (

@@ -31,5 +31,4 @@ it("leaves the next attachment its own top edge when there are no notices", asyn
 
   const surface = getComputedStyle(screen.getByTestId("drawer").element(), "::before");
   expect(surface.borderTopWidth).toBe("1px");
-  expect(surface.borderTopLeftRadius).not.toBe("0px");
 });

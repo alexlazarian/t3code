@@ -150,14 +150,14 @@ export function ColorSaturationValuePlane({
           />
           <span
             aria-hidden
-            className="pointer-events-none invisible absolute bottom-2 left-2 z-10 rounded bg-popover px-1.5 py-0.5 text-xs text-popover-foreground peer-focus-visible:visible"
+            className="pointer-events-none invisible absolute bottom-2 left-2 z-10 rounded-none bg-popover px-1.5 py-0.5 text-xs text-popover-foreground peer-focus-visible:visible"
           >
             {axisLabel} {Math.round(value[axis] * 100)}%
           </span>
         </label>
       ))}
       <span
-        className="pointer-events-none absolute size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_0_1px_rgb(0_0_0/0.4)]"
+        className="pointer-events-none absolute size-3 -translate-x-1/2 -translate-y-1/2 rounded-none border-2 border-white shadow-[0_0_0_1px_rgb(0_0_0/0.4)]"
         style={{
           left: `calc(${value.s} * (100% - 0.75rem) + 0.375rem)`,
           top: `calc(${1 - value.v} * (100% - 0.75rem) + 0.375rem)`,
@@ -196,7 +196,7 @@ export function ColorHueSlider({
       aria-valuemin={0}
       aria-valuenow={Math.round(value)}
       className={cn(
-        "relative flex h-6 cursor-pointer touch-none items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
+        "relative flex h-6 cursor-pointer touch-none items-center rounded-none outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
         className,
       )}
       role="slider"
@@ -206,10 +206,10 @@ export function ColorHueSlider({
     >
       <span
         aria-hidden
-        className="h-2.5 w-full rounded-full bg-[linear-gradient(to_right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)] shadow-[inset_0_0_0_1px_rgb(0_0_0_/_12%)]"
+        className="h-2.5 w-full rounded-none bg-[linear-gradient(to_right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)] shadow-[inset_0_0_0_1px_rgb(0_0_0_/_12%)]"
       />
       <span
-        className="pointer-events-none absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_0_1px_rgb(0_0_0/0.4)]"
+        className="pointer-events-none absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-none border-2 border-white shadow-[0_0_0_1px_rgb(0_0_0/0.4)]"
         style={{
           left: `calc(${value / 360} * (100% - 1rem) + 0.5rem)`,
           backgroundColor: `hsl(${value} 100% 50%)`,

@@ -22,7 +22,7 @@ export function ProjectMonogram({
       <svg
         viewBox="0 0 16 16"
         className={cn(
-          "size-full overflow-hidden rounded-[25%] font-mono select-none",
+          "size-full overflow-hidden rounded-none font-mono select-none",
           projectIconColorClassName(color),
         )}
         style={{

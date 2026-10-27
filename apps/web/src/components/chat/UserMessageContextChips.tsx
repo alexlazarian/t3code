@@ -210,7 +210,7 @@ function UserMessagePreviewAnnotationDetails(props: {
                     ) : null}
                   </div>
                   {element.htmlPreview?.trim() ? (
-                    <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap rounded bg-muted/60 px-2 py-1.5 text-3xs leading-relaxed">
+                    <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap rounded-none bg-muted/60 px-2 py-1.5 text-3xs leading-relaxed">
                       {element.htmlPreview.trim()}
                     </pre>
                   ) : null}
@@ -256,12 +256,12 @@ function UserMessageElementDetails({
           ) : null}
         </div>
         {record.htmlPreview?.trim() ? (
-          <div className="flex h-40 flex-col overflow-hidden rounded border border-border">
+          <div className="flex h-40 flex-col overflow-hidden rounded-none border border-border">
             <ReadOnlySourcePreview name="element.html" text={record.htmlPreview} />
           </div>
         ) : null}
         {record.styles?.trim() ? (
-          <div className="flex h-32 flex-col overflow-hidden rounded border border-border">
+          <div className="flex h-32 flex-col overflow-hidden rounded-none border border-border">
             <ReadOnlySourcePreview name="styles.css" text={record.styles} />
           </div>
         ) : null}

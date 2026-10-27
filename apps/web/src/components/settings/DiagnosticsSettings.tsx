@@ -1267,7 +1267,7 @@ function DiagnosticsSettingsBody() {
                       <RelativeTimeNoWrap value={event.seenAt} />
                     </td>
                     <td className="px-4 py-3 align-top">
-                      <span className="inline-flex rounded bg-muted px-1.5 py-0.5 font-mono text-2xs font-medium uppercase text-foreground/80">
+                      <span className="inline-flex rounded-none bg-muted px-1.5 py-0.5 font-mono text-2xs font-medium uppercase text-foreground/80">
                         {event.level}
                       </span>
                     </td>

@@ -1347,7 +1347,7 @@ function TerminalSidebarGroup({
       {showHeader && (
         <button
           type="button"
-          className={`flex h-[22px] w-full cursor-pointer items-center gap-1 rounded px-1.5 text-2xs ${
+          className={`flex h-[22px] w-full cursor-pointer items-center gap-1 rounded-none px-1.5 text-2xs ${
             isGroupActive
               ? "bg-accent/50 text-foreground"
               : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"

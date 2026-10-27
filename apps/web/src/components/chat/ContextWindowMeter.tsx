@@ -115,7 +115,7 @@ export function ContextWindowMeter(props: {
           </div>
           {usage.maxTokens !== null ? (
             <div
-              className="h-1.5 w-full overflow-hidden rounded-full bg-muted/60"
+              className="h-1.5 w-full overflow-hidden rounded-none bg-muted/60"
               role="progressbar"
               aria-valuemin={0}
               aria-valuemax={100}
@@ -123,7 +123,7 @@ export function ContextWindowMeter(props: {
               aria-label="Context window usage"
             >
               <div
-                className="h-full rounded-full transition-[width,background-color] duration-500 ease-out motion-reduce:transition-none"
+                className="h-full rounded-none transition-[width,background-color] duration-500 ease-out motion-reduce:transition-none"
                 style={{ width: `${normalizedPercentage}%`, backgroundColor: usageColor }}
               />
             </div>

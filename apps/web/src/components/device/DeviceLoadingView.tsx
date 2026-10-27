@@ -38,9 +38,9 @@ export function DeviceLoadingView(props: {
               props.stage === "opening" ? "Step 1 of 2: open device" : "Step 2 of 2: connect video"
             }
           >
-            <span className="h-1 flex-1 rounded-full bg-foreground/60" />
+            <span className="h-1 flex-1 rounded-none bg-foreground/60" />
             <span
-              className={`h-1 flex-1 rounded-full ${props.stage === "stream" ? "bg-foreground/60" : "bg-muted"}`}
+              className={`h-1 flex-1 rounded-none ${props.stage === "stream" ? "bg-foreground/60" : "bg-muted"}`}
             />
           </div>
         ) : null}

@@ -78,7 +78,7 @@ export function V2EventTimelineRow({ row }: { row: Extract<TimelineRow, { kind: 
           {item.status !== "completed" ? (
             <span
               className={cn(
-                "shrink-0 rounded-full border px-1.5 py-0.5 font-mono text-3xs",
+                "shrink-0 rounded-none border px-1.5 py-0.5 font-mono text-3xs",
                 item.status === "failed"
                   ? "border-destructive/40 text-destructive"
                   : "border-border/70 text-muted-foreground",
@@ -93,7 +93,7 @@ export function V2EventTimelineRow({ row }: { row: Extract<TimelineRow, { kind: 
             </span>
           ) : null}
           {visibility !== "local" ? (
-            <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-3xs text-muted-foreground">
+            <span className="shrink-0 rounded-none bg-muted px-1.5 py-0.5 text-3xs text-muted-foreground">
               {visibility === "inherited" ? "Inherited" : "Synthetic"}
             </span>
           ) : null}
@@ -161,7 +161,7 @@ export function V2EventTimelineRow({ row }: { row: Extract<TimelineRow, { kind: 
             {item.status !== "completed" ? (
               <span
                 className={cn(
-                  "rounded-full border px-1.5 py-0.5 font-mono text-3xs",
+                  "rounded-none border px-1.5 py-0.5 font-mono text-3xs",
                   item.status === "failed"
                     ? "border-destructive/40 text-destructive"
                     : "border-border/70 text-muted-foreground",
@@ -171,7 +171,7 @@ export function V2EventTimelineRow({ row }: { row: Extract<TimelineRow, { kind: 
               </span>
             ) : null}
             {visibility !== "local" ? (
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-3xs text-muted-foreground">
+              <span className="rounded-none bg-muted px-1.5 py-0.5 text-3xs text-muted-foreground">
                 {visibility === "inherited" ? "Inherited" : "Synthetic"}
               </span>
             ) : null}
