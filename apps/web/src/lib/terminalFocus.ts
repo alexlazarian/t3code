@@ -84,8 +84,8 @@ export function focusPanelTerminalAfterClose(
 
 /**
  * Focuses a terminal from a handler that may also navigate to its thread (a
- * sidebar terminal reveal). When it does, that thread's entry keeps this request
- * instead of focusing the panel's active terminal.
+ * sidebar terminal reveal). When it does, that thread's entry leaves focus to
+ * this request instead of focusing the composer.
  */
 export function focusTerminalOnNavigation(threadRef: ScopedThreadRef, terminalId: string): void {
   const threadKey = scopedThreadKey(threadRef);
@@ -94,19 +94,23 @@ export function focusTerminalOnNavigation(threadRef: ScopedThreadRef, terminalId
 }
 
 /**
- * Entering a thread whose right panel shows a terminal focuses it, unless a
- * navigating handler already asked for a terminal there. Returns the leave
- * cleanup for ChatView's effect.
+ * Marks the thread ChatView now shows. `terminalRequested` says a navigating
+ * handler asked for a terminal there, so the composer must not take focus.
  */
-export function focusTerminalOnThreadEnter(threadRef: ScopedThreadRef): () => void {
+export function enterThreadForTerminalFocus(threadRef: ScopedThreadRef): {
+  readonly terminalRequested: boolean;
+  readonly leave: () => void;
+} {
   const threadKey = scopedThreadKey(threadRef);
-  const requestedByHandler = navigationRequestThreadKey === threadKey;
+  const terminalRequested = navigationRequestThreadKey === threadKey;
   navigationRequestThreadKey = null;
   enteredThreadKey = threadKey;
-  if (!requestedByHandler) focusActivePanelTerminal(threadRef);
-  return () => {
-    // A handler navigating elsewhere marks its target before this cleanup runs.
-    if (enteredThreadKey === threadKey) enteredThreadKey = null;
+  return {
+    terminalRequested,
+    leave: () => {
+      // A handler navigating elsewhere marks its target before this cleanup runs.
+      if (enteredThreadKey === threadKey) enteredThreadKey = null;
+    },
   };
 }
 

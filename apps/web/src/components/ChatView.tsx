@@ -195,7 +195,7 @@ import { usePanelAnimationSettings, usePanelPresence } from "../panelAnimations"
 import { useNewThreadHandler } from "../hooks/useHandleNewThread";
 import { useOpenPanelPullRequestUrl } from "../hooks/useOpenPanelPullRequestUrl";
 import { isPreviewFocused } from "../lib/previewFocus";
-import { focusTerminalOnThreadEnter, isTerminalFocused } from "../lib/terminalFocus";
+import { enterThreadForTerminalFocus, isTerminalFocused } from "../lib/terminalFocus";
 import {
   deriveLogicalProjectKeyFromSettings,
   selectProjectGroupingSettings,
@@ -1984,15 +1984,20 @@ export default function ChatView(props: ChatViewProps) {
     setTimelineAnchor,
   });
 
+  // Entering a thread focuses the composer, unless the handler that navigated
+  // here asked to focus one of its terminals.
   useEffect(() => {
-    if (!activeThread?.id || rightPanelTerminalOpen) return;
+    if (!activeThreadRef) return;
+    const { terminalRequested, leave } = enterThreadForTerminalFocus(activeThreadRef);
+    if (terminalRequested) return leave;
     const frame = window.requestAnimationFrame(() => {
       focusComposerStable();
     });
     return () => {
       window.cancelAnimationFrame(frame);
+      leave();
     };
-  }, [activeThread?.id, focusComposerStable, rightPanelTerminalOpen]);
+  }, [activeThreadRef, focusComposerStable]);
 
   useEffect(() => {
     if (!activeThread?.id || rightPanelTerminalOpen || isMobileViewport) return;
@@ -2494,13 +2499,6 @@ export default function ChatView(props: ChatViewProps) {
   ) {
     setTerminalUiLaunchContext(null);
   }
-
-  // Entering a thread whose right panel shows a terminal focuses it; opening one
-  // from a handler requests focus there. Otherwise the composer effect above
-  // takes focus.
-  useEffect(() => {
-    if (activeThreadRef) return focusTerminalOnThreadEnter(activeThreadRef);
-  }, [activeThreadRef]);
 
   const getShortcutContext = (eventTarget: EventTarget | null = document.activeElement) => ({
     terminalFocus: isTerminalFocused(),

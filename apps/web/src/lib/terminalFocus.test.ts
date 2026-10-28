@@ -5,11 +5,11 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { selectThreadRightPanelState, useRightPanelStore } from "../rightPanelStore";
 import {
   consumePendingTerminalFocus,
+  enterThreadForTerminalFocus,
   focusActivePanelTerminal,
   focusPanelTerminalAfterClose,
   focusTerminal,
   focusTerminalOnNavigation,
-  focusTerminalOnThreadEnter,
   registerTerminalFocusTarget,
 } from "./terminalFocus";
 
@@ -151,16 +151,17 @@ describe("focusTerminal", () => {
     unregisterRemount();
   });
 
-  it("entering a thread whose panel shows a terminal focuses it", () => {
+  it("entering a thread whose panel shows a terminal leaves focus to the composer", () => {
     const ref = threadRef("entered");
     useRightPanelStore.getState().openTerminal(ref, "a");
     const focus = vi.fn(() => true);
     const unregister = registerTerminalFocusTarget({ threadRef: ref, terminalId: "a", focus });
 
-    const leave = focusTerminalOnThreadEnter(ref);
+    const entry = enterThreadForTerminalFocus(ref);
 
-    expect(focus).toHaveBeenCalledTimes(1);
-    leave();
+    expect(entry.terminalRequested).toBe(false);
+    expect(focus).not.toHaveBeenCalled();
+    entry.leave();
     unregister();
   });
 
@@ -183,54 +184,31 @@ describe("focusTerminal", () => {
       terminalId: "revealed",
       focus: revealed,
     });
-    const leave = focusTerminalOnThreadEnter(ref);
+    const entry = enterThreadForTerminalFocus(ref);
 
+    expect(entry.terminalRequested).toBe(true);
     expect(shown).not.toHaveBeenCalled();
     expect(revealed).toHaveBeenCalledTimes(1);
-    leave();
+    entry.leave();
     unregisterShown();
     unregisterRevealed();
   });
 
-  it("re-entering a thread after in-thread terminal actions focuses the panel terminal", () => {
+  it("a terminal request inside the shown thread does not outrank its next entry", () => {
     const ref = threadRef("re-entered");
-    useRightPanelStore.getState().openTerminal(ref, "shown");
-    const shown = vi.fn(() => true);
-    const unregisterShown = registerTerminalFocusTarget({
-      threadRef: ref,
-      terminalId: "shown",
-      focus: shown,
-    });
-
-    const leaveFirst = focusTerminalOnThreadEnter(ref);
-    focusTerminal(ref, "shown");
+    const first = enterThreadForTerminalFocus(ref);
     focusTerminalOnNavigation(ref, "shown");
-    leaveFirst();
-    shown.mockClear();
-    const leaveSecond = focusTerminalOnThreadEnter(ref);
+    first.leave();
 
-    expect(shown).toHaveBeenCalledTimes(1);
-    leaveSecond();
-    unregisterShown();
+    expect(enterThreadForTerminalFocus(ref).terminalRequested).toBe(false);
   });
 
   it("a navigating handler's request only outranks the next thread entry", () => {
     const ref = threadRef("revisited");
-    useRightPanelStore.getState().openTerminal(ref, "shown");
     focusTerminalOnNavigation(ref, "revealed");
-    focusTerminalOnThreadEnter(threadRef("elsewhere"))();
+    enterThreadForTerminalFocus(threadRef("elsewhere")).leave();
 
-    const shown = vi.fn(() => true);
-    const unregisterShown = registerTerminalFocusTarget({
-      threadRef: ref,
-      terminalId: "shown",
-      focus: shown,
-    });
-    const leave = focusTerminalOnThreadEnter(ref);
-
-    expect(shown).toHaveBeenCalledTimes(1);
-    leave();
-    unregisterShown();
+    expect(enterThreadForTerminalFocus(ref).terminalRequested).toBe(false);
   });
 
   it("focuses the panel terminal a closed surface falls back to", () => {

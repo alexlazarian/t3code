@@ -126,6 +126,7 @@ export function useChatTerminalActions(input: ChatTerminalActionsInput) {
     if (!activeThreadRef) return;
     if (activeRightPanelSurface?.kind === "terminal") {
       useRightPanelStore.getState().close(activeThreadRef);
+      composerRef.current?.focusAtEnd();
       return;
     }
     const canRead = readEnvironmentScope(environmentId, AuthTerminalReadScope);
