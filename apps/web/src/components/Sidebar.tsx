@@ -204,7 +204,7 @@ import {
   ComboboxTrigger,
   useComboboxFilter,
 } from "./ui/combobox";
-import { SidebarContent, SidebarGroup, useSidebar } from "./ui/sidebar";
+import { SidebarContent, useSidebar } from "./ui/sidebar";
 import { LibraryPanel } from "./library/LibraryPanel";
 import { sidebarPanelId, sidebarPanelTabId } from "./sidebar/SidebarChrome";
 import { SidebarChromeFooter, SidebarChromeHeader } from "./sidebar/SidebarChrome";
@@ -2558,7 +2558,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
           id={sidebarPanelId("threads")}
           aria-labelledby={sidebarPanelTabId("threads")}
           fixedHeader={
-            <SidebarGroup className="z-[1]">
+            <div className="relative z-[1] border-b border-sidebar-border p-1">
               <SidebarThreadHeader
                 projectScope={
                   projectGroups.length === 0 ? null : (
@@ -2713,10 +2713,10 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                 statusCounts={statusCounts}
                 onStatusFilterChange={setStatusFilter}
               />
-            </SidebarGroup>
+            </div>
           }
         >
-          <SidebarGroup className="flex-1" role="presentation">
+          <div className="relative flex w-full min-w-0 flex-1 flex-col" role="presentation">
             {isSearchingThreads ? (
               threadSearchResults.length > 0 ? (
                 <TooltipProvider
@@ -3167,7 +3167,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                 )}
               </div>
             ) : null}
-          </SidebarGroup>
+          </div>
         </SidebarContent>
       )}
       <SidebarChromeFooter />

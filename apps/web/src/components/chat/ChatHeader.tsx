@@ -315,7 +315,7 @@ export const ChatHeader = memo(function ChatHeader({
   return (
     <div
       ref={breadcrumbContainerRef}
-      className="@container/thread-header flex min-w-0 flex-1 items-center gap-2 sm:gap-3"
+      className="@container/thread-header flex min-w-0 flex-1 items-center gap-2"
       onContextMenu={handleHeaderContextMenu}
     >
       <WorkspaceBreadcrumb

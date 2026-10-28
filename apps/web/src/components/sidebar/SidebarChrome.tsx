@@ -115,7 +115,7 @@ function SidebarPanelTabs() {
     <div
       role="tablist"
       aria-label="Left panel"
-      className="relative z-10 flex shrink-0 gap-0.5 px-3 pb-1.5 [&>button]:flex-1"
+      className="relative z-10 flex shrink-0 border-b border-sidebar-border [&>button]:flex-1"
       onKeyDown={onKeyDown}
     >
       {PANEL_TABS.map((tab) => {
@@ -132,10 +132,10 @@ function SidebarPanelTabs() {
             tabIndex={on ? 0 : -1}
             onClick={() => setPanel(tab.id)}
             className={cn(
-              "h-5 cursor-pointer whitespace-nowrap border px-1.5 text-2xs leading-4.5 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+              "h-7 cursor-pointer whitespace-nowrap border-r border-sidebar-border px-1.5 text-2xs outline-none last:border-r-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
               on
-                ? "border-sidebar-border bg-sidebar-row-hover text-sidebar-foreground"
-                : "border-sidebar-border/60 text-sidebar-muted-foreground hover:text-sidebar-foreground",
+                ? "bg-sidebar-row-hover text-sidebar-foreground"
+                : "text-sidebar-muted-foreground hover:text-sidebar-foreground",
             )}
           >
             {tab.label}
