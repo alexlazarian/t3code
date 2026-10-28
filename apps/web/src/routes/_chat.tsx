@@ -10,6 +10,7 @@ import { appModalReturnPathname, isAppModalPage } from "../components/sidebar/ma
 import { isOverviewPathname } from "../threadView";
 import { SidebarInset } from "../components/ui/sidebar";
 import { resolveThreadRouteTarget, type ThreadRouteTarget } from "../threadRoutes";
+import { noteThreadRouteOpened } from "../threadView";
 import { retainThreadFindForRoute } from "../components/chat/threadFindStore";
 import { ThreadLinkPrompt } from "../components/promptLinks/ThreadLinkPrompt";
 import { useThreadRouteTarget } from "../hooks/useThreadRouteTarget";
@@ -86,6 +87,7 @@ function retainThreadFindForRouteMatch(
   params: Partial<Record<"environmentId" | "threadId", string>>,
 ) {
   const target = resolveThreadRouteTarget(params);
+  if (target?.kind === "server") noteThreadRouteOpened(target.threadRef);
   retainThreadFindForRoute({
     modalPage,
     threadRef: target?.kind === "server" ? target.threadRef : null,

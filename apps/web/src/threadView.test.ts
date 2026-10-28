@@ -2,7 +2,17 @@ import { describe, expect, it } from "vite-plus/test";
 
 import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
 
-import { isOverviewPathname, pickLastVisitedThread } from "./threadView";
+import {
+  __resetCurrentThreadForTests,
+  currentThreadKey,
+  isOverviewPathname,
+  noteOverviewSplitClosed,
+  noteOverviewSplitOpened,
+  noteThreadRouteOpened,
+  overviewSplitThreadKey,
+  pickLastVisitedThread,
+  pickListThread,
+} from "./threadView";
 
 describe("threadView", () => {
   it("recognizes the overview route", () => {
@@ -37,6 +47,46 @@ describe("threadView", () => {
         shell("c", "2026-02-01T00:00:00Z"),
       ]);
       expect(picked?.threadId).toBe("b");
+    });
+  });
+
+  describe("the current thread both views share", () => {
+    const env = "env-1" as EnvironmentId;
+    const ref = (id: string) => ({ environmentId: env, threadId: id as ThreadId });
+    const shell = (id: string, lastVisitedAt: string | null = null) => ({
+      environmentId: env,
+      id: id as ThreadId,
+      archivedAt: null,
+      lastVisitedAt,
+    });
+    const key = (id: string) => `${env}:${id}`;
+
+    it("follows the last thread opened from either view", () => {
+      __resetCurrentThreadForTests();
+      noteThreadRouteOpened(ref("a"));
+      expect(overviewSplitThreadKey()).toBe(key("a"));
+      noteOverviewSplitOpened(ref("b"));
+      expect(pickListThread([shell("a", "2026-03-01T00:00:00Z"), shell("b")])?.threadId).toBe("b");
+    });
+
+    it("keeps the split closed until a different thread opens", () => {
+      __resetCurrentThreadForTests();
+      noteOverviewSplitOpened(ref("a"));
+      noteOverviewSplitClosed();
+      expect(overviewSplitThreadKey()).toBeNull();
+      expect(currentThreadKey()).toBe(key("a"));
+      // Switching to List lands on the same thread; that is not a new open.
+      noteThreadRouteOpened(ref("a"));
+      expect(overviewSplitThreadKey()).toBeNull();
+      expect(pickListThread([shell("a")])?.threadId).toBe("a");
+      noteThreadRouteOpened(ref("b"));
+      expect(overviewSplitThreadKey()).toBe(key("b"));
+    });
+
+    it("falls back to the last visit when the current thread is gone", () => {
+      __resetCurrentThreadForTests();
+      noteThreadRouteOpened(ref("gone"));
+      expect(pickListThread([shell("a", "2026-01-01T00:00:00Z")])?.threadId).toBe("a");
     });
   });
 });

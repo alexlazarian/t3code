@@ -37,6 +37,12 @@ import {
   useServerConfigs,
 } from "../../state/entities";
 import { buildThreadRouteParams } from "../../threadRoutes";
+import {
+  currentThreadKey,
+  noteOverviewSplitClosed,
+  noteOverviewSplitOpened,
+  overviewSplitThreadKey,
+} from "../../threadView";
 import { useThreadSelectionStore } from "../../threadSelectionStore";
 import { useUiStateStore } from "../../uiStateStore";
 import { cn } from "~/lib/utils";
@@ -158,8 +164,9 @@ export function OverviewView() {
   const { environments } = useEnvironments();
   const clockKey = useSidebarPartitionClockKey(threads);
   const expansion = useOverviewRowExpansion();
-  const [focusKey, setFocusKey] = useState<string | null>(null);
-  const [openKey, setOpenKey] = useState<string | null>(null);
+  // Both start from the thread List showed last, so switching views does not lose it.
+  const [focusKey, setFocusKey] = useState(currentThreadKey);
+  const [openKey, setOpenKey] = useState(overviewSplitThreadKey);
   const [columnDrag, setColumnDrag] = useState<{
     readonly from: string;
     readonly over: string | null;
@@ -288,9 +295,15 @@ export function OverviewView() {
     void router.navigate({ to: "/$environmentId/$threadId", params: buildThreadRouteParams(ref) });
   });
   const showThread = useStableCallback((threadKey: string) => {
+    const ref = parseScopedThreadKey(threadKey);
+    if (ref !== null) noteOverviewSplitOpened(ref);
     setFocusKey(threadKey);
     setOpenKey(threadKey);
   });
+  const closeSplit = () => {
+    noteOverviewSplitClosed();
+    setOpenKey(null);
+  };
   const startThreadIn = (project: NonNullable<OverviewColumn["project"]>) => {
     void updateClientSettings({ threadView: "list" });
     void handleNewThread(scopeProjectRef(project.environmentId, project.id));
@@ -330,12 +343,12 @@ export function OverviewView() {
   const handleGridClick = (event: MouseEvent<HTMLDivElement>) => {
     if (openKey === null) return;
     if (event.target instanceof Element && event.target.closest(GRID_CONTROL_SELECTOR)) return;
-    setOpenKey(null);
+    closeSplit();
   };
   const handleGridKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape" && openKey !== null) {
       event.preventDefault();
-      setOpenKey(null);
+      closeSplit();
       return;
     }
     const direction = ARROW_DIRECTIONS[event.key];
@@ -362,7 +375,7 @@ export function OverviewView() {
         fill: "forwards",
       })
       .finished.then(
-        () => setOpenKey(null),
+        () => closeSplit(),
         () => undefined,
       );
   };
