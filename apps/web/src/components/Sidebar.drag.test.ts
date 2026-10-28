@@ -141,13 +141,11 @@ describe("sidebar collision detection", () => {
       const sourceRect = rects[activeIndex]!;
       let boundaryTop = 300;
       const boundaryNode = {
-        querySelector: () => ({
-          getBoundingClientRect: () => ({
-            top: boundaryTop,
-            bottom: boundaryTop + 16,
-            left: 0,
-            right: 260,
-          }),
+        getBoundingClientRect: () => ({
+          top: boundaryTop,
+          bottom: boundaryTop + 16,
+          left: 0,
+          right: 260,
         }),
       } as unknown as HTMLElement;
       const detector = createSidebarCollisionDetection(() => true, {
@@ -352,6 +350,36 @@ describe("sidebar drag projection", () => {
       expect(result.get(sidebarMarkerId("settled-header"))?.y).toBe(0);
     },
   );
+
+  it("keeps visible section header rows in place while reordering active rows", () => {
+    const items = [
+      pinnedHeader,
+      thread("p", "pinned"),
+      divider,
+      thread("a1", "active"),
+      thread("a2", "active"),
+      settledHeader,
+      thread("s", "settled"),
+    ];
+    const strategy = createSidebarSortingStrategy({
+      items,
+      settledOrder: [],
+      settledExpanded: true,
+    });
+    const args = layout(items, "a2", "a1");
+    let top = 100;
+    for (const [index, item] of items.entries()) {
+      const height = item.kind === "marker" ? 20 : item.section === "settled" ? 36 : 82;
+      args.rects[index] = { ...args.rects[index]!, top, height, bottom: top + height };
+      top += height + 1;
+    }
+    const at = (id: string) =>
+      strategy({ ...args, index: items.findIndex((item) => sidebarListItemId(item) === id) });
+    expect(at("p")).toEqual(stationary);
+    expect(at(sidebarMarkerId("pinned-divider"))).toEqual(stationary);
+    expect(at("a1")).toEqual({ ...stationary, y: 83 });
+    expect(at(sidebarMarkerId("settled-header"))).toEqual(stationary);
+  });
 
   it("opens label space below each pinned boundary while dragging", () => {
     const items = [

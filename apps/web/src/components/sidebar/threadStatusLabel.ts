@@ -72,7 +72,7 @@ export function resolveSidebarStatusLabel(input: {
   }
   if (input.isWoke) return { label: "Woke", icon: "woke", className: "text-warning-foreground" };
   if (input.isUnread || input.isCompleted) {
-    return { label: "Done", icon: "done", className: "text-muted-foreground" };
+    return { label: "Done", icon: "done", className: "text-foreground" };
   }
   return null;
 }

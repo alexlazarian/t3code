@@ -31,6 +31,8 @@ import {
 } from "../Sidebar.logic";
 import { sidebarProviderEntriesAtom } from "../sidebar/sidebarProviderEntries";
 import {
+  ACTIVE_SECTION_EXPANDED_KEY,
+  PINNED_SECTION_EXPANDED_KEY,
   SETTLED_SHELF_EXPANDED_KEY,
   SETTLED_TAIL_INITIAL_COUNT,
   SETTLED_TAIL_PAGE_COUNT,
@@ -85,8 +87,8 @@ function useOverviewRowExpansion(): Record<
   SidebarSection,
   readonly [boolean, (v: boolean) => void]
 > {
-  const pinned = useLocalStorage("t3code:overview:pinned-expanded", true, Schema.Boolean);
-  const active = useLocalStorage("t3code:overview:active-expanded", true, Schema.Boolean);
+  const pinned = useLocalStorage(PINNED_SECTION_EXPANDED_KEY, true, Schema.Boolean);
+  const active = useLocalStorage(ACTIVE_SECTION_EXPANDED_KEY, true, Schema.Boolean);
   const working = useLocalStorage(
     WORKING_SHELF_EXPANDED_KEY,
     SIDEBAR_SHELF_EXPANDED_DEFAULT,

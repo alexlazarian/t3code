@@ -25,6 +25,8 @@ import {
   shouldRecedeSidebarThread,
   sortInboxThreadsByReturn,
   resolveSidebarDropTarget,
+  buildSidebarListItems,
+  sidebarMarkerId,
   planSidebarThreadDrop,
   sortPinnedThreadsForSidebar,
   sortProjectsForSidebar,
@@ -1157,6 +1159,30 @@ describe("Working shelf (beta)", () => {
       marker("settled-header"),
       row("s1", "settled"),
     ];
+
+    it("gives every section a header row, and a collapsed section only its header", () => {
+      const built = buildSidebarListItems({
+        pinned: [],
+        active: ["a1"],
+        working: [],
+        snoozed: null,
+        settled: [],
+      });
+      expect(built).toEqual([
+        marker("pinned-header"),
+        marker("pinned-divider"),
+        marker("active-placeholder"),
+        row("a1", "active"),
+        marker("working-header"),
+        marker("settled-header"),
+        marker("settled-placeholder"),
+      ]);
+      expect(resolveSidebarDropTarget(built, "a1", sidebarMarkerId("pinned-divider"))).toEqual({
+        section: "pinned",
+        pinnedOrder: ["a1"],
+        activeOrder: [],
+      });
+    });
 
     it("never drops into the Working shelf, and keeps it out of the inbox order", () => {
       expect(resolveSidebarDropTarget(items, "a1", "w1")).toBeNull();

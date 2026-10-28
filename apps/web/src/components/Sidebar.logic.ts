@@ -214,6 +214,35 @@ export function sidebarListItemId(item: SidebarListItem): string {
   return item.kind === "thread" ? item.key : sidebarMarkerId(item.marker);
 }
 
+/** Section header rows double as drag boundaries; working and snoozed shelves pass null when empty. */
+export function buildSidebarListItems(sections: {
+  readonly pinned: readonly string[];
+  readonly active: readonly string[];
+  readonly working: readonly string[] | null;
+  readonly snoozed: readonly string[] | null;
+  readonly settled: readonly string[];
+}): SidebarListItem[] {
+  const rows = (keys: readonly string[], section: SidebarSection): SidebarListItem[] =>
+    keys.map((key) => ({ kind: "thread", key, section }));
+  const marker = (name: SidebarListMarker): SidebarListItem => ({ kind: "marker", marker: name });
+  return [
+    marker("pinned-header"),
+    ...rows(sections.pinned, "pinned"),
+    marker("pinned-divider"),
+    marker("active-placeholder"),
+    ...rows(sections.active, "active"),
+    ...(sections.working === null
+      ? []
+      : [marker("working-header"), ...rows(sections.working, "working")]),
+    ...(sections.snoozed === null
+      ? []
+      : [marker("snoozed-header"), ...rows(sections.snoozed, "snoozed")]),
+    marker("settled-header"),
+    marker("settled-placeholder"),
+    ...rows(sections.settled, "settled"),
+  ];
+}
+
 function sectionAtSidebarSlot(items: readonly SidebarListItem[], index: number): SidebarSection {
   let section: SidebarSection = "pinned";
   for (let i = 0; i < index && i < items.length; i += 1) {
@@ -749,13 +778,6 @@ export function isSidebarNestedLinkClick(target: EventTarget | null): boolean {
       ? target.parentElement
       : null;
   return nodeClosest(parent, "a[href]") !== null;
-}
-
-export function shouldCreateNewThreadInCurrentProject(
-  shiftKey: boolean,
-  projectGroupCount: number,
-): boolean {
-  return shiftKey || projectGroupCount <= 1;
 }
 
 export function orderItemsByPreferredIds<TItem, TId>(input: {
