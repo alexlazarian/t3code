@@ -195,7 +195,7 @@ import { usePanelAnimationSettings, usePanelPresence } from "../panelAnimations"
 import { useNewThreadHandler } from "../hooks/useHandleNewThread";
 import { useOpenPanelPullRequestUrl } from "../hooks/useOpenPanelPullRequestUrl";
 import { isPreviewFocused } from "../lib/previewFocus";
-import { focusTerminalOnThreadEnter, getTerminalFocusOwner } from "../lib/terminalFocus";
+import { focusTerminalOnThreadEnter, isTerminalFocused } from "../lib/terminalFocus";
 import {
   deriveLogicalProjectKeyFromSettings,
   selectProjectGroupingSettings,
@@ -214,7 +214,6 @@ import {
 } from "../composerDraftStore";
 import { type TerminalContextDraft } from "../lib/terminalContext";
 import { collectInlineContextIds } from "../lib/composerContextReferences";
-import { selectThreadTerminalUiState, useTerminalUiStateStore } from "../terminalUiStateStore";
 import { useKnownTerminalSessions, useThreadRunningTerminalIds } from "../state/terminalSessions";
 import { useEnvironmentQuery } from "../state/query";
 import { useEnvironmentScope } from "~/state/session";
@@ -342,7 +341,6 @@ import { useOrchestrationCommand } from "../state/use-orchestration-command";
 import { useAtomQueryRunner } from "../state/use-atom-query-runner";
 import { observeResize } from "~/lib/observeResize";
 import { ThreadVisitWatermark } from "./chat/ThreadVisitWatermark";
-import { ChatTerminalDrawers } from "./chat/ChatTerminalDrawers";
 import { ChatRightPanel } from "./chat/ChatRightPanel";
 import { useDraftEnvironmentRouting } from "./chat/useDraftEnvironmentRouting";
 import { branchMismatchBannerItem } from "./chat/ThreadActivityBanners";
@@ -715,10 +713,6 @@ export default function ChatView(props: ChatViewProps) {
   const setMultipleModelSelectionsStable = useStableCallback(setMultipleModelSelections);
   const feedbackUploadsInFlightRef = useRef(new Set<string>());
 
-  const terminalUiState = useTerminalUiStateStore((state) =>
-    selectThreadTerminalUiState(state.terminalUiStateByThreadKey, routeThreadRef),
-  );
-
   const fallbackDraftProjectRef = draftThread
     ? scopeProjectRef(draftThread.environmentId, draftThread.projectId)
     : null;
@@ -944,6 +938,7 @@ export default function ChatView(props: ChatViewProps) {
   const activeRightPanelSurface = useRightPanelStore((state) =>
     selectActiveRightPanelSurface(state.byThreadKey, activeThreadRef),
   );
+  const rightPanelTerminalOpen = activeRightPanelKind === "terminal";
   const activePreviewState = useThreadPreviewState(activeThreadRef);
   const activePreviewServerEpoch = activePreviewState.serverEpoch;
   const resolvePreviewRuntimeTabId = activeThreadRef
@@ -1647,7 +1642,7 @@ export default function ChatView(props: ChatViewProps) {
   const terminalShortcutLabelOptions = {
     context: {
       terminalFocus: true,
-      terminalOpen: Boolean(terminalUiState.terminalOpen),
+      terminalOpen: rightPanelTerminalOpen,
     },
   };
   const splitTerminalShortcutLabel = shortcutLabelForCommand(
@@ -1775,12 +1770,11 @@ export default function ChatView(props: ChatViewProps) {
     runShellCommandStable,
     splitPanelTerminalStable,
     splitPanelTerminalVerticalStable,
-    toggleTerminalVisibilityStable,
+    toggleTerminalStable,
     shortcuts: terminalShortcuts,
   } = useChatTerminalActions({
     environmentId,
     composerRef,
-    terminalUiState,
     activeThread,
     activeThreadId,
     activeThreadRef,
@@ -1991,17 +1985,17 @@ export default function ChatView(props: ChatViewProps) {
   });
 
   useEffect(() => {
-    if (!activeThread?.id || terminalUiState.terminalOpen) return;
+    if (!activeThread?.id || rightPanelTerminalOpen) return;
     const frame = window.requestAnimationFrame(() => {
       focusComposerStable();
     });
     return () => {
       window.cancelAnimationFrame(frame);
     };
-  }, [activeThread?.id, focusComposerStable, terminalUiState.terminalOpen]);
+  }, [activeThread?.id, focusComposerStable, rightPanelTerminalOpen]);
 
   useEffect(() => {
-    if (!activeThread?.id || terminalUiState.terminalOpen || isMobileViewport) return;
+    if (!activeThread?.id || rightPanelTerminalOpen || isMobileViewport) return;
     let frame: number | null = null;
     const onWindowFocus = () => {
       if (frame !== null) window.cancelAnimationFrame(frame);
@@ -2019,7 +2013,7 @@ export default function ChatView(props: ChatViewProps) {
       window.removeEventListener("focus", onWindowFocus);
       if (frame !== null) window.cancelAnimationFrame(frame);
     };
-  }, [activeThread?.id, focusComposerStable, isMobileViewport, terminalUiState.terminalOpen]);
+  }, [activeThread?.id, focusComposerStable, isMobileViewport, rightPanelTerminalOpen]);
 
   // Promotion drops draftId while a send may still be dispatching, so key by thread.
   const [localDispatchThreadId, setLocalDispatchThreadId] = useState(threadId);
@@ -2114,7 +2108,7 @@ export default function ChatView(props: ChatViewProps) {
       composerTimelineInsetRef.current = nextInset;
       setComposerTimelineInset(nextInset);
     }
-    // Reserve the expanded composer height for the terminal drawer and empty placeholder.
+    // Reserve the expanded composer height for the empty placeholder.
     // Keep it while the mobile strip collapses, but allow growth from approvals or tasks.
     // A hero overlay fills the pane, so reserve only its stack.
     const stack = composerOverlayElement?.querySelector<HTMLElement>(
@@ -2490,7 +2484,7 @@ export default function ChatView(props: ChatViewProps) {
   if (
     terminalUiLaunchContext !== null &&
     (terminalUiLaunchContext.threadId !== activeThreadId ||
-      !terminalUiState.terminalOpen ||
+      !rightPanelTerminalOpen ||
       (activeProjectCwd !== null &&
         projectScriptCwd({
           project: { cwd: activeProjectCwd },
@@ -2501,16 +2495,16 @@ export default function ChatView(props: ChatViewProps) {
     setTerminalUiLaunchContext(null);
   }
 
-  // Entering a thread with its drawer open focuses the drawer terminal; opening
-  // it from a handler requests focus there. A closed drawer leaves focus to the
-  // composer effect above.
+  // Entering a thread whose right panel shows a terminal focuses it; opening one
+  // from a handler requests focus there. Otherwise the composer effect above
+  // takes focus.
   useEffect(() => {
     if (activeThreadRef) return focusTerminalOnThreadEnter(activeThreadRef);
   }, [activeThreadRef]);
 
   const getShortcutContext = (eventTarget: EventTarget | null = document.activeElement) => ({
-    terminalFocus: getTerminalFocusOwner() !== null,
-    terminalOpen: Boolean(terminalUiState.terminalOpen),
+    terminalFocus: isTerminalFocused(),
+    terminalOpen: rightPanelTerminalOpen,
     previewFocus: isPreviewFocused(),
     previewOpen: previewPanelOpen,
     editableFocus: isEditableFocused(eventTarget),
@@ -3123,9 +3117,9 @@ export default function ChatView(props: ChatViewProps) {
             onToggleFiles={toggleFilesSurfaceStable}
             onTogglePullRequests={togglePullRequestsSurfaceStable}
             terminalAvailable={activeProject !== null}
-            terminalOpen={terminalUiState.terminalOpen}
+            terminalOpen={rightPanelTerminalOpen}
             terminalShortcutLabel={terminalShortcutLabel}
-            onToggleTerminal={toggleTerminalVisibilityStable}
+            onToggleTerminal={toggleTerminalStable}
             rightPanelAvailable={activeProject !== null}
             rightPanelOpen={rightPanelOpen}
             rightPanelShortcutLabel={rightPanelShortcutLabel}
@@ -3456,7 +3450,7 @@ export default function ChatView(props: ChatViewProps) {
                               resolvedTheme={resolvedTheme}
                               settings={settings}
                               keybindings={keybindings}
-                              terminalOpen={Boolean(terminalUiState.terminalOpen)}
+                              terminalOpen={rightPanelTerminalOpen}
                               gitCwd={gitCwd}
                               pullRequestProjectId={
                                 supportsPullRequests ? (activeProject?.id ?? null) : null
@@ -3522,10 +3516,7 @@ export default function ChatView(props: ChatViewProps) {
                         </div>
                       </ComposerSurface.Host>
                       <div className="min-h-0">
-                        <div
-                          data-terminal-open={terminalUiState.terminalOpen ? "true" : undefined}
-                          className="relative z-0"
-                        >
+                        <div className="relative z-0">
                           {mountComposerModelStrip ? (
                             <ComposerSurface.ContextStrip
                               data-composer-model-strip="true"
@@ -3686,19 +3677,6 @@ export default function ChatView(props: ChatViewProps) {
             />
           </ThreadFindCanvas>
         </div>
-
-        <ChatTerminalDrawers
-          activeThreadKey={activeThreadKey}
-          activeTerminalOpen={Boolean(terminalUiState.terminalOpen)}
-          composerHeight={composerReservedHeight}
-          launchContext={activeTerminalLaunchContext ?? null}
-          splitShortcutLabel={splitTerminalShortcutLabel ?? undefined}
-          splitVerticalShortcutLabel={splitTerminalVerticalShortcutLabel ?? undefined}
-          newShortcutLabel={newTerminalShortcutLabel ?? undefined}
-          closeShortcutLabel={closeTerminalShortcutLabel ?? undefined}
-          keybindings={keybindings}
-          onAddTerminalContext={addTerminalContextToDraftStable}
-        />
       </div>
 
       {rightPanelPresent && activeThreadRef ? (

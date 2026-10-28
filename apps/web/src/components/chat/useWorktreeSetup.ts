@@ -13,8 +13,8 @@ import { useEnvironmentQuery } from "../../state/query";
 import { threadEnvironment } from "../../state/threads";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { vcsEnvironment } from "../../state/vcs";
-import { useTerminalUiStateStore } from "../../terminalUiStateStore";
 import type { Thread } from "../../types";
+import { showTerminalInRightPanel } from "../../lib/revealThreadTerminal";
 import { focusTerminal } from "../../lib/terminalFocus";
 import { resolveVisibleWorktreeSetup, resolveWorktreeSetupProgress } from "../ChatView.logic";
 import { worktreeSetupAgentStarted } from "./MessagesTimeline.logic";
@@ -51,7 +51,6 @@ export function useWorktreeSetup(input: {
     reportFailure: false,
   });
   const retryWorkspacePreparation = useAtomCommand(threadEnvironment.retryWorkspacePreparation);
-  const storeEnsureTerminal = useTerminalUiStateStore((state) => state.ensureTerminal);
   const [startedSetup, setStartedSetup] = useState<{
     readonly environmentId: EnvironmentId;
     readonly threadId: ThreadId;
@@ -152,7 +151,7 @@ export function useWorktreeSetup(input: {
     worktreeSetup && threadRef && worktreeSetup.threadId === threadRef.threadId ? threadRef : null;
   const openSetupTerminal = setupThreadRef
     ? (terminalId: string) => {
-        storeEnsureTerminal(setupThreadRef, terminalId, { open: true, active: true });
+        showTerminalInRightPanel(setupThreadRef, terminalId);
         focusTerminal(setupThreadRef, terminalId);
       }
     : null;

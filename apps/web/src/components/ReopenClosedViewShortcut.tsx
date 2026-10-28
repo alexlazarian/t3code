@@ -25,6 +25,7 @@ import {
 import {
   PULL_REQUESTS_PANEL_REF,
   selectActiveRightPanel,
+  selectRightPanelTerminalOpen,
   selectSelectedRightPanelSurface,
   selectThreadRightPanelState,
   useRightPanelStore,
@@ -35,7 +36,6 @@ import { previewEnvironment } from "../state/preview";
 import { primaryServerKeybindingsAtom } from "../state/server";
 import { environmentShell } from "../state/shell";
 import { useAtomCommand } from "../state/use-atom-command";
-import { selectThreadTerminalUiState, useTerminalUiStateStore } from "../terminalUiStateStore";
 import {
   buildDraftThreadRouteParams,
   buildThreadRouteParams,
@@ -65,9 +65,8 @@ export function ReopenClosedViewShortcut() {
       : draft
         ? (draft.promotedTo ?? scopeThreadRef(draft.environmentId, draft.threadId))
         : null;
-  const terminalOpen = useTerminalUiStateStore(
-    (state) =>
-      selectThreadTerminalUiState(state.terminalUiStateByThreadKey, threadRef).terminalOpen,
+  const terminalOpen = useRightPanelStore((state) =>
+    selectRightPanelTerminalOpen(state.byThreadKey, threadRef),
   );
   const previewOpen = useRightPanelStore(
     (state) => selectActiveRightPanel(state.byThreadKey, threadRef) === "preview",

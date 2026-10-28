@@ -196,7 +196,7 @@ export interface ThreadHeaderToolsProps {
   readonly onToggleRightPanel: () => void;
 }
 
-/** The thread header's icon buttons: thread details, right panel surfaces, terminal drawer, whole right panel. Unavailable ones are not shown. */
+/** The thread header's icon buttons: thread details, right panel surfaces, whole right panel. Unavailable ones are not shown. */
 export const ThreadHeaderTools = memo(function ThreadHeaderTools({
   threadPanelAnchorRef,
   ...props
@@ -272,7 +272,7 @@ export const ThreadHeaderTools = memo(function ThreadHeaderTools({
         <HeaderToolButton
           icon={TerminalSquare}
           label="Terminal"
-          info={withShortcut("Toggle terminal drawer", props.terminalShortcutLabel)}
+          info={withShortcut("Toggle terminal", props.terminalShortcutLabel)}
           on={props.terminalOpen}
           onToggle={props.onToggleTerminal}
         />

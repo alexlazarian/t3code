@@ -1109,6 +1109,14 @@ export function selectActiveRightPanel(
   return state.surfaces.find((surface) => surface.id === state.activeSurfaceId)?.kind ?? null;
 }
 
+/** The `terminalOpen` keybinding context: the thread's open right panel shows a terminal. */
+export function selectRightPanelTerminalOpen(
+  byThreadKey: Record<string, ThreadRightPanelState>,
+  ref: ScopedThreadRef | null | undefined,
+): boolean {
+  return selectActiveRightPanel(byThreadKey, ref) === "terminal";
+}
+
 export function selectActiveRightPanelSurface(
   byThreadKey: Record<string, ThreadRightPanelState>,
   ref: ScopedThreadRef | null | undefined,

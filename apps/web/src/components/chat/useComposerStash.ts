@@ -48,7 +48,7 @@ import { remainingComposerAttachmentSlots } from "./composerThreadImport";
 import { replaceComposerContextReferences } from "@t3tools/shared/composerContextReferences";
 import { resizeSnapShotSource } from "../../lib/snapShotSource";
 import { registerCommands } from "../../shortcuts/dispatcher";
-import { selectThreadTerminalUiState, useTerminalUiStateStore } from "../../terminalUiStateStore";
+import { selectRightPanelTerminalOpen, useRightPanelStore } from "../../rightPanelStore";
 import { toastManager } from "../ui/toast";
 import type { useComposerTriggerState } from "./useComposerTriggerState";
 import {
@@ -687,11 +687,9 @@ export function useComposerStash(input: {
   // dialog even when a focused widget (the model picker search) stops the key.
   const backgroundThread = use(BackgroundThreadContext);
   const readShortcutContext = useStableCallback(() => ({
-    terminalOpen: Boolean(
-      selectThreadTerminalUiState(
-        useTerminalUiStateStore.getState().terminalUiStateByThreadKey,
-        routeThreadRef,
-      ).terminalOpen,
+    terminalOpen: selectRightPanelTerminalOpen(
+      useRightPanelStore.getState().byThreadKey,
+      routeThreadRef,
     ),
   }));
   useEffect(() => {

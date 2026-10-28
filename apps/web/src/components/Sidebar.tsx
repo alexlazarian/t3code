@@ -84,7 +84,7 @@ import {
 import { useShortcutModifierState } from "../shortcutModifierState";
 import { isTerminalFocused } from "../lib/terminalFocus";
 import { isModelPickerOpen } from "../modelPickerVisibility";
-import { selectThreadTerminalUiState, useTerminalUiStateStore } from "../terminalUiStateStore";
+import { selectRightPanelTerminalOpen, useRightPanelStore } from "../rightPanelStore";
 import { isMacPlatform } from "~/lib/utils";
 import { readLocalApi } from "../localApi";
 import { useSidebarPendingFileDropStore } from "../sidebarPendingFileDropStore";
@@ -2467,10 +2467,8 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     },
   );
 
-  const routeTerminalOpen = useTerminalUiStateStore((state) =>
-    routeThreadRef
-      ? selectThreadTerminalUiState(state.terminalUiStateByThreadKey, routeThreadRef).terminalOpen
-      : false,
+  const routeTerminalOpen = useRightPanelStore((state) =>
+    selectRightPanelTerminalOpen(state.byThreadKey, routeThreadRef),
   );
   useEffect(() => {
     const onWindowKeyDown = (event: KeyboardEvent) => {
