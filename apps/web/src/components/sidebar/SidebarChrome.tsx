@@ -21,7 +21,6 @@ import { SidebarThreadUndoNotice } from "./SidebarThreadUndoNotice";
 import { SidebarProviderUpdatePill } from "./SidebarProviderUpdatePill";
 import { SidebarUpdateArchitectureWarning, SidebarUpdatePill } from "./SidebarUpdatePill";
 import { PullRequestGlyph } from "~/components/pullRequest/pullRequestIcons";
-import { observeResize } from "~/lib/observeResize";
 import { useUiStateStore, type SidebarPanel } from "../../uiStateStore";
 
 export const SidebarChromeHeader = memo(function SidebarChromeHeader({
@@ -113,30 +112,6 @@ function SidebarPanelTabs() {
           </button>
         );
       })}
-    </div>
-  );
-}
-
-export function SidebarBrandWidthProbe({
-  onWidthChange,
-}: {
-  onWidthChange: (width: number) => void;
-}) {
-  const observeWidth = (probe: HTMLDivElement) => {
-    return observeResize(probe, ([entry]) => {
-      if (entry) onWidthChange(entry.borderBoxSize[0]?.inlineSize ?? probe.offsetWidth);
-    });
-  };
-
-  return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none invisible fixed top-0 left-0 flex w-max border-r border-transparent pr-3"
-      ref={observeWidth}
-    >
-      <div className="ml-3 flex">
-        <SidebarBrandMark />
-      </div>
     </div>
   );
 }

@@ -249,6 +249,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   --color-code: var(--code-background);
   --color-foreground: var(--contrast-foreground);
   --color-background: var(--background);
+  --color-surface-raised: var(--surface-raised);
   --color-message: var(--message-surface);
   --color-message-foreground: var(--contrast-message-foreground);
   --color-message-action: var(--message-action);

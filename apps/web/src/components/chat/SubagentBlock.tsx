@@ -251,7 +251,12 @@ function SubagentBlockRow(props: {
                 : "text-muted-foreground",
           )}
         >
-          {remote !== undefined ? <>on {remote.label}{detail ? <> &middot; </> : null}</> : null}
+          {remote !== undefined ? (
+            <>
+              on {remote.label}
+              {detail ? <> &middot; </> : null}
+            </>
+          ) : null}
           {detail}
         </span>
         <span className={cn("shrink-0", STATE_TEXT[state])}>{word}</span>

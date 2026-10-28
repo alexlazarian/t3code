@@ -407,10 +407,21 @@ export function getStandardThemeColors(appearance: ThemeAppearance): ThemeColors
   return (standardLightThemeColors ??= decodeThemeColors(T3_CODE_LIGHT_THEME_COLORS));
 }
 
-// index.css paints the light bubble a step darker than the shared palette mobile uses.
+// index.css paints the fork's default palette, not the shared one mobile uses.
+// The light canvas is index.css's color-mix(in oklab, #fcfcfc, black 9%).
 const STANDARD_WEB_PAINTED_COLORS: Record<ThemeAppearance, Partial<ThemeColors>> = {
-  light: { messageSurface: "#ebebed" },
-  dark: { canvas: "#000000", messageSurface: "#1e1e1e" },
+  light: {
+    canvas: "#dedede",
+    surface: "#ffffff",
+    surfaceRaised: "#fcfcfc",
+    messageSurface: "#fcfcfc",
+  },
+  dark: {
+    canvas: "#1f1d1b",
+    surface: "#2a2826",
+    surfaceRaised: "#34312e",
+    messageSurface: "#34312e",
+  },
 };
 
 /** The standard theme as index.css paints it, for solves that measure the page. */

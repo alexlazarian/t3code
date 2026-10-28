@@ -54,14 +54,7 @@ import {
 } from "@t3tools/contracts";
 import type { OlderSettledScope } from "@t3tools/client-runtime/state/threads";
 
-import {
-  CheckIcon,
-  ChevronDownIcon,
-  FolderIcon,
-  ListFilterIcon,
-  PlusIcon,
-  SettingsIcon,
-} from "lucide-react";
+import { CheckIcon, ChevronDownIcon, FolderIcon, PlusIcon, SettingsIcon } from "lucide-react";
 import {
   useEffect,
   useLayoutEffect,
@@ -114,7 +107,6 @@ import { useSidebarProjectGroups } from "../hooks/useSidebarProjectGroups";
 import { useTerminalFocus } from "../hooks/useTerminalFocus";
 import { isCommandPaletteOpen, openCommandPalette } from "../commandPaletteBus";
 import { registerSettleAndAdvance } from "../settleAndAdvance";
-import { startNewThreadFromContext } from "../lib/chatThreadActions";
 import { useBoringSidebarEnabled, useClientSettings } from "../hooks/useSettings";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { useLocalStorage } from "../hooks/useLocalStorage";
@@ -158,7 +150,6 @@ import {
 } from "./threadActionMenu.logic";
 import {
   applySidebarThreadDrop,
-  filterSidebarV2VisibleThreads,
   groupSidebarThreadsByProject,
   sidebarFolderExpansionKeys,
   buildBulkTitleRegenerationContextMenuItem,

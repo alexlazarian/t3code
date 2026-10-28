@@ -407,7 +407,7 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
     };
   }, [keybindings, toggleSidebar, usagePageOpen]);
 
-  // oxlint-disable-next-line t3code/react-effect-budget -- subscribes to the palette's open-sidebar request on window
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- subscribes to the palette's open-sidebar request
   useEffect(
     () => onOpenSidebarRequest(() => (isMobile ? setOpenMobile(true) : setOpen(true))),
     [isMobile, setOpen, setOpenMobile],
