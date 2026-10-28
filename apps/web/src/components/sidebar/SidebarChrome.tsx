@@ -99,9 +99,9 @@ function SidebarPanelTabs() {
             onClick={() => setPanel(tab.id)}
             className={cn(
               "h-7.5 cursor-pointer whitespace-nowrap border-r border-sidebar-border px-1.5 text-control outline-none last:border-r-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
-              // The open tab is the panel itself; the closed one sits on the raised strip.
+              // Lit like the top bar's view switch, so both read the same way.
               on
-                ? "text-sidebar-foreground"
+                ? "bg-primary font-medium text-primary-foreground"
                 : "bg-sidebar-control-surface text-sidebar-muted-foreground hover:bg-sidebar-row-hover hover:text-sidebar-foreground",
             )}
           >
