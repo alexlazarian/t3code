@@ -20,8 +20,8 @@ export function LibraryPanel() {
     <div className="flex min-h-0 flex-1 flex-col gap-2 px-2 py-2">
       <nav aria-label="Library categories" className="flex flex-col gap-px">
         {LIBRARY_GROUPS.map((group) => (
-          <div key={group.group} className="flex flex-col gap-px">
-            <div className="px-2 pt-1 pb-0.5 text-2xs font-medium uppercase tracking-wide text-sidebar-muted-foreground">
+          <div key={group.group} className="flex flex-col gap-px not-first:pt-2">
+            <div className="px-2 pt-1.5 pb-1 text-3xs font-medium uppercase tracking-wider text-sidebar-muted-foreground/70">
               {group.group}
             </div>
             {group.categories.map((entry) => (
@@ -34,7 +34,7 @@ export function LibraryPanel() {
                   "h-6 cursor-pointer px-2 text-left text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
                   entry.id === active?.id
                     ? "bg-nav-selected text-sidebar-foreground"
-                    : "text-sidebar-muted-foreground hover:bg-sidebar-row-hover hover:text-sidebar-foreground",
+                    : "text-sidebar-foreground hover:bg-sidebar-row-hover/60",
                 )}
               >
                 {entry.name}
@@ -45,7 +45,7 @@ export function LibraryPanel() {
       </nav>
       {active ? (
         <section aria-label={active.name} className="border-t border-sidebar-border px-2 pt-2">
-          <div className="pb-1 text-2xs font-medium uppercase tracking-wide text-sidebar-muted-foreground">
+          <div className="pb-1 text-3xs font-medium uppercase tracking-wider text-sidebar-muted-foreground/70">
             {active.name}
           </div>
           <p className="text-xs text-sidebar-muted-foreground">{active.tip}</p>
