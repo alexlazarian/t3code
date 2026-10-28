@@ -46,6 +46,7 @@ import {
   usePanelNavigationSuppression,
 } from "../panelAnimations";
 import { InfoBar } from "./InfoBar";
+import { PanelTab } from "./PanelTab";
 import { BackgroundThreadAnnouncer } from "./BackgroundThreadAnnouncer";
 import ThreadSidebar from "./Sidebar";
 import {
@@ -78,7 +79,6 @@ import { createStartNewThread } from "../shortcuts/chatRouteCommands";
 import { registerCommands, registerMenuAction } from "../shortcuts/dispatcher";
 import { resolveThreadRouteRef } from "../threadRoutes";
 import { isOverviewPathname, switchThreadView, useSwitchThreadView } from "../threadView";
-import { Toggle, ToggleGroup } from "./ui/toggle-group";
 
 const MACOS_TRAFFIC_LIGHTS_LEFT_INSET = "var(--desktop-window-controls-inset, 90px)";
 
@@ -368,43 +368,12 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
     select: (location) => location.pathname === "/settings/usage",
   });
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
+  const infoBarEnabled = useClientSettings((s) => s.infoBarEnabled);
   const { toggleSidebar, setOpen, setOpenMobile, isMobile } = useSidebar();
   const shortcutLabel = shortcutLabelForCommand(keybindings, "sidebar.toggle", {
     context: { usagePageOpen },
   });
-  const routeView = useLocation({ select: (location) => topBarViewForPathname(location.pathname) });
-  const onThreadRoute = useParams({
-    strict: false,
-    select: (params) => "threadId" in params || "draftId" in params,
-  });
-  const setThreadView = useSwitchThreadView();
-  const settingsRouteOpen = useLocation({
-    select: (location) => isSettingsPath(location.pathname),
-  });
-  const settingsInLibrary = useSettingsInLibrary();
-  const settingsPageOpen = settingsRouteOpen && !settingsInLibrary;
-  const pullRequestsSupported = usePullRequestsSupported();
-  // Over Settings in Library the switch still names the view underneath it.
-  const shownView = settingsPageOpen
-    ? "settings"
-    : settingsRouteOpen
-      ? topBarViewForPathname(appModalReturnPathname())
-      : routeView;
-  const pickView = (view: TopBarView) => {
-    // Leaving Settings for the view that opened it goes back to the exact place.
-    if (settingsRouteOpen && topBarViewForPathname(appModalReturnPathname()) === view) {
-      void router.navigate({ href: appModalReturnLocation() });
-      return;
-    }
-    if (view === "pull-requests") {
-      void router.navigate({ to: "/pull-requests", search: readPullRequestListPreferences() });
-      return;
-    }
-    setThreadView(view);
-  };
-  const viewShortcutLabel = shortcutLabelForCommand(keybindings, "view.toggleOverview");
   const sidebarToggleLabel = `Toggle main sidebar${shortcutLabel ? ` (${shortcutLabel})` : ""}`;
-  const viewSwitchLabel = `Switch to ${shownView === "overview" ? "List" : "Overview"}${viewShortcutLabel ? ` (${viewShortcutLabel})` : ""}`;
   const newThreadShortcutLabel = shortcutLabelForCommand(keybindings, "chat.new", {
     context: { terminalFocus: false },
   });
@@ -489,43 +458,8 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
           <TooltipPopup side="bottom">{sidebarToggleLabel}</TooltipPopup>
         </Tooltip>
       </div>
-      <div className="border-r max-md:hidden">
-        <Tooltip>
-          <TooltipTrigger
-            info={viewSwitchLabel}
-            render={<div className="[-webkit-app-region:no-drag]" />}
-          >
-            <ToggleGroup
-              aria-label="Thread view"
-              variant="mode"
-              value={[shownView]}
-              onValueChange={(next) => {
-                const view = next[0];
-                if (view === "list" || view === "overview" || view === "pull-requests")
-                  pickView(view);
-                if (view === "settings") openSettings(router);
-              }}
-            >
-              <Toggle
-                value="list"
-                onClick={() => {
-                  if (routeView === "list" && !onThreadRoute && !settingsRouteOpen)
-                    setThreadView("list");
-                }}
-              >
-                List
-              </Toggle>
-              <Toggle value="overview">Overview</Toggle>
-              {pullRequestsSupported || shownView === "pull-requests" ? (
-                <Toggle value="pull-requests">Pull requests</Toggle>
-              ) : null}
-              <Toggle value="settings">Settings</Toggle>
-            </ToggleGroup>
-          </TooltipTrigger>
-          <TooltipPopup side="bottom">{viewSwitchLabel}</TooltipPopup>
-        </Tooltip>
-      </div>
-      <div className="border-r">
+      {infoBarEnabled ? <InfoBar /> : <div className="min-w-0 flex-1 px-0!" />}
+      <div className="border-l">
         <Tooltip>
           <TooltipTrigger
             info={newThreadLabel}
@@ -539,8 +473,7 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
           <TooltipPopup side="bottom">{newThreadLabel}</TooltipPopup>
         </Tooltip>
       </div>
-      <div className="min-w-0 flex-1 px-0!" />
-      <div className="max-md:border-r md:pr-0!">
+      <div className="border-l max-md:border-r md:pr-0!">
         <Button
           variant="ghost"
           aria-label="Search and commands"
@@ -552,7 +485,7 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
           {paletteShortcutLabel ? <TopBarShortcut label={paletteShortcutLabel} /> : null}
         </Button>
       </div>
-      {/* Wide windows open Settings from the view switch, which narrow ones hide. */}
+      {/* Wide windows open Settings from the main view switch, which narrow ones hide. */}
       <div className="pr-0! md:hidden">
         <Button
           variant="ghost"
@@ -567,6 +500,100 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
   );
 }
 
+/** The main area's own header: the view switch spans only the panel it controls. */
+function MainViewHeader() {
+  const router = useRouter();
+  const keybindings = useAtomValue(primaryServerKeybindingsAtom);
+  const routeView = useLocation({ select: (location) => topBarViewForPathname(location.pathname) });
+  const onThreadRoute = useParams({
+    strict: false,
+    select: (params) => "threadId" in params || "draftId" in params,
+  });
+  const setThreadView = useSwitchThreadView();
+  const settingsRouteOpen = useLocation({
+    select: (location) => isSettingsPath(location.pathname),
+  });
+  const settingsInLibrary = useSettingsInLibrary();
+  const settingsPageOpen = settingsRouteOpen && !settingsInLibrary;
+  const pullRequestsSupported = usePullRequestsSupported();
+  // Over Settings in Library the switch still names the view underneath it.
+  const shownView = settingsPageOpen
+    ? "settings"
+    : settingsRouteOpen
+      ? topBarViewForPathname(appModalReturnPathname())
+      : routeView;
+  const pickView = (view: TopBarView) => {
+    // Leaving Settings for the view that opened it goes back to the exact place.
+    if (settingsRouteOpen && topBarViewForPathname(appModalReturnPathname()) === view) {
+      void router.navigate({ href: appModalReturnLocation() });
+      return;
+    }
+    if (view === "pull-requests") {
+      void router.navigate({ to: "/pull-requests", search: readPullRequestListPreferences() });
+      return;
+    }
+    setThreadView(view);
+  };
+  const viewShortcutLabel = shortcutLabelForCommand(keybindings, "view.toggleOverview");
+  const viewSwitchLabel = `Switch to ${shownView === "overview" ? "List" : "Overview"}${viewShortcutLabel ? ` (${viewShortcutLabel})` : ""}`;
+
+  return (
+    <div className="flex h-(--main-header-height) shrink-0 items-stretch border-b border-sidebar-border bg-sidebar max-md:hidden">
+      <div className="flex h-full">
+        <Tooltip>
+          <TooltipTrigger
+            info={viewSwitchLabel}
+            render={<div className="h-full [-webkit-app-region:no-drag]" />}
+          >
+            <div role="group" aria-label="Thread view" className="flex h-full">
+              <PanelTab
+                on={shownView === "list"}
+                aria-pressed={shownView === "list"}
+                onClick={() => {
+                  if (shownView !== "list") pickView("list");
+                  else if (!onThreadRoute && !settingsRouteOpen) setThreadView("list");
+                }}
+              >
+                List
+              </PanelTab>
+              <PanelTab
+                on={shownView === "overview"}
+                aria-pressed={shownView === "overview"}
+                onClick={() => {
+                  if (shownView !== "overview") pickView("overview");
+                }}
+              >
+                Overview
+              </PanelTab>
+              {pullRequestsSupported || shownView === "pull-requests" ? (
+                <PanelTab
+                  on={shownView === "pull-requests"}
+                  aria-pressed={shownView === "pull-requests"}
+                  onClick={() => {
+                    if (shownView !== "pull-requests") pickView("pull-requests");
+                  }}
+                >
+                  Pull requests
+                </PanelTab>
+              ) : null}
+              <PanelTab
+                on={shownView === "settings"}
+                aria-pressed={shownView === "settings"}
+                onClick={() => {
+                  if (shownView !== "settings") openSettings(router);
+                }}
+              >
+                Settings
+              </PanelTab>
+            </div>
+          </TooltipTrigger>
+          <TooltipPopup side="bottom">{viewSwitchLabel}</TooltipPopup>
+        </Tooltip>
+      </div>
+    </div>
+  );
+}
+
 function TopBarShortcut({ label }: { label: string }) {
   return (
     <span className="max-md:hidden">
@@ -577,10 +604,12 @@ function TopBarShortcut({ label }: { label: string }) {
 
 export function AppSidebarLayout({ children }: { children: ReactNode }) {
   const sidebarArea = workspaceAreaProps("sidebar", 0, "Threads");
-  const infoBarEnabled = useClientSettings((s) => s.infoBarEnabled);
-  const infoBarHeightStyle = {
-    "--info-bar-height": infoBarEnabled ? "20px" : "0px",
-    "--app-height": "calc(100dvh - var(--info-bar-height) - var(--app-top-bar-bottom))",
+  const appHeightStyle = {
+    "--app-height": "calc(100dvh - var(--app-top-bar-bottom))",
+  } as CSSProperties;
+  // Pages size themselves to --app-height, so the main area's header comes off it there.
+  const mainHeightStyle = {
+    "--app-height": "calc(100dvh - var(--app-top-bar-bottom) - var(--main-header-height))",
   } as CSSProperties;
   const [sidebarRouteReveal] = useState<SidebarRouteReveal>(() => ({
     observedKey: null,
@@ -623,7 +652,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
 
   return (
     <PanelAnimationSuppressionProvider value={panelAnimationsSuppressed}>
-      <div style={infoBarHeightStyle}>
+      <div style={appHeightStyle}>
         <SidebarProvider
           className="mt-(--workspace-topbar-height) h-(--app-height)! min-h-0!"
           data-panel-animations={routePanelAnimationsActive ? "true" : "false"}
@@ -654,11 +683,16 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
             </div>
             <SidebarRail onDoubleClick={resetSidebarWidth} />
           </Sidebar>
-          {children}
+          <div
+            className="flex min-h-0 min-w-0 flex-1 flex-col [--main-header-height:0px] md:[--main-header-height:1.875rem]"
+            style={mainHeightStyle}
+          >
+            <MainViewHeader />
+            {children}
+          </div>
           <BackgroundThreadAnnouncer />
           <AppTopBar windowControlsInsetStyle={windowControlsInsetStyle} />
         </SidebarProvider>
-        {infoBarEnabled ? <InfoBar /> : null}
       </div>
     </PanelAnimationSuppressionProvider>
   );

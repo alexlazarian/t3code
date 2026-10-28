@@ -233,7 +233,7 @@ same choice.
 On web and desktop, **Overview** lays out each project as a column of thread cards.
 A card's left edge shows its status: green while working, amber when it needs you,
 and red when it failed or hit a usage limit. Switch between List and Overview with
-the switch in the top bar, **Switch to Overview** or **Switch to List** in the command
+the switch above the main area, **Switch to Overview** or **Switch to List** in the command
 palette, or **Settings → General → Thread view**. T3 Code opens in the view you last
 chose. **Switch between List and Overview** has no default shortcut; assign one in
 **Settings → Keybindings**.
@@ -256,7 +256,7 @@ projects start a new thread. Each category explains what its items do.
 such as a new theme, land on the open thread or Overview. That view stays
 read-only until you close Settings. **Open as page** moves Settings into the main
 area at the same section, and **Show in Library** on the page moves it back. **Settings**
-in the top bar's **List | Overview | Pull requests | Settings** switch, the command palette, and
+in the **List | Overview | Pull requests | Settings** switch above the main area, the command palette, and
 the app menu open the page; `Esc` or **Back** returns to where you were.
 
 ## Find and reference work

@@ -1419,7 +1419,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
         {ownsDesktopTitleBar ? (
           <span
             aria-hidden
-            className="pointer-events-none fixed top-(--app-top-bar-bottom) right-[var(--workspace-controls-right)] h-[var(--workspace-topbar-height)] w-28 [-webkit-app-region:no-drag]"
+            className="pointer-events-none fixed top-[calc(var(--app-top-bar-bottom)+var(--main-header-height,0px))] right-[var(--workspace-controls-right)] h-[var(--workspace-topbar-height)] w-28 [-webkit-app-region:no-drag]"
           />
         ) : null}
       </div>

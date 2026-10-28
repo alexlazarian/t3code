@@ -106,7 +106,7 @@ export function FloatingRightPanelMaximizeControl(props: {
 }) {
   return (
     <div
-      className="pointer-events-none fixed top-(--app-top-bar-bottom) right-[var(--workspace-controls-right)] z-50 mr-px flex h-[var(--workspace-topbar-height)] items-center gap-1 [-webkit-app-region:no-drag]"
+      className="pointer-events-none fixed top-[calc(var(--app-top-bar-bottom)+var(--main-header-height,0px))] right-[var(--workspace-controls-right)] z-50 mr-px flex h-[var(--workspace-topbar-height)] items-center gap-1 [-webkit-app-region:no-drag]"
       data-workspace-titlebar-controls
     >
       {props.showMaximizeControl ? (

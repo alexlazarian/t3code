@@ -11,7 +11,7 @@ export function SettingsInLibraryBar() {
   return (
     <div
       role="status"
-      className="fixed top-[calc(var(--app-top-bar-bottom)+var(--workspace-topbar-height)+0.5rem)] left-[calc((100vw+var(--sidebar-width))/2)] z-30 flex max-w-[calc(100vw-var(--sidebar-width)-2rem)] -translate-x-1/2 items-center gap-2 border bg-popover py-1 ps-3 pe-1 text-xs text-popover-foreground shadow-lg [-webkit-app-region:no-drag]"
+      className="fixed top-[calc(var(--app-top-bar-bottom)+var(--main-header-height,0px)+var(--workspace-topbar-height)+0.5rem)] left-[calc((100vw+var(--sidebar-width))/2)] z-30 flex max-w-[calc(100vw-var(--sidebar-width)-2rem)] -translate-x-1/2 items-center gap-2 border bg-popover py-1 ps-3 pe-1 text-xs text-popover-foreground shadow-lg [-webkit-app-region:no-drag]"
     >
       <span className="truncate">
         <span className="font-semibold">Read-only while Settings is open in Library.</span> It keeps

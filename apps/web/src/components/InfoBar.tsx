@@ -148,11 +148,9 @@ export function InfoBar() {
   }, [lookup]);
 
   return (
-    <div
-      aria-hidden="true"
-      className="h-(--info-bar-height) truncate border-t border-border bg-background px-2 text-3xs leading-5 text-muted-foreground select-none"
-    >
-      {text}
+    <div aria-hidden="true" className="min-w-0 flex-1 text-3xs text-muted-foreground select-none">
+      {/* The top bar lays its children out as flex rows; truncation needs its own box. */}
+      <span className="min-w-0 truncate">{text}</span>
     </div>
   );
 }

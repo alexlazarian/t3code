@@ -16,6 +16,7 @@ import {
 import { isSidebarUtilityPage, useNavigateToMainApp } from "./mainAppLocation";
 import { SidebarThreadUndoNotice } from "./SidebarThreadUndoNotice";
 import { SidebarUpdateArchitectureWarning, SidebarUpdatePill } from "./SidebarUpdatePill";
+import { PanelTab } from "../PanelTab";
 import { ProviderUpdateIndicator } from "../ProviderUpdateIndicator";
 import { useUiStateStore, type SidebarPanel } from "../../uiStateStore";
 
@@ -81,35 +82,29 @@ function SidebarPanelTabs() {
     <div
       role="tablist"
       aria-label="Left panel"
-      className="relative z-10 flex shrink-0 border-b border-sidebar-border [&>button]:flex-1"
+      className="relative z-10 flex h-7.5 shrink-0 border-b border-sidebar-border"
       onKeyDown={onKeyDown}
     >
       {PANEL_TABS.map((tab) => {
         const on = panel === tab.id;
         return (
-          <button
+          <PanelTab
             key={tab.id}
+            on={on}
             id={sidebarPanelTabId(tab.id)}
-            type="button"
             role="tab"
             aria-selected={on}
             aria-controls={sidebarPanelId(tab.id)}
             data-info={tab.info}
             tabIndex={on ? 0 : -1}
             onClick={() => setPanel(tab.id)}
-            className={cn(
-              "h-7.5 cursor-pointer whitespace-nowrap border-r border-sidebar-border px-1.5 text-control outline-none last:border-r-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
-              // Lit like the top bar's view switch, so both read the same way.
-              on
-                ? "bg-primary font-medium text-primary-foreground"
-                : "bg-sidebar-control-surface text-sidebar-muted-foreground hover:bg-sidebar-row-hover hover:text-sidebar-foreground",
-            )}
+            className="flex-1 last:border-r-0"
           >
             {tab.label}
             {tab.id === "library" ? (
               <ProviderUpdateIndicator className="ms-1 align-middle" />
             ) : null}
-          </button>
+          </PanelTab>
         );
       })}
     </div>

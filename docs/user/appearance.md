@@ -50,8 +50,8 @@ without replaying its transitions.
 
 ## Info bar
 
-On web and desktop, a bar along the bottom of the window describes whatever you point
-at: a control's tooltip and shortcut, or a thread's status, project, machine, branch,
+On web and desktop, a line in the top bar, before **+ New thread** and **Search and
+commands**, describes whatever you point at: a control's tooltip and shortcut, or a thread's status, project, machine, branch,
 model, access mode, and pull request. Turn it off with **Info bar** in
 **Settings → Appearance**.
 
