@@ -6,6 +6,7 @@ import {
   type OrchestrationV2ExecutionNode,
   type OrchestrationV2PlanArtifact,
   type OrchestrationV2ProjectedTurnItem,
+  type OrchestrationV2Run,
   type OrchestrationV2RunAttempt,
   type OrchestrationV2TurnItem,
   type PlanId,
@@ -1111,17 +1112,72 @@ export function deriveRevertTurnCountByUserMessageId(input: {
   return byUserMessageId;
 }
 
+type RevertCheckpointFields = Pick<
+  OrchestrationV2Checkpoint,
+  "scopeId" | "ordinalWithinScope" | "appRunOrdinal" | "status" | "files"
+>;
+
+function isRevertCheckpoint(checkpoint: RevertCheckpointFields, turnCount: number): boolean {
+  return (
+    checkpoint.status === "ready" &&
+    (turnCount === 0
+      ? checkpoint.ordinalWithinScope === 0 && checkpoint.appRunOrdinal === null
+      : checkpoint.appRunOrdinal === turnCount)
+  );
+}
+
 export function findRevertCheckpoint(
   checkpoints: ReadonlyArray<OrchestrationV2Checkpoint>,
   turnCount: number,
 ): OrchestrationV2Checkpoint | undefined {
-  return checkpoints.findLast(
-    (checkpoint) =>
-      checkpoint.status === "ready" &&
-      (turnCount === 0
-        ? checkpoint.ordinalWithinScope === 0 && checkpoint.appRunOrdinal === null
-        : checkpoint.appRunOrdinal === turnCount),
+  return checkpoints.findLast((checkpoint) => isRevertCheckpoint(checkpoint, turnCount));
+}
+
+/**
+ * Distinct files the turns after `turnCount` changed, or null when the checkpoints cannot vouch for
+ * it. Each checkpoint lists its diff from the previous ordinal in its scope, so the later
+ * checkpoints must form an unbroken ready chain from the target, covering every run that started.
+ */
+export function countFilesChangedAfterTurn(
+  projection: {
+    readonly checkpoints: ReadonlyArray<RevertCheckpointFields>;
+    readonly runs: ReadonlyArray<Pick<OrchestrationV2Run, "ordinal" | "status" | "startedAt">>;
+  } | null,
+  turnCount: number,
+): number | null {
+  if (projection === null) return null;
+  const target = projection.checkpoints.findLast((checkpoint) =>
+    isRevertCheckpoint(checkpoint, turnCount),
   );
+  if (target === undefined) return null;
+  const laterByOrdinal = new Map<number, RevertCheckpointFields>();
+  for (const checkpoint of projection.checkpoints) {
+    if (checkpoint.status === "stale") continue;
+    const later =
+      (checkpoint.appRunOrdinal ?? 0) > turnCount ||
+      (checkpoint.scopeId === target.scopeId &&
+        checkpoint.ordinalWithinScope > target.ordinalWithinScope);
+    if (!later) continue;
+    // A baseline here means the next turn diffed against a fresh snapshot, not the chain.
+    if (
+      checkpoint.status !== "ready" ||
+      checkpoint.scopeId !== target.scopeId ||
+      checkpoint.appRunOrdinal === null
+    )
+      return null;
+    laterByOrdinal.set(checkpoint.ordinalWithinScope, checkpoint);
+  }
+  for (const run of projection.runs) {
+    if (run.ordinal <= turnCount || run.status === "rolled_back" || run.startedAt === null)
+      continue;
+    if (!laterByOrdinal.has(run.ordinal)) return null;
+  }
+  const paths = new Set<string>();
+  for (const [ordinal, checkpoint] of laterByOrdinal) {
+    if (ordinal - 1 !== target.ordinalWithinScope && !laterByOrdinal.has(ordinal - 1)) return null;
+    for (const file of checkpoint.files) paths.add(file.path);
+  }
+  return paths.size;
 }
 
 export function derivePhase(runtime: ThreadStructureRuntime | null): SessionPhase {

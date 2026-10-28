@@ -7,6 +7,7 @@ import type {
 } from "@t3tools/contracts";
 import { useAtomValue } from "@effect/atom-react";
 import { Atom } from "effect/reactivity";
+import { useState } from "react";
 
 import { appAtomRegistry } from "~/rpc/atomRegistry";
 import { useRightPanelStore } from "~/rightPanelStore";
@@ -182,6 +183,8 @@ export function BranchRestoreConfirmHost(props: {
 interface PendingRevert {
   readonly turnCount: number;
   readonly messageId: MessageId;
+  /** Null when the checkpoints cannot say whether later turns changed files. */
+  readonly changedFileCount: number | null;
 }
 
 const revertConfirmAtom = makeThreadOverlayAtom<PendingRevert>("revert-confirm");
@@ -195,6 +198,10 @@ export function RevertConfirmHost(props: {
   readonly onConfirm: (turnCount: number, messageId: MessageId, restoreFiles: boolean) => void;
 }) {
   const pending = useThreadOverlay(revertConfirmAtom, props.threadKey);
+  // Keep the last copy through the close animation so the buttons do not flip.
+  const [shown, setShown] = useState(pending);
+  if (pending !== null && pending !== shown) setShown(pending);
+  const changedFileCount = shown?.changedFileCount ?? null;
   const confirm = (restoreFiles: boolean) => {
     if (pending === null) return;
     closeThreadOverlay(revertConfirmAtom);
@@ -212,15 +219,28 @@ export function RevertConfirmHost(props: {
           <AlertDialogTitle>Edit from here?</AlertDialogTitle>
           <AlertDialogDescription>
             Rewind chat to before this message. Your prompt and attachments return to the composer.
-            “Revert files too” also undoes your own edits.
+            {changedFileCount === 0 ? null : (
+              <>
+                {changedFileCount === null
+                  ? " "
+                  : ` Later turns changed ${changedFileCount} ${changedFileCount === 1 ? "file" : "files"}. `}
+                “Revert files too” also undoes your own edits.
+              </>
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogClose render={<Button variant="outline" />}>Cancel</AlertDialogClose>
-          <Button variant="destructive-outline" onClick={() => confirm(true)}>
-            Revert files too
-          </Button>
-          <Button onClick={() => confirm(false)}>Revert and keep changes</Button>
+          {changedFileCount === 0 ? (
+            <Button onClick={() => confirm(false)}>Edit from here</Button>
+          ) : (
+            <>
+              <Button variant="destructive-outline" onClick={() => confirm(true)}>
+                Revert files too
+              </Button>
+              <Button onClick={() => confirm(false)}>Revert and keep changes</Button>
+            </>
+          )}
         </AlertDialogFooter>
       </AlertDialogPopup>
     </AlertDialog>

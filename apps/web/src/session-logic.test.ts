@@ -23,6 +23,7 @@ import * as DateTime from "effect/DateTime";
 import { describe, expect, it } from "vite-plus/test";
 
 import {
+  countFilesChangedAfterTurn,
   deriveCanInterruptRunningThread,
   deriveTimelineEntriesFromVisibleTurnItems,
   deriveTimelineEntriesFromVisibleTurnItemsWithState,
@@ -408,6 +409,82 @@ describe("V2 session presentation", () => {
           }),
         ),
       ).toEqual({ "user-2": 0 });
+    });
+
+    it("counts files later turns changed, or null when the record is incomplete", () => {
+      const scope = CheckpointScopeId.make("scope-1");
+      const started = DateTime.makeUnsafe("2026-06-20T00:00:00.000Z");
+      const point = (
+        ordinal: number,
+        paths: ReadonlyArray<string> = [],
+        overrides: Partial<{
+          status: "ready" | "missing" | "error" | "stale";
+          appRunOrdinal: number | null;
+          scopeId: CheckpointScopeId;
+        }> = {},
+      ) => ({
+        scopeId: scope,
+        ordinalWithinScope: ordinal,
+        appRunOrdinal: ordinal === 0 ? null : ordinal,
+        status: "ready" as const,
+        files: paths.map((path) => ({ path, kind: "modified", additions: 1, deletions: 0 })),
+        ...overrides,
+      });
+      const run = (
+        ordinal: number,
+        status: "completed" | "cancelled" | "rolled_back" = "completed",
+        startedAt: DateTime.Utc | null = started,
+      ) => ({ ordinal, status, startedAt });
+      const count = (
+        turnCount: number,
+        checkpoints: ReadonlyArray<ReturnType<typeof point>>,
+        runs: ReadonlyArray<ReturnType<typeof run>>,
+      ) => countFilesChangedAfterTurn({ checkpoints, runs }, turnCount);
+
+      const history = [point(0), point(1, ["a"]), point(2, ["a", "b"]), point(3, ["b", "c"])];
+      const runs = [run(1), run(2), run(3)];
+      expect(count(3, history, runs)).toBe(0);
+      expect(count(2, history, runs)).toBe(2);
+      expect(count(1, history, runs)).toBe(3);
+      expect(count(0, history, runs)).toBe(3);
+      // Runs 2 and 3 were rewound; run 4 was cancelled before it started.
+      expect(
+        count(
+          1,
+          [point(0), point(1, ["a"]), point(2, ["b"], { status: "stale" })],
+          [run(1), run(2, "rolled_back"), run(3, "rolled_back"), run(4, "cancelled", null)],
+        ),
+      ).toBe(0);
+
+      expect(countFilesChangedAfterTurn(null, 1)).toBeNull();
+      expect(count(4, history, runs)).toBeNull();
+      // Run 4 stopped without capturing a checkpoint.
+      expect(count(2, history, [...runs, run(4, "cancelled")])).toBeNull();
+      expect(count(1, [...history, point(4, [], { status: "error" })], [...runs, run(4)])).toBe(
+        null,
+      );
+      expect(
+        count(
+          2,
+          [...history, point(4, ["d"], { scopeId: CheckpointScopeId.make("scope-2") })],
+          [...runs, run(4)],
+        ),
+      ).toBeNull();
+      // After an earlier rewind, run 5 diffed against a fresh baseline, not run 2's checkpoint.
+      expect(
+        count(
+          1,
+          [
+            point(0),
+            point(1),
+            point(2, ["a"]),
+            point(3, [], { status: "stale" }),
+            point(4, [], { appRunOrdinal: null }),
+            point(5, ["b"]),
+          ],
+          [run(1), run(2), run(3, "rolled_back"), run(4, "rolled_back"), run(5)],
+        ),
+      ).toBeNull();
     });
   });
 
