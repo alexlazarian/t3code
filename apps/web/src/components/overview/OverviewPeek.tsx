@@ -1,15 +1,10 @@
-import {
-  isAtomCommandInterrupted,
-  squashAtomCommandFailure,
-} from "@t3tools/client-runtime/state/runtime";
 import type { ScopedThreadRef } from "@t3tools/contracts";
 import { XIcon } from "lucide-react";
 import { useState, type KeyboardEvent, type ReactNode } from "react";
 
-import { environmentCatalog } from "../../connection/catalog";
+import { useReconnectEnvironment } from "../../hooks/useReconnectEnvironment";
 import { useQuietThreadShell } from "../../state/entities";
 import { useEnvironment } from "../../state/environments";
-import { useAtomCommand } from "../../state/use-atom-command";
 
 import {
   buildPendingUserInputAnswers,
@@ -22,7 +17,7 @@ import { ComposerPendingApprovalActions } from "../chat/ComposerPendingApprovalA
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Popover, PopoverClose, PopoverPopup } from "../ui/popover";
-import { stackedThreadToast, toastManager } from "../ui/toast";
+import { toastManager } from "../ui/toast";
 import type { OverviewPeekAction } from "./OverviewPeek.logic";
 import { useOverviewThreadActions } from "./useOverviewThreadActions";
 
@@ -49,29 +44,17 @@ export function OverviewPeek(props: OverviewPeekProps) {
 
 function OverviewOfflinePeek(props: OverviewPeekProps & { readonly machineLabel: string }) {
   const title = useQuietThreadShell(props.threadRef)?.title;
-  const retryEnvironment = useAtomCommand(environmentCatalog.retryNow, { reportFailure: false });
-  const [reconnecting, setReconnecting] = useState(false);
-  const reconnect = async () => {
-    setReconnecting(true);
-    const result = await retryEnvironment(props.threadRef.environmentId);
-    setReconnecting(false);
-    if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
-      const error = squashAtomCommandFailure(result);
-      toastManager.add(
-        stackedThreadToast({
-          type: "error",
-          title: "Could not reconnect environment",
-          description: error instanceof Error ? error.message : "Failed to reconnect.",
-        }),
-      );
-    }
-  };
+  const { reconnect, reconnectingId } = useReconnectEnvironment();
   return (
     <PeekShell {...props} title={title}>
       <div className="flex flex-col gap-1.5 px-2 py-1.5 text-xs">
         <p className="text-muted-foreground">{props.machineLabel} is offline.</p>
         <div className="flex gap-1">
-          <Button size="xs" disabled={reconnecting} onClick={() => void reconnect()}>
+          <Button
+            size="xs"
+            disabled={reconnectingId !== null}
+            onClick={() => void reconnect(props.threadRef.environmentId)}
+          >
             Reconnect
           </Button>
         </div>

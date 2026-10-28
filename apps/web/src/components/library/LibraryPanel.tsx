@@ -1,6 +1,15 @@
 import { cn } from "../../lib/utils";
 import { useUiStateStore } from "../../uiStateStore";
-import { LIBRARY_CATEGORIES, LIBRARY_GROUPS } from "./Library.logic";
+import { LIBRARY_CATEGORIES, LIBRARY_GROUPS, type LibraryCategory } from "./Library.logic";
+import { LibraryAccess } from "./LibraryAccess";
+import { LibraryMachines } from "./LibraryMachines";
+import { LibraryModels } from "./LibraryModels";
+import { LibraryProjects } from "./LibraryProjects";
+import { LibraryProviders } from "./LibraryProviders";
+import { LibraryScheduled } from "./LibraryScheduled";
+import { LibrarySkills } from "./LibrarySkills";
+import { LibraryStash } from "./LibraryStash";
+import { useLibraryContext } from "./useLibrary";
 
 export function LibraryPanel() {
   const category = useUiStateStore((store) => store.libraryCategory);
@@ -40,8 +49,39 @@ export function LibraryPanel() {
             {active.name}
           </div>
           <p className="text-xs text-sidebar-muted-foreground">{active.tip}</p>
+          <div className="-mx-2 pt-2">
+            <LibraryCategoryItems category={active.id} />
+          </div>
         </section>
       ) : null}
     </div>
   );
+}
+
+function LibraryCategoryItems(props: { readonly category: LibraryCategory }) {
+  const ctx = useLibraryContext();
+  switch (props.category) {
+    case "skills":
+      return <LibrarySkills ctx={ctx} />;
+    case "models":
+      return <LibraryModels ctx={ctx} />;
+    case "providers":
+      return <LibraryProviders ctx={ctx} />;
+    case "access":
+      return <LibraryAccess ctx={ctx} />;
+    case "actions":
+      return (
+        <p className="px-2 py-1 text-xs text-sidebar-muted-foreground">
+          Not available in this build
+        </p>
+      );
+    case "stash":
+      return <LibraryStash ctx={ctx} />;
+    case "scheduled":
+      return <LibraryScheduled ctx={ctx} />;
+    case "projects":
+      return <LibraryProjects />;
+    case "machines":
+      return <LibraryMachines />;
+  }
 }
