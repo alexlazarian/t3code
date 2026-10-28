@@ -3270,6 +3270,16 @@ export const OrchestrationV2Command = Schema.Union([
     text: Schema.String,
     // Replaces all attachments; absent preserves them for older clients editing text.
     attachments: Schema.optional(Schema.Array(ChatAttachment)),
+    // Ends a `queued-run.hold` in the same commit, so the run cannot start with the old text.
+    releaseHold: Schema.optional(Schema.Boolean),
+  }),
+  // Holds one queued run while a client edits it, so the queue does not send the old text.
+  Schema.Struct({
+    type: Schema.Literal("queued-run.hold"),
+    commandId: CommandId,
+    threadId: ThreadId,
+    runId: RunId,
+    held: Schema.Boolean,
   }),
   Schema.Struct({
     type: Schema.Literal("runtime-request.respond"),

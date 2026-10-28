@@ -61,6 +61,8 @@ interface EditingQueuedRun {
   readonly originalText: string;
   readonly existingAttachments: ReadonlyArray<ChatAttachment>;
   readonly context?: OrchestrationMessageContext | undefined;
+  // Only the edit that held the run releases it, so a queue paused for another reason stays paused.
+  readonly heldForEdit: boolean;
 }
 
 // Keyed by the route thread, so an edit survives navigating away and back.
@@ -147,6 +149,7 @@ async function submitQueuedRunEdit(input: {
         threadId: editing.threadId,
         runId: editing.runId,
         text: editText.length === 0 ? ATTACHMENT_ONLY_BOOTSTRAP_PROMPT : editText,
+        releaseHold: editing.heldForEdit,
         edit: {
           messageId: editing.messageId,
           attachments: uploads,
@@ -193,6 +196,7 @@ export function useQueuedRunEdit(input: {
     composerRef,
   } = input;
   const editQueuedRunCommand = useEditQueuedRunCommand();
+  const holdQueuedRun = useAtomCommand(threadEnvironment.holdQueuedRun, { reportFailure: false });
   const editKey = scopedThreadKey(routeThreadRef);
   const storedEdit = useAtomValue(queuedRunEdits.atom)[editKey] ?? null;
   const editing = activeThreadId === null ? null : storedEdit;
@@ -222,10 +226,23 @@ export function useQueuedRunEdit(input: {
     useComposerDraftStore
       .getState()
       .clearComposerContent(queuedEditDraftTarget(routeThreadRef, runId));
+  // A rejected hold means the run already left the queue; the exit watch handles that.
+  const setRunHeld = (edit: Pick<EditingQueuedRun, "threadId" | "runId">, held: boolean) =>
+    void holdQueuedRun({
+      environmentId,
+      input: { threadId: edit.threadId, runId: edit.runId, held },
+    });
 
   const beginEdit = useStableCallback((request: EditQueuedRunRequest) => {
     if (activeThreadId === null) return;
-    if (editing !== null && editing.runId !== request.runId) clearEditDraft(editing.runId);
+    const reopened = editing !== null && editing.runId === request.runId;
+    if (editing !== null && !reopened) {
+      clearEditDraft(editing.runId);
+      if (editing.heldForEdit) setRunHeld(editing, false);
+    }
+    const run = serverProjection?.runs.find((candidate) => candidate.id === request.runId);
+    const holds = run?.status === "queued" && run.queueHeld !== true;
+    if (holds) setRunHeld({ threadId: activeThreadId, runId: request.runId }, true);
     const target = queuedEditDraftTarget(routeThreadRef, request.runId);
     const store = useComposerDraftStore.getState();
     store.clearComposerContent(target);
@@ -241,6 +258,7 @@ export function useQueuedRunEdit(input: {
         existingAttachments: request.attachments,
         context: serverProjection?.messages.find((message) => message.id === request.messageId)
           ?.context,
+        heldForEdit: holds || (reopened && editing?.heldForEdit === true),
       },
       {
         runs: makeQueuedRunsAtom({
@@ -285,6 +303,7 @@ export function useQueuedRunEdit(input: {
   const cancelEdit = useStableCallback(() => {
     if (editing === null) return;
     clearEditDraft(editing.runId);
+    if (editing.heldForEdit) setRunHeld(editing, false);
     queuedRunEdits.end(editKey);
     focusComposerSoon();
   });

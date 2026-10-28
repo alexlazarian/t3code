@@ -504,6 +504,7 @@ function commandThreadId(command: OrchestrationV2ServerCommand): ThreadId {
     case "queued-run.reorder":
     case "queued-run.cancel":
     case "queued-run.edit":
+    case "queued-run.hold":
     case "runtime-request.respond":
     case "runtime-request.delivery.fail":
     case "thread.user-input.dismiss":
@@ -715,6 +716,19 @@ function delegatedTaskTerminalStatus(
     case "waiting":
       return null;
   }
+}
+
+// The turn may have ended while the run was held; nothing else would start it.
+function releasesQueuedRunHold(
+  command: OrchestrationV2ServerCommand,
+): command is Extract<
+  OrchestrationV2ServerCommand,
+  { readonly type: "queued-run.hold" | "queued-run.edit" }
+> {
+  return (
+    (command.type === "queued-run.hold" && !command.held) ||
+    (command.type === "queued-run.edit" && command.releaseHold === true)
+  );
 }
 
 function nextQueuedRun(
@@ -9365,6 +9379,42 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
         }),
       });
     }
+    if (command.releaseHold === true && queuedRun.queueHeld === true) {
+      yield* emitEvent({
+        type: "run.updated",
+        threadId: command.threadId,
+        runId: queuedRun.id,
+        providerInstanceId: queuedRun.providerInstanceId,
+        occurredAt: now,
+        payload: { ...queuedRun, queueHeld: false },
+      });
+    }
+  });
+
+  const dispatchQueuedRunHold = Effect.fn("Orchestrator.dispatchQueuedRunHold")(function* (
+    command: Extract<OrchestrationV2Command, { readonly type: "queued-run.hold" }>,
+    events: Ref.Ref<Array<OrchestrationV2DomainEvent>>,
+  ) {
+    const projection = yield* loadProjectionForCommand(command, ["runs"]);
+    const queuedRun = projection.runs.find((candidate) => candidate.id === command.runId);
+    if (queuedRun === undefined || queuedRun.status !== "queued") {
+      return yield* new OrchestratorDispatchError({
+        commandId: command.commandId,
+        commandType: command.type,
+        cause: `Run ${command.runId} is not queued.`,
+      });
+    }
+    yield* emit(
+      events,
+      command,
+    )({
+      type: "run.updated",
+      threadId: command.threadId,
+      runId: queuedRun.id,
+      providerInstanceId: queuedRun.providerInstanceId,
+      occurredAt: yield* DateTime.now,
+      payload: { ...queuedRun, queueHeld: command.held },
+    });
   });
 
   const loadProjectionForCommand = <K extends ProjectionRecordField>(
@@ -12669,6 +12719,9 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
       case "queued-run.edit":
         yield* dispatchQueuedRunEdit(command, events);
         break;
+      case "queued-run.hold":
+        yield* dispatchQueuedRunHold(command, events);
+        break;
       case "checkpoint.rollback":
         yield* dispatchCheckpointRollback(command, events, effects);
         break;
@@ -12787,6 +12840,9 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
             command.type === "queued-run.start" ? { queuedRunId: command.runId } : undefined,
           ),
         );
+      }
+      if (releasesQueuedRunHold(command)) {
+        yield* mapDispatchError(command)(startNextQueuedRun(command.threadId));
       }
       return {
         sequence: receipt.resultSequence,
@@ -12932,6 +12988,9 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
           command.type === "queued-run.start" ? { queuedRunId: command.runId } : undefined,
         ),
       );
+    }
+    if (releasesQueuedRunHold(command)) {
+      yield* mapDispatchError(command)(startNextQueuedRun(command.threadId));
     }
     if (command.type === "notification.delivery.accept") {
       yield* mapDispatchError(command)(offerDelegatedCompletionDeliveries(command.threadId));

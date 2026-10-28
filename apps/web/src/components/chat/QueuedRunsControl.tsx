@@ -17,6 +17,7 @@ import {
   ChevronDownIcon,
   Clock3Icon,
   MessagesSquareIcon,
+  PauseIcon,
   PencilIcon,
   XIcon,
 } from "lucide-react";
@@ -128,6 +129,7 @@ export function QueuedRunsControl({
       messageId: run.userMessageId,
       serverIndex,
       text,
+      held: run.queueHeld === true,
       // A guest's message keeps the guest's words; the owner can cancel it, not rewrite it.
       editable: context?.guest === undefined,
       attachments,
@@ -147,6 +149,7 @@ export function QueuedRunsControl({
       messageId: null,
       serverIndex: null,
       text: message.text,
+      held: false,
       editable: true,
       attachments: [] as ReadonlyArray<ContractChatAttachment>,
       thumbnails: (message.attachments ?? [])
@@ -212,6 +215,12 @@ export function QueuedRunsControl({
   }));
 
   if (items.length === 0) return null;
+
+  const resumeQueue = async (runId: RunId) => {
+    setBusyRunId(runId);
+    await resume({ environmentId: props.environmentId, input: { threadId: props.threadId } });
+    setBusyRunId(null);
+  };
 
   const remove = async (runId: RunId) => {
     setBusyRunId(runId);
@@ -290,6 +299,27 @@ export function QueuedRunsControl({
                     <Clock3Icon aria-hidden className="size-3" />
                     Saving
                   </span>
+                ) : null}
+                {item.held && !isEditing ? (
+                  <Tooltip>
+                    <TooltipTrigger render={<span className="flex items-center gap-1 px-1" />}>
+                      <PauseIcon aria-hidden className="size-3" />
+                      Paused
+                    </TooltipTrigger>
+                    <TooltipPopup>Waits until you resume the queue or send a message</TooltipPopup>
+                  </Tooltip>
+                ) : null}
+                {item.held && !isEditing && item.runId !== null && !workflow?.canSendNow ? (
+                  <Button
+                    size="xs"
+                    variant="ghost-muted"
+                    disabled={busyRunId !== null}
+                    onClick={() => {
+                      if (item.runId !== null) void resumeQueue(item.runId);
+                    }}
+                  >
+                    Resume
+                  </Button>
                 ) : null}
                 {isEditing ? (
                   <>

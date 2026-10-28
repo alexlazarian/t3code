@@ -241,9 +241,15 @@ export interface RetryWorkspacePreparationInput extends ThreadCommandInput {
   readonly runId: RunId;
 }
 
+export interface HoldQueuedRunInput extends ThreadCommandInput {
+  readonly runId: RunId;
+  readonly held: boolean;
+}
+
 export interface EditQueuedRunInput extends ThreadCommandInput {
   readonly runId: RunId;
   readonly text: string;
+  readonly releaseHold?: boolean;
   /**
    * Full replacement attachment list for the queued message. Omitted =
    * text-only edit that leaves attachments untouched.
@@ -1034,6 +1040,18 @@ export const retryWorkspacePreparation = Effect.fn("EnvironmentCommands.retryWor
   },
 );
 
+export const holdQueuedRun = Effect.fn("EnvironmentCommands.holdQueuedRun")(function* (
+  input: HoldQueuedRunInput,
+) {
+  return yield* dispatch({
+    type: "queued-run.hold",
+    commandId: yield* allocateCommandId(input),
+    threadId: input.threadId,
+    runId: input.runId,
+    held: input.held,
+  });
+});
+
 export const editQueuedRun = Effect.fn("EnvironmentCommands.editQueuedRun")(function* (
   input: EditQueuedRunInput,
 ) {
@@ -1047,6 +1065,7 @@ export const editQueuedRun = Effect.fn("EnvironmentCommands.editQueuedRun")(func
     threadId: input.threadId,
     runId: input.runId,
     text: input.text,
+    ...(input.releaseHold === true ? { releaseHold: true } : {}),
     ...(attachments === undefined ? {} : { attachments }),
     ...(input.edit?.context && attachments
       ? {

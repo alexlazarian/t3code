@@ -17,12 +17,14 @@ import { useQueuedRunEdit } from "./useQueuedRunEdit";
 interface RunStatus {
   readonly id: RunId;
   readonly status: string;
+  readonly queueHeld?: boolean;
 }
 
 const mocks = await vi.hoisted(async () => {
   const { Atom } = await import("effect/reactivity");
   return {
     editQueuedRun: vi.fn<(value: unknown) => Promise<{ readonly _tag: "Success" | "Failure" }>>(),
+    holdQueuedRun: vi.fn<(value: unknown) => Promise<{ readonly _tag: "Success" }>>(),
     // The projection's runs per thread, written by each test to stand in for the server.
     threadRuns: Atom.family((_key: string) =>
       Atom.make<ReadonlyArray<RunStatus> | null>(null).pipe(Atom.keepAlive),
@@ -31,7 +33,8 @@ const mocks = await vi.hoisted(async () => {
 });
 
 vi.mock("../../state/use-atom-command", () => ({
-  useAtomCommand: () => mocks.editQueuedRun,
+  useAtomCommand: (command: { readonly hold?: true }) =>
+    command.hold ? mocks.holdQueuedRun : mocks.editQueuedRun,
 }));
 
 const runsKey = (ref: ScopedThreadRef) => `${ref.environmentId}:${ref.threadId}`;
@@ -43,6 +46,7 @@ vi.mock("../../state/threads", async () => {
     threadEnvironment: {
       snapshotAtom: () => Atom.make(null),
       editQueuedRun: {},
+      holdQueuedRun: { hold: true },
     },
     environmentThreadDetails: {
       statusAtom: () => Atom.make("ready"),
@@ -76,6 +80,7 @@ function setRuns(ref: ScopedThreadRef, status: string) {
 function Harness(props: {
   readonly threadRef: ScopedThreadRef;
   readonly runStatus: string;
+  readonly queueHeld?: boolean;
   readonly hookRef: RefObject<HookResult | null>;
 }) {
   const result = useQueuedRunEdit({
@@ -83,7 +88,9 @@ function Harness(props: {
     routeThreadRef: props.threadRef,
     threadDraftTarget: props.threadRef,
     activeThreadId: props.threadRef.threadId,
-    serverProjection: projection([{ id: RUN, status: props.runStatus }]),
+    serverProjection: projection([
+      { id: RUN, status: props.runStatus, queueHeld: props.queueHeld ?? false },
+    ]),
     promptRef: { current: "" },
     composerRef: { current: null },
   });
@@ -91,16 +98,22 @@ function Harness(props: {
   return null;
 }
 
-function view(threadRef: ScopedThreadRef, runStatus: string, hook: { current: HookResult | null }) {
+function view(
+  threadRef: ScopedThreadRef,
+  runStatus: string,
+  hook: { current: HookResult | null },
+  queueHeld = false,
+) {
   return (
     <AppAtomRegistryProvider>
-      <Harness threadRef={threadRef} runStatus={runStatus} hookRef={hook} />
+      <Harness threadRef={threadRef} runStatus={runStatus} queueHeld={queueHeld} hookRef={hook} />
     </AppAtomRegistryProvider>
   );
 }
 
 function setup() {
   mocks.editQueuedRun.mockReset();
+  mocks.holdQueuedRun.mockReset();
   useComposerDraftStore.setState({ draftsByThreadKey: {}, draftThreadsByThreadKey: {} });
   setRuns(THREAD_A, "queued");
   setRuns(THREAD_B, "queued");
@@ -140,7 +153,39 @@ const savedContent = (prompt: string) => ({
 const promptOf = (ref: ScopedThreadRef) =>
   useComposerDraftStore.getState().getComposerDraft(ref)?.prompt ?? "";
 
+const holdCalls = () =>
+  mocks.holdQueuedRun.mock.calls.map(
+    ([call]) => (call as { readonly input: { readonly held: boolean } }).input.held,
+  );
+
 describe("useQueuedRunEdit", () => {
+  it.each([
+    { exit: "cancel", alreadyHeld: false, holds: [true, false] },
+    { exit: "cancel", alreadyHeld: true, holds: [] },
+    { exit: "save", alreadyHeld: false, holds: [true] },
+    { exit: "save", alreadyHeld: true, holds: [] },
+  ] as const)(
+    "releases only a hold it took ($exit, already held: $alreadyHeld)",
+    async ({ exit, alreadyHeld, holds }) => {
+      const { hook } = setup();
+      mocks.editQueuedRun.mockResolvedValue({ _tag: "Success" });
+      await using _screen = await render(view(THREAD_A, "queued", hook, alreadyHeld));
+      await beginChangedEdit(hook);
+
+      if (exit === "cancel") {
+        await act(() => requireHook(hook).cancelEdit());
+      } else {
+        await act(() => requireHook(hook).saveEdit(savedContent("changed"), () => {}));
+        expect(mocks.editQueuedRun).toHaveBeenCalledWith(
+          expect.objectContaining({
+            input: expect.objectContaining({ releaseHold: !alreadyHeld }),
+          }),
+        );
+      }
+      expect(holdCalls()).toEqual(holds);
+    },
+  );
+
   it("keeps an open edit when the user leaves the thread and comes back", async () => {
     const { hook } = setup();
     await using screen = await render(view(THREAD_A, "queued", hook));

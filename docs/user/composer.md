@@ -211,7 +211,7 @@ images. **Send now** sends a message right away, into the running turn if there 
 also edit or remove it.
 
 If you stop the agent or the server restarts, queued messages keep their order and are held.
-Press **Resume** in an empty composer on web and desktop, or **Resume queue** on mobile, to
+On web and desktop, held messages show **Paused**. Press **Resume** in an empty composer on web and desktop, or **Resume queue** on mobile, to
 continue. Sending a new message also resumes the queue, unless it steers a turn that is already
 running. You can edit or remove held messages without starting them.
 
@@ -219,9 +219,11 @@ The pencil on a queued message opens it in the composer for editing. The origina
 stays in the queue until you save, and it is highlighted while you edit. The message's
 attachments appear above the text with a remove control, and new images can be added the usual way.
 The checkmark saves the queued message in place; **Cancel** next to it leaves it unchanged. Whatever
-you had typed in the composer before starting the edit is restored afterwards. If the queued
-message starts or is removed while you are editing, the edit ends: changed content moves into the
-composer when it is empty, and is discarded otherwise.
+you had typed in the composer before starting the edit is restored afterwards. A message you are
+editing waits, even if the turn ahead of it ends, and is sent once you save or cancel; messages
+queued behind it can go first. An edit left open when the app closes keeps the message held. If
+the message starts or is removed another way, such as from another device, the edit ends: changed
+content moves into the composer when it is empty, and is discarded otherwise.
 
 ## Commands and skills
 

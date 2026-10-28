@@ -5377,6 +5377,126 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
     }),
   );
 
+  it.effect.each(["save", "cancel", "abandon"] as const)(
+    "holds a queued run while it is edited, then %s",
+    (exit) =>
+      Effect.gen(function* () {
+        const orchestrator = yield* Orchestrator.OrchestratorV2;
+        const events = yield* EventSink.EventSinkV2;
+        const threadId = ThreadId.make(`queued-edit-hold-${exit}`);
+        yield* orchestrator.dispatch({
+          type: "thread.create",
+          createdBy: "user",
+          creationSource: "web",
+          commandId: CommandId.make(`${threadId}:create`),
+          threadId,
+          projectId: ProjectId.make(`${threadId}:project`),
+          title: "Hold a queued edit",
+          modelSelection,
+          runtimeMode: "full-access",
+          interactionMode: "default",
+          branch: null,
+          worktreePath: process.cwd(),
+        });
+        const send = (index: number, text: string) =>
+          orchestrator.dispatch({
+            type: "message.dispatch",
+            createdBy: "user",
+            creationSource: "web",
+            commandId: CommandId.make(`${threadId}:message:${index}`),
+            threadId,
+            messageId: MessageId.make(`${threadId}:message:${index}`),
+            text,
+            attachments: [],
+            modelSelection,
+            dispatchMode: { type: index === 0 ? "start_immediately" : "queue_after_active" },
+          });
+        yield* send(0, "Active");
+        yield* send(1, "Original queued text.");
+        const before = yield* orchestrator.getThreadProjection(threadId);
+        const [active, queued] = [before.runs[0]!, before.runs[1]!];
+
+        yield* orchestrator.dispatch({
+          type: "queued-run.hold",
+          commandId: CommandId.make(`${threadId}:hold`),
+          threadId,
+          runId: queued.id,
+          held: true,
+        });
+        const now = yield* DateTime.now;
+        yield* events.write({
+          events: [
+            {
+              id: EventId.make(`${threadId}:active-done`),
+              type: "run.updated",
+              threadId,
+              runId: active.id,
+              occurredAt: now,
+              payload: { ...active, status: "completed", completedAt: now },
+            },
+          ],
+        });
+        yield* orchestrator.resumeQueuedRuns;
+        const whileEditing = yield* orchestrator.getThreadProjection(threadId);
+        const heldRun = whileEditing.runs.find((run) => run.id === queued.id);
+        assert.equal(
+          heldRun?.status,
+          "queued",
+          "an open edit must keep the old text from starting",
+        );
+        assert.isTrue(heldRun?.queueHeld);
+
+        if (exit === "save") {
+          yield* orchestrator.dispatch({
+            type: "queued-run.edit",
+            commandId: CommandId.make(`${threadId}:save`),
+            threadId,
+            runId: queued.id,
+            text: "Edited queued text.",
+            releaseHold: true,
+          });
+        } else if (exit === "cancel") {
+          yield* orchestrator.dispatch({
+            type: "queued-run.hold",
+            commandId: CommandId.make(`${threadId}:release`),
+            threadId,
+            runId: queued.id,
+            held: false,
+          });
+        } else {
+          yield* orchestrator.resumeQueuedRuns;
+          const abandoned = yield* orchestrator.getThreadProjection(threadId);
+          assert.equal(abandoned.runs.find((run) => run.id === queued.id)?.status, "queued");
+          yield* send(2, "Next message");
+        }
+
+        const after = yield* orchestrator.getThreadProjection(threadId);
+        const afterRun = after.runs.find((run) => run.id === queued.id);
+        if (exit === "abandon") {
+          // The new message starts first; it releases the held one to run after it.
+          assert.equal(afterRun?.status, "queued");
+          assert.isFalse(afterRun?.queueHeld);
+          return;
+        }
+        assert.equal(afterRun?.status, "starting");
+        assert.equal(
+          after.messages.find((message) => message.id === queued.userMessageId)?.text,
+          exit === "save" ? "Edited queued text." : "Original queued text.",
+        );
+        // An edit opened in another client after the run started must not hold it.
+        const lateHold = yield* orchestrator
+          .dispatch({
+            type: "queued-run.hold",
+            commandId: CommandId.make(`${threadId}:late-hold`),
+            threadId,
+            runId: queued.id,
+            held: true,
+          })
+          .pipe(Effect.flip);
+        assert.equal(lateHold._tag, "OrchestratorDispatchError");
+      }),
+  );
+
   it.effect("edits and removes queued runs", () =>
     Effect.gen(function* () {
       const orchestrator = yield* Orchestrator.OrchestratorV2;
