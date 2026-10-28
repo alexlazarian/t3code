@@ -281,7 +281,9 @@ export function workEntryIsVisibleInGroup(
 }
 const TIMELINE_MINIMAP_ITEM_SPACING = 8;
 export const TIMELINE_MINIMAP_MIN_ITEMS = 2;
-const TIMELINE_MINIMAP_MAX_HEIGHT_CSS = "calc(100vh - 18rem)";
+// Relative to the timeline, so a short pane (the Overview split) keeps the rail and its arrows inside it.
+const TIMELINE_MINIMAP_MAX_HEIGHT_CSS = "calc(100% - 5rem)";
+const TIMELINE_MINIMAP_MIN_DRAWN_SPACING = 4;
 const TIMELINE_MINIMAP_PERSISTENT_GUTTER = 48;
 
 export interface WorkGroupScrollAnchor {
@@ -337,6 +339,13 @@ export function resolveTimelineIsAtEnd(state: TimelineEndState | undefined): boo
 export function resolveTimelineMinimapHeightStyle(itemCount: number): string {
   const naturalHeight = Math.max(1, (itemCount - 1) * TIMELINE_MINIMAP_ITEM_SPACING);
   return `min(${naturalHeight}px, ${TIMELINE_MINIMAP_MAX_HEIGHT_CSS})`;
+}
+
+/** Draw every Nth strip so a crowded rail keeps a gap between strips; hover still reaches every item. */
+export function resolveTimelineMinimapStride(itemCount: number, railHeight: number): number {
+  if (itemCount <= 1 || railHeight <= 0) return 1;
+  const spacing = railHeight / (itemCount - 1);
+  return Math.max(1, Math.ceil(TIMELINE_MINIMAP_MIN_DRAWN_SPACING / spacing));
 }
 
 export function resolveTimelineMinimapTopPercent(index: number, itemCount: number): number {

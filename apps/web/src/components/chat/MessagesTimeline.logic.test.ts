@@ -34,6 +34,7 @@ import {
   resolveAssistantCaption,
   type MessagesTimelineRow,
   workEntryDisplayLabel,
+  resolveTimelineMinimapStride,
 } from "./MessagesTimeline.logic";
 
 describe("resolveAssistantCaption", () => {
@@ -4357,5 +4358,14 @@ describe("shouldCollapseUserMessage", () => {
 
     expect(shouldCollapseUserMessage(`${citation} Can you expand on this?`)).toBe(false);
     expect(shouldCollapseUserMessage(`${citation} ${"More text. ".repeat(60)}`)).toBe(true);
+  });
+});
+
+describe("resolveTimelineMinimapStride", () => {
+  it("draws every strip while they fit and thins a crowded rail", () => {
+    expect(resolveTimelineMinimapStride(20, 400)).toBe(1);
+    expect(resolveTimelineMinimapStride(101, 200)).toBe(2);
+    expect(resolveTimelineMinimapStride(301, 200)).toBe(6);
+    expect(resolveTimelineMinimapStride(50, 0)).toBe(1);
   });
 });

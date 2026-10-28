@@ -7,10 +7,12 @@ import {
   resolveTimelineMinimapIndexFromPointer,
   resolveTimelineMinimapInteractiveWidth,
   resolveTimelineMinimapNavigationInteractive,
+  resolveTimelineMinimapStride,
   resolveTimelineMinimapTopPercent,
   TIMELINE_MINIMAP_MIN_ITEMS,
 } from "./MessagesTimeline.logic";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
+import { observeResize } from "~/lib/observeResize";
 import { cn } from "~/lib/utils";
 
 function timelineMinimapEventTargetsPreview(target: EventTarget): boolean {
@@ -58,6 +60,14 @@ export function TimelineMinimap({
     return () => node.removeEventListener("wheel", onWheel);
   };
 
+  const [railHeight, setRailHeight] = useState(0);
+  const railRef = (node: HTMLDivElement | null) => {
+    if (!node) return;
+    return observeResize(node, ([entry]) => {
+      if (entry) setRailHeight(Math.round(entry.contentRect.height));
+    });
+  };
+
   const pressedOnStripRef = useRef(false);
   const [passThrough, setPassThrough] = useState(false);
 
@@ -85,6 +95,8 @@ export function TimelineMinimap({
   const previousItem =
     resolvedCurrentIndex === null ? null : (items[resolvedCurrentIndex - 1] ?? null);
   const nextItem = resolvedCurrentIndex === null ? null : (items[resolvedCurrentIndex + 1] ?? null);
+
+  const stride = resolveTimelineMinimapStride(items.length, railHeight);
 
   const resolveActiveIndexFromPointer = (event: MouseEvent<HTMLElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -126,6 +138,7 @@ export function TimelineMinimap({
     >
       <div className="relative h-full w-full select-none">
         <div
+          ref={railRef}
           className={cn(
             "absolute top-1/2 left-3 -translate-y-1/2",
             hitStripWidth > 0 && !passThrough ? "pointer-events-auto" : "pointer-events-none",
@@ -206,6 +219,12 @@ export function TimelineMinimap({
           >
             <div className="absolute top-0 left-3 h-full w-px bg-border/15" />
             {items.map((item, index) => {
+              const drawn =
+                index % stride === 0 ||
+                index === items.length - 1 ||
+                index === resolvedActiveIndex ||
+                index === resolvedCurrentIndex;
+              if (!drawn) return null;
               const top = `${resolveTimelineMinimapTopPercent(index, items.length)}%`;
               const activeDistance =
                 resolvedActiveIndex === null ? null : Math.abs(index - resolvedActiveIndex);

@@ -370,6 +370,7 @@ export function OverviewView() {
     <SidebarInset className="h-(--app-height) min-h-0 overflow-hidden overscroll-y-none">
       <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
         <WorkspacePageHeader
+          data-focus-dims
           electron={isElectron}
           className="border-b border-border bg-muted text-xs whitespace-nowrap text-muted-foreground"
         >
@@ -418,6 +419,7 @@ export function OverviewView() {
               ref={gridRef}
               role="grid"
               aria-label="Overview"
+              data-focus-dims
               className="min-h-0 flex-1 overflow-auto"
               onFocus={handleGridFocus}
               onClick={handleGridClick}

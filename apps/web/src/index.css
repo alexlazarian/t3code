@@ -1842,6 +1842,7 @@ html[data-focus-dimming]
     [data-app-sidebar] > [data-slot="sidebar-inner"],
     [data-preview-panel-mode="inline"] > *,
     [data-chat-header] > *,
+    [data-focus-dims],
     :has(> [data-chat-composer-overlay]) > :not([data-chat-composer-overlay])
   ) {
   transition: opacity 300ms ease-out;
@@ -1854,6 +1855,7 @@ html[data-focus-dimming]:has([data-chat-composer-form]:focus-within):not(
     [data-app-sidebar] > [data-slot="sidebar-inner"],
     [data-preview-panel-mode="inline"] > *,
     [data-chat-header] > *,
+    [data-focus-dims],
     :has(> [data-chat-composer-overlay]) > :not([data-chat-composer-overlay])
   ) {
   opacity: 0.35;
