@@ -17,7 +17,7 @@ const toggleVariants = cva(
         default: "h-9 min-w-9 px-[calc(--spacing(2)-1px)] sm:h-6.5 sm:min-w-6.5",
         lg: "h-10 min-w-10 px-[calc(--spacing(2.5)-1px)] sm:h-7.5 sm:min-w-7.5",
         // Inside the segmented group's 0.125rem padding, so the group is as tall as an `sm` button.
-        segmented: "h-7.5 min-w-0 rounded-md px-2.5 text-xs before:rounded-none sm:h-4.5",
+        segmented: "h-7 min-w-0 rounded-md px-2.5 text-xs before:rounded-none sm:h-4.5",
         sm: "h-8 min-w-8 px-[calc(--spacing(1.5)-1px)] sm:h-5.5 sm:min-w-5.5",
         xs: "h-7 min-w-7 px-[calc(--spacing(1)-1px)] sm:h-5 sm:min-w-5 rounded-md",
       },
