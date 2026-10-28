@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { dominantColorFromPixels } from "./projectAccentColor.logic";
+import { dominantColorFromPixels, projectIconOverrideColor } from "./projectAccentColor.logic";
 
 function pixels(
   size: number,
@@ -47,5 +47,54 @@ describe("dominantColorFromPixels", () => {
     );
     expect(b).toBeGreaterThan(200);
     expect(r).toBeLessThan(80);
+  });
+
+  it("returns null when chromatic pixels are under a quarter of the opaque ones", () => {
+    const red = (x: number, y: number) => (y * 32 + x) % 5 === 0;
+    expect(
+      dominantColorFromPixels(
+        pixels(32, (x, y) => (red(x, y) ? [220, 20, 20, 255] : [0, 0, 0, 255])),
+      ),
+    ).toBeNull();
+  });
+
+  it("returns a color once chromatic pixels pass a quarter of the opaque ones", () => {
+    const red = (x: number, y: number) => (y * 32 + x) % 3 === 0;
+    expect(
+      dominantColorFromPixels(
+        pixels(32, (x, y) => (red(x, y) ? [220, 20, 20, 255] : [0, 0, 0, 255])),
+      ),
+    ).not.toBeNull();
+  });
+
+  it("returns null when opaque pixels are under 5% of the image", () => {
+    expect(
+      dominantColorFromPixels(
+        pixels(32, (x, y) => (x < 7 && y < 7 ? [220, 20, 20, 255] : [0, 0, 0, 0])),
+      ),
+    ).toBeNull();
+  });
+
+  it("returns a color when opaque pixels pass 5% of the image", () => {
+    expect(
+      dominantColorFromPixels(
+        pixels(32, (x, y) => (x < 8 && y < 8 ? [220, 20, 20, 255] : [0, 0, 0, 0])),
+      ),
+    ).not.toBeNull();
+  });
+
+  it("ignores near-gray colors below the chroma floor", () => {
+    expect(dominantColorFromPixels(pixels(32, () => [128, 124, 120, 255]))).toBeNull();
+  });
+});
+
+describe("projectIconOverrideColor", () => {
+  it("maps an icon color to its Tailwind theme variable", () => {
+    expect(projectIconOverrideColor({ color: "red" })).toBe("var(--color-red-500)");
+  });
+
+  it("returns null without an icon color", () => {
+    expect(projectIconOverrideColor(null)).toBeNull();
+    expect(projectIconOverrideColor({})).toBeNull();
   });
 });

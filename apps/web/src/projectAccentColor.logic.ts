@@ -3,38 +3,9 @@ import type { ProjectIconColor } from "@t3tools/contracts";
 const MIN_CHROMA = 0.04;
 const MIN_OPAQUE_SHARE = 0.05;
 const MIN_CHROMATIC_SHARE = 0.25;
-const NEUTRAL_MIX = { r: 0x8a, g: 0x85, b: 0x7e };
-const ACCENT_WEIGHT = 0.74;
-
-// Tailwind 500 values, matching the swatches in projectIconColors.ts.
-const ICON_COLOR_HEX: Record<ProjectIconColor, string> = {
-  gray: "#6b7280",
-  red: "#ef4444",
-  orange: "#f97316",
-  amber: "#f59e0b",
-  yellow: "#eab308",
-  lime: "#84cc16",
-  green: "#22c55e",
-  emerald: "#10b981",
-  teal: "#14b8a6",
-  cyan: "#06b6d4",
-  sky: "#0ea5e9",
-  blue: "#3b82f6",
-  indigo: "#6366f1",
-  violet: "#8b5cf6",
-  purple: "#a855f7",
-  fuchsia: "#d946ef",
-  pink: "#ec4899",
-  rose: "#f43f5e",
-};
 
 function toHex(r: number, g: number, b: number): string {
   return `#${((1 << 24) | (Math.round(r) << 16) | (Math.round(g) << 8) | Math.round(b)).toString(16).slice(1)}`;
-}
-
-function parseHex(hex: string) {
-  const value = Number.parseInt(hex.slice(1), 16);
-  return { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 };
 }
 
 function linear(channel: number): number {
@@ -86,14 +57,8 @@ export function dominantColorFromPixels(rgba: Uint8ClampedArray): string | null 
   return best ? toHex(best.r / best.count, best.g / best.count, best.b / best.count) : null;
 }
 
-export function mixAccentFill(hex: string): string {
-  const { r, g, b } = parseHex(hex);
-  const mix = (a: number, n: number) => a * ACCENT_WEIGHT + n * (1 - ACCENT_WEIGHT);
-  return toHex(mix(r, NEUTRAL_MIX.r), mix(g, NEUTRAL_MIX.g), mix(b, NEUTRAL_MIX.b));
-}
-
-export function projectIconOverrideFill(
-  projectIcon: { readonly kind: string; readonly color?: ProjectIconColor } | null | undefined,
+export function projectIconOverrideColor(
+  projectIcon: { readonly kind?: string; readonly color?: ProjectIconColor } | null | undefined,
 ): string | null {
-  return projectIcon?.color ? mixAccentFill(ICON_COLOR_HEX[projectIcon.color]) : null;
+  return projectIcon?.color ? `var(--color-${projectIcon.color}-500)` : null;
 }
