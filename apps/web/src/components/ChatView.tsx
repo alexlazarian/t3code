@@ -277,9 +277,10 @@ import {
   PanelLayoutControls,
   type PanelLayoutControlsProps,
   RightPanelMaximizeControl,
-  ThreadPanelHeaderControl,
+  ThreadHeaderTools,
   WorkspaceTitlebarControls,
 } from "./chat/PanelLayoutControls";
+import { resolveThreadHeaderTools } from "./chat/threadHeaderTools.logic";
 import type { ExpandedImagePreview } from "./chat/ExpandedImagePreview";
 import { ThreadDetailsPanel } from "./chat/ThreadDetailsPanel";
 import { NoActiveThreadState } from "./NoActiveThreadState";
@@ -978,8 +979,6 @@ export default function ChatView(props: ChatViewProps) {
     panelAnimationDurationMs,
   );
   const rightPanelPresent = rightPanelPresence.present;
-  const rightPanelControlsInPanel =
-    shouldUsePlanSidebarSheet && rightPanelPresent && rightPanelOpen;
   const rightPanelControlsAtRoot = rightPanelPresent && !shouldUsePlanSidebarSheet;
   const renderedRightPanelSurface = rightPanelPresence.value?.activeSurface ?? null;
   const renderedRightPanelSurfaces = rightPanelPresence.value?.surfaces ?? [];
@@ -989,7 +988,6 @@ export default function ChatView(props: ChatViewProps) {
   );
   const canMaximizeRightPanel = rightPanelOpen;
   const rightPanelMaximized = canMaximizeRightPanel && rightPanelState.maximized === true;
-  const inlineRightPanelOwnsTitleBar = rightPanelOpen && !shouldUsePlanSidebarSheet;
   const [threadPanelPopoverHandle] = useState(PopoverCreateHandle);
   const [chatCanvasStore] = useState(createChatCanvasStore);
 
@@ -2279,6 +2277,10 @@ export default function ChatView(props: ChatViewProps) {
     onOpenTurnDiffStable,
     openChangesFromThreadPanelStable,
     openFileSurfaceStable,
+    onToggleDiffStable,
+    toggleFilesSurfaceStable,
+    togglePreviewPanelStable,
+    togglePullRequestsSurfaceStable,
     toggleRightPanelMaximizedStable,
     toggleRightPanelStable,
     toggleThreadPanelStable,
@@ -3082,10 +3084,42 @@ export default function ChatView(props: ChatViewProps) {
   const panelToggleControls = (
     <PanelLayoutControls
       {...panelToggleControlProps}
-      showThreadPanelControl={!inlineRightPanelOwnsTitleBar}
+      showThreadPanelControl={false}
+      showTerminalControl={false}
     />
   );
-  const threadPanelHeaderControl = <ThreadPanelHeaderControl {...panelToggleControlProps} />;
+  const threadHeaderToolStates = resolveThreadHeaderTools({
+    activeSurfaceKind: activeRightPanelKind,
+    isServerThread,
+    isGitRepo,
+    hasProject: activeProject !== null,
+    browserAvailable,
+    canOperatePreview,
+    pullRequestsAvailable: pullRequestsSurfaceAvailable,
+  });
+  const threadHeaderTools = (
+    <ThreadHeaderTools
+      threadPanelOpen={threadPanelOpen}
+      threadPanelPresentation={threadPanelPresentation}
+      threadPanelPopoverHandle={threadPanelPopoverHandle}
+      threadPanelShortcutLabel={panelToggleControlProps.threadPanelShortcutLabel}
+      onToggleThreadPanel={toggleThreadPanelStable}
+      diff={threadHeaderToolStates.diff}
+      diffShortcutLabel={shortcutLabelForCommand(keybindings, "diff.toggle")}
+      onToggleDiff={onToggleDiffStable}
+      preview={threadHeaderToolStates.preview}
+      previewShortcutLabel={shortcutLabelForCommand(keybindings, "preview.toggle")}
+      onTogglePreview={togglePreviewPanelStable}
+      files={threadHeaderToolStates.files}
+      onToggleFiles={toggleFilesSurfaceStable}
+      pullRequests={threadHeaderToolStates.pullRequests}
+      onTogglePullRequests={togglePullRequestsSurfaceStable}
+      terminalAvailable={panelToggleControlProps.terminalAvailable}
+      terminalOpen={panelToggleControlProps.terminalOpen}
+      terminalShortcutLabel={panelToggleControlProps.terminalShortcutLabel}
+      onToggleTerminal={toggleTerminalVisibilityStable}
+    />
+  );
   const panelLayoutControls = (
     <WorkspaceTitlebarControls
       showMaximizeControl={!shouldUsePlanSidebarSheet}
@@ -3138,21 +3172,20 @@ export default function ChatView(props: ChatViewProps) {
               className="pointer-events-none fixed top-(--app-top-bar-bottom) right-[var(--workspace-controls-right)] h-[var(--workspace-topbar-height)] w-28 [-webkit-app-region:no-drag]"
             />
           ) : null}
-          {!rightPanelControlsAtRoot && !rightPanelControlsInPanel ? panelLayoutControls : null}
-          {inlineRightPanelOwnsTitleBar ? threadPanelHeaderControl : null}
           <ChatHeader
             activeThreadEnvironmentId={activeThread.environmentId}
             activeThreadId={activeThread.id}
             isServerThread={isServerThread}
+            threadShell={activeThreadShell}
             activeThreadTitle={activeThread.title}
             activeProject={activeProject ?? null}
             parentThreadLink={parentThreadLink}
             onOpenThread={onOpenRelatedThreadStable}
-            rightPanelOpen={inlineRightPanelOwnsTitleBar}
             onNewThreadInProject={handleNewThreadInActiveProjectStable}
             {...(activeDraftLogicalProjectKey
               ? { onOpenProjectSettings: handleOpenDraftProjectSettingsStable }
               : {})}
+            tools={threadHeaderTools}
           />
         </header>
 

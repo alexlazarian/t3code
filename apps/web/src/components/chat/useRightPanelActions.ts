@@ -146,6 +146,18 @@ export function useRightPanelActions(input: RightPanelActionsInput) {
     useRightPanelStore.getState().open(activeThreadRef, "pull-requests");
   };
   const addPullRequestsSurfaceStable = useStableCallback(addPullRequestsSurface);
+  const toggleFilesSurface = () => {
+    if (!activeThreadRef) return;
+    if (activeRightPanelSurface?.kind !== "files" && !activeProject) return;
+    useRightPanelStore.getState().toggle(activeThreadRef, "files");
+  };
+  const toggleFilesSurfaceStable = useStableCallback(toggleFilesSurface);
+  const togglePullRequestsSurface = () => {
+    if (!activeThreadRef) return;
+    if (activeRightPanelSurface?.kind !== "pull-requests" && !pullRequestsSurfaceAvailable) return;
+    useRightPanelStore.getState().toggle(activeThreadRef, "pull-requests");
+  };
+  const togglePullRequestsSurfaceStable = useStableCallback(togglePullRequestsSurface);
   const addDeviceSurface = () => {
     if (!activeThreadRef) return;
     if (!deviceState.onboardingCompleted || deviceState.hostStatus === "disabled") {
@@ -327,6 +339,9 @@ export function useRightPanelActions(input: RightPanelActionsInput) {
     onToggleDiffStable,
     openChangesFromThreadPanelStable,
     openFileSurfaceStable,
+    toggleFilesSurfaceStable,
+    togglePreviewPanelStable,
+    togglePullRequestsSurfaceStable,
     toggleRightPanelMaximizedStable,
     toggleRightPanelStable,
     toggleThreadPanelStable,
