@@ -54,10 +54,10 @@ describe("t3 theme", () => {
         somethingFromANewerBuild: { nested: true },
       });
 
-      yield* runCli(["theme", "set", "ocean", "--base-dir", baseDir]);
+      yield* runCli(["theme", "set", "cockpit", "--base-dir", baseDir]);
 
       const settings = readSettings(baseDir);
-      assert.equal(settings.defaultTheme, "ocean");
+      assert.equal(settings.defaultTheme, "cockpit");
       assert.equal(settings.enableProviderUpdateChecks, false);
       assert.deepEqual(settings.somethingFromANewerBuild, { nested: true });
     }),
@@ -68,7 +68,7 @@ describe("t3 theme", () => {
       const baseDir = makeBaseDir();
       writeSettings(baseDir, { enableProviderUpdateChecks: false });
 
-      yield* runCli(["theme", "set", "ocean", "--base-dir", baseDir]);
+      yield* runCli(["theme", "set", "cockpit", "--base-dir", baseDir]);
       yield* runCli(["theme", "clear", "--base-dir", baseDir]);
 
       const settings = readSettings(baseDir);
@@ -159,7 +159,7 @@ describe("t3 theme", () => {
       writeSettings(baseDir, { enableProviderUpdateChecks: false });
       NodeFS.chmodSync(settingsPathFor(baseDir), 0o000);
 
-      const failure = yield* runCli(["theme", "set", "ocean", "--base-dir", baseDir]).pipe(
+      const failure = yield* runCli(["theme", "set", "cockpit", "--base-dir", baseDir]).pipe(
         Effect.flip,
       );
 

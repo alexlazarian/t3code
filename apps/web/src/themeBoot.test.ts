@@ -8,11 +8,9 @@ import {
   invalidateCustomThemes,
   isKnownThemePreference,
   resolveThemeAppearance,
-  T3_CHAT_THEME,
-  EMBER_THEME,
-  GROVE_THEME,
-  IRIS_THEME,
-  OCEAN_THEME,
+  CLASSIC_MEDIUM_THEME,
+  COCKPIT_THEME,
+  VSCODE_THEME,
   THEME_APPEARANCE_MODE_STORAGE_KEY,
   THEME_FOLLOW_SYSTEM_STORAGE_KEY,
   toCanonicalThemeColor,
@@ -153,46 +151,42 @@ describe("index.html boot script", () => {
   }> = [
     { name: "no stored preference on a dark OS", storage: {}, prefersDark: true },
     {
-      name: "T3 Chat follows a dark OS",
-      storage: { [THEME_STORAGE_KEY]: "t3-chat", [THEME_FOLLOW_SYSTEM_STORAGE_KEY]: "true" },
+      name: "Classic Medium follows a dark OS",
+      storage: {
+        [THEME_STORAGE_KEY]: "classic-medium",
+        [THEME_FOLLOW_SYSTEM_STORAGE_KEY]: "true",
+      },
       prefersDark: true,
     },
     {
-      name: "an explicit global dark mode applies to T3 Chat",
+      name: "an explicit global dark mode applies to Cockpit",
       storage: {
-        [THEME_STORAGE_KEY]: "t3-chat",
+        [THEME_STORAGE_KEY]: "cockpit",
         [THEME_APPEARANCE_MODE_STORAGE_KEY]: "dark",
         [THEME_FOLLOW_SYSTEM_STORAGE_KEY]: "false",
       },
       prefersDark: false,
     },
     {
-      name: "Grove follows a dark OS",
-      storage: { [THEME_STORAGE_KEY]: "grove", [THEME_FOLLOW_SYSTEM_STORAGE_KEY]: "true" },
+      name: "VS Code follows a dark OS",
+      storage: { [THEME_STORAGE_KEY]: "vscode", [THEME_FOLLOW_SYSTEM_STORAGE_KEY]: "true" },
       prefersDark: true,
     },
     {
-      name: "Ocean follows a dark OS",
-      storage: { [THEME_STORAGE_KEY]: "ocean", [THEME_FOLLOW_SYSTEM_STORAGE_KEY]: "true" },
+      name: "a removed built-in keeps its explicit dark mode on the default theme",
+      storage: {
+        [THEME_STORAGE_KEY]: "grove",
+        [THEME_APPEARANCE_MODE_STORAGE_KEY]: "dark",
+      },
+      prefersDark: false,
+    },
+    {
+      name: "a removed built-in follows the OS on the default theme",
+      storage: { [THEME_STORAGE_KEY]: "t3-chat", [THEME_FOLLOW_SYSTEM_STORAGE_KEY]: "true" },
       prefersDark: true,
     },
     {
-      name: "Ember follows a dark OS",
-      storage: { [THEME_STORAGE_KEY]: "ember", [THEME_FOLLOW_SYSTEM_STORAGE_KEY]: "true" },
-      prefersDark: true,
-    },
-    {
-      name: "Iris follows a dark OS",
-      storage: { [THEME_STORAGE_KEY]: "iris", [THEME_FOLLOW_SYSTEM_STORAGE_KEY]: "true" },
-      prefersDark: true,
-    },
-    {
-      name: "a legacy t3-grove preference resolves through the alias",
-      storage: { [THEME_STORAGE_KEY]: "t3-grove", [THEME_FOLLOW_SYSTEM_STORAGE_KEY]: "true" },
-      prefersDark: true,
-    },
-    {
-      name: "legacy t3-chat-dark resolves to dark T3 Chat",
+      name: "a legacy t3-chat-dark preference falls back to the default theme",
       storage: { [THEME_STORAGE_KEY]: "t3-chat-dark" },
       prefersDark: true,
     },
@@ -284,7 +278,7 @@ describe("index.html boot script", () => {
   });
 
   it("keeps every built-in boot splash in sync with the real palettes", () => {
-    for (const theme of [T3_CHAT_THEME, GROVE_THEME, OCEAN_THEME, EMBER_THEME, IRIS_THEME]) {
+    for (const theme of [CLASSIC_MEDIUM_THEME, COCKPIT_THEME, VSCODE_THEME]) {
       expect(theme.appearance).toBe("light");
       for (const mode of ["light", "dark"] as const) {
         const colors = getThemeColorsForMode(theme, mode);
@@ -309,40 +303,60 @@ describe("index.html boot script", () => {
 
   it("applies the matching half of an automatic mix to the splash", () => {
     const storage = {
-      [THEME_STORAGE_KEY]: "t3-chat",
+      [THEME_STORAGE_KEY]: VSCODE_THEME.id,
       [THEME_APPEARANCE_MODE_STORAGE_KEY]: "system",
-      "t3code:theme-halves:v1": JSON.stringify({ dark: GROVE_THEME.id }),
+      "t3code:theme-halves:v1": JSON.stringify({ dark: COCKPIT_THEME.id }),
     };
 
     const dark = runBootScript({ storage, prefersDark: true });
     expect(dark.isDark).toBe(true);
-    expect(dark.themeId).toBe(GROVE_THEME.id);
+    expect(dark.themeId).toBe(COCKPIT_THEME.id);
     expect(dark.bootVariables["--boot-background"]).toBe(
-      getThemeColorsForMode(GROVE_THEME, "dark")!.canvas,
+      getThemeColorsForMode(COCKPIT_THEME, "dark")!.canvas,
     );
 
     const light = runBootScript({ storage, prefersDark: false });
     expect(light.isDark).toBe(false);
-    expect(light.themeId).toBe("t3-chat");
+    expect(light.themeId).toBe(VSCODE_THEME.id);
     expect(light.bootVariables["--boot-background"]).toBe(
-      getThemeColorsForMode(T3_CHAT_THEME, "light")!.canvas,
+      getThemeColorsForMode(VSCODE_THEME, "light")!.canvas,
     );
   });
+
+  it.each(["grove", "ocean", "ember", "iris", "t3-chat", "t3-grove", "t3-chat-dark"])(
+    "paints the default splash for the removed built-in %s",
+    (themeId) => {
+      const boot = runBootScript({
+        storage: {
+          [THEME_STORAGE_KEY]: themeId,
+          [THEME_APPEARANCE_MODE_STORAGE_KEY]: "dark",
+          "t3code:theme-halves:v1": JSON.stringify({ dark: themeId }),
+        },
+        prefersDark: false,
+      });
+      expect(boot.isDark).toBe(true);
+      expect(boot.themeId).toBeUndefined();
+      expect(boot.themeSelected).toBeUndefined();
+      expect(boot.bootVariables).toEqual({});
+      expect(boot.backgroundColor).toBe("#1f1d1b");
+      expect(isKnownThemePreference(themeId)).toBe(false);
+    },
+  );
 
   it("paints the half's splash when the base theme no longer exists", () => {
     const boot = runBootScript({
       storage: {
         [THEME_STORAGE_KEY]: "gone-theme",
         [THEME_APPEARANCE_MODE_STORAGE_KEY]: "system",
-        "t3code:theme-halves:v1": JSON.stringify({ dark: GROVE_THEME.id }),
+        "t3code:theme-halves:v1": JSON.stringify({ dark: COCKPIT_THEME.id }),
       },
       prefersDark: true,
     });
     expect(boot.isDark).toBe(true);
-    expect(boot.themeId).toBe(GROVE_THEME.id);
+    expect(boot.themeId).toBe(COCKPIT_THEME.id);
     expect(boot.themeSelected).toBe("true");
     expect(boot.bootVariables["--boot-background"]).toBe(
-      getThemeColorsForMode(GROVE_THEME, "dark")!.canvas,
+      getThemeColorsForMode(COCKPIT_THEME, "dark")!.canvas,
     );
   });
 

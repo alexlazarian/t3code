@@ -5,6 +5,10 @@ appearance or stay in light or dark mode. To use different themes for light and 
 the corresponding preview within each theme. Appearance preferences are saved separately on each
 device or browser.
 
+The built-in themes are **Default**, **Classic Medium** (after Ableton Live), **Cockpit**, and
+**VS Code** (Light Modern and Dark Modern). Each has a light and a dark version. If you had picked
+Grove, Ocean, Ember, Iris, or T3 Chat, you'll see Default until you choose another theme.
+
 On web and desktop, use **Change theme** in the command palette to select a theme without leaving chat.
 Press **Cmd+Option+A** on macOS or **Ctrl+Alt+A** on Windows/Linux to open the theme picker directly.
 Use **Change appearance** in the command palette to choose System, Light, or Dark independently of
@@ -68,8 +72,8 @@ main local environment. app.t3.codes and additional connections do not use them.
 
 Select a published theme in **Settings → Appearance** to follow its palette as the server updates
 it. **Duplicate** makes an independent copy you can edit. A saved custom theme with the same ID
-takes precedence. If the server stops publishing the selected theme, T3 Code falls back to its
-standard theme.
+takes precedence. If the server stops publishing the selected theme, T3 Code falls back to the
+Default theme.
 
 Run this on the server to set a default and switch connected clients to it:
 

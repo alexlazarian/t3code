@@ -22,11 +22,9 @@ import {
   type ThemeAppearance,
   type ThemeDefinition,
   type ThemeHalves,
-  T3_CHAT_THEME,
-  EMBER_THEME,
-  GROVE_THEME,
-  IRIS_THEME,
-  OCEAN_THEME,
+  CLASSIC_MEDIUM_THEME,
+  COCKPIT_THEME,
+  VSCODE_THEME,
 } from "../../themePalette";
 import {
   AlertDialog,
@@ -55,11 +53,9 @@ import {
 import { ThemeWireframe } from "./ThemeWireframe";
 
 const MAINTAINER_THEMES: ReadonlyArray<ThemeDefinition> = [
-  T3_CHAT_THEME,
-  GROVE_THEME,
-  OCEAN_THEME,
-  EMBER_THEME,
-  IRIS_THEME,
+  CLASSIC_MEDIUM_THEME,
+  COCKPIT_THEME,
+  VSCODE_THEME,
 ];
 
 function collectionVariantLabels(themes: ReadonlyArray<ThemeDefinition>): ReadonlyArray<string> {
