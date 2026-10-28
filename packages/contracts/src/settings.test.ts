@@ -198,6 +198,30 @@ describe("ClientSettings notifications", () => {
   });
 });
 
+describe("ClientSettings interface font size", () => {
+  it("defaults to the prototype scale when never set", () => {
+    expect(decodeClientSettings({}).fontSizeInterface).toBe(13);
+  });
+
+  it("keeps a persisted value over the default", () => {
+    expect(decodeClientSettings({ fontSizeInterface: 16 }).fontSizeInterface).toBe(16);
+  });
+});
+
+describe("ClientSettings reading spacing", () => {
+  it("defaults to the prototype's tight spacing when never set", () => {
+    const settings = decodeClientSettings({});
+    expect(settings.messageLineHeight).toBe(155);
+    expect(settings.messageParagraphSpacing).toBe(40);
+  });
+
+  it("keeps persisted values over the defaults", () => {
+    const settings = decodeClientSettings({ messageLineHeight: 163, messageParagraphSpacing: 65 });
+    expect(settings.messageLineHeight).toBe(163);
+    expect(settings.messageParagraphSpacing).toBe(65);
+  });
+});
+
 describe("ClientSettings quit confirmation", () => {
   it.each([
     [true, "hold"],

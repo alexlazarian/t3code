@@ -1,3 +1,5 @@
+import { useUiStateStore } from "../uiStateStore";
+import { requestOpenSidebar } from "../sidebarOpenRequest";
 import { threadPullRequestLinkMode } from "@t3tools/client-runtime/thread-pull-request-compatibility";
 import { visibleThreadPullRequests } from "@t3tools/shared/threadPullRequests";
 
@@ -57,10 +59,13 @@ import {
   CheckIcon,
   ChevronRightIcon,
   CornerLeftUpIcon,
+  BellIcon,
   FileSearchIcon,
   FolderGit2Icon,
   FolderIcon,
   FolderPlusIcon,
+  LayoutGridIcon,
+  ListIcon,
   MessageSquareDashedIcon,
   LinkIcon,
   MessageSquareIcon,
@@ -87,6 +92,7 @@ import { useAtomValue } from "@effect/atom-react";
 
 import { isDesktopLocalConnectionTarget } from "../connection/desktopLocal";
 import { useDesktopLocalBootstraps } from "../connection/useDesktopLocalBootstraps";
+import { isOverviewPathname, useSwitchThreadView } from "../threadView";
 import { useHandleNewThread } from "../hooks/useHandleNewThread";
 import { useOpenPanelPullRequestUrl } from "../hooks/useOpenPanelPullRequestUrl";
 import { copyThreadReference } from "../lib/copyThreadReference";
@@ -374,6 +380,7 @@ function OpenCommandPaletteDialog(props: {
 }) {
   const navigate = useNavigate();
   const pathname = useLocation({ select: (location) => location.pathname });
+  const setThreadView = useSwitchThreadView();
   const { openChildSearch, setOpen } = props;
   // Keyed by palette session: the intent and restored search only seed this
   // mount, and closing must not change what the closing palette shows.
@@ -1151,6 +1158,18 @@ function OpenCommandPaletteDialog(props: {
   };
 
   const actionItems: Array<CommandPaletteActionItem | CommandPaletteSubmenuItem> = [];
+  actionItems.push({
+    kind: "action",
+    value: "action:show-threads-that-need-you",
+    searchTerms: ["need", "attention", "approval", "input", "request", "plan", "filter", "inbox"],
+    title: "Show threads that need you",
+    icon: <BellIcon className={ITEM_ICON_CLASS} />,
+    run: async () => {
+      useUiStateStore.getState().setSidebarStatusFilter("needs-you");
+      useUiStateStore.getState().setSidebarPanel("threads");
+      requestOpenSidebar();
+    },
+  });
 
   if (projects.length > 0) {
     const activeProjectTitle =
@@ -1489,6 +1508,33 @@ function OpenCommandPaletteDialog(props: {
       icon: <PullRequestGlyph.pullRequest className={ITEM_ICON_CLASS} />,
       run: async () => {
         await navigate({ to: "/pull-requests", search: readPullRequestListPreferences() });
+      },
+    });
+  }
+
+  const viewSearchTerms = ["overview", "grid", "board", "list", "view", "switch"];
+  if (isOverviewPathname(pathname)) {
+    actionItems.push({
+      kind: "action",
+      value: "action:view-list",
+      searchTerms: viewSearchTerms,
+      title: "Switch to List",
+      icon: <ListIcon className={ITEM_ICON_CLASS} />,
+      shortcutCommand: "view.toggleOverview",
+      run: async () => {
+        setThreadView("list");
+      },
+    });
+  } else {
+    actionItems.push({
+      kind: "action",
+      value: "action:view-overview",
+      searchTerms: viewSearchTerms,
+      title: "Switch to Overview",
+      icon: <LayoutGridIcon className={ITEM_ICON_CLASS} />,
+      shortcutCommand: "view.toggleOverview",
+      run: async () => {
+        setThreadView("overview");
       },
     });
   }

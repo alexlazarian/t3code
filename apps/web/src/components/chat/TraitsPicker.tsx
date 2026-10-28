@@ -645,6 +645,7 @@ export const TraitsPicker = memo(function TraitsPicker({
                       : undefined
                   }
                   size={size}
+                  variant={isComposerOwned ? "boxed" : "ghost"}
                   className={cn(
                     isCodexStyle
                       ? "min-w-0 max-w-40 shrink justify-start overflow-hidden whitespace-nowrap sm:max-w-48"

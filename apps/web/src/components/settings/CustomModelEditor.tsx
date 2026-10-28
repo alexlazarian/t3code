@@ -3,7 +3,6 @@ import { useState } from "react";
 import type { ProviderDriverKind, ServerProviderModel } from "@t3tools/contracts";
 import type { CustomModelDefinition } from "@t3tools/shared/model";
 
-import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
@@ -259,8 +258,8 @@ export function CustomModelEditor({
           <Button
             type="button"
             size="xs"
-            variant="ghost-muted"
-            className="-ml-2 self-start"
+            variant="outline"
+            className="self-start"
             onClick={() =>
               updateDescriptor(descriptor.key, {
                 choices: [...descriptor.choices, emptyEditorChoice()],
@@ -339,8 +338,7 @@ export function CustomModelEditor({
                 key={preset.id}
                 type="button"
                 size="xs"
-                variant="ghost-muted"
-                className={cn("-ml-2 first:ml-0")}
+                variant="outline"
                 onClick={() => addDescriptor(descriptorFromPreset(preset))}
               >
                 <PlusIcon className="size-3" />
@@ -350,7 +348,7 @@ export function CustomModelEditor({
           <Button
             type="button"
             size="xs"
-            variant="ghost-muted"
+            variant="outline"
             onClick={() => addDescriptor(emptyEditorDescriptor())}
           >
             <PlusIcon className="size-3" />

@@ -364,7 +364,7 @@ function SegmentTriggers({
         }
       >
         <div aria-hidden className="absolute inset-0 overflow-hidden rounded-md">
-          {/* Clipped inside the rounded clip so the bar's own corners keep their antialiasing. */}
+          {/* Clipped inside the rounded-none clip so the bar's own corners keep their antialiasing. */}
           <div className="absolute inset-0" style={paceMark?.gap}>
             <div
               aria-hidden
@@ -386,7 +386,7 @@ function SegmentTriggers({
         {paceMark ? (
           <span
             aria-hidden
-            className="absolute inset-y-0.5 w-0.5 -translate-x-1/2 rounded-full bg-foreground"
+            className="absolute inset-y-0.5 w-0.5 -translate-x-1/2 rounded-none bg-foreground"
             style={paceMark.tick}
           />
         ) : null}
@@ -670,7 +670,7 @@ export function UsageLimitsPooled({
             </div>
           </div>
           <Button
-            variant="ghost-muted"
+            variant="outline"
             size="xs"
             onClick={() => void ensureLocalApi().shell.openExternal(link.url)}
           >

@@ -601,7 +601,7 @@ export function AddEnvironmentDialog({
           render={
             <DialogTrigger
               render={
-                <Button size="xs" variant="ghost-muted" aria-label="Add environment">
+                <Button size="xs" variant="outline" aria-label="Add environment">
                   <PlusIcon className="size-3" />
                   <span>Add environment</span>
                 </Button>

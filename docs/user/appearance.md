@@ -43,10 +43,17 @@ preference is saved separately on each device.
 
 ## Motion
 
-The main sidebar, right panel, and terminal drawer open and close immediately by default. Move the
+The main sidebar and right panel open and close immediately by default. Move the
 **Panel animations** slider above 0 ms to add motion, up to 400 ms, unless reduced motion is enabled
 in your operating system. Moving between threads always snaps to the selected thread's panel state
 without replaying its transitions.
+
+## Info bar
+
+On web and desktop, a bar along the bottom of the window describes whatever you point
+at: a control's tooltip and shortcut, or a thread's status, project, machine, branch,
+model, access mode, and pull request. Turn it off with **Info bar** in
+**Settings → Appearance**.
 
 ## Custom themes
 

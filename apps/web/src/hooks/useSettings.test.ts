@@ -18,7 +18,6 @@ import {
   getClientSettings,
   mergeEnvironmentSettings,
   persistClientSettingsPatch,
-  resolveEnvironmentIdentificationMode,
   persistClientSettingsUpdate,
   prepareModelPreferencesPatch,
 } from "./useSettings";
@@ -336,21 +335,4 @@ it("uses the environment's model preferences after migration, including empty li
   );
   expect(merged.favorites).toEqual([]);
   expect(merged.providerModelPreferences).toEqual({});
-});
-
-describe("resolveEnvironmentIdentificationMode", () => {
-  it("swaps nightly artwork for the pill while a sidebar background is active", () => {
-    const base = { mode: "artwork", settingsHydrated: true } as const;
-    expect(resolveEnvironmentIdentificationMode(base)).toBe("artwork");
-    expect(resolveEnvironmentIdentificationMode({ ...base, sidebarBackgroundActive: true })).toBe(
-      "pill",
-    );
-    expect(
-      resolveEnvironmentIdentificationMode({
-        ...base,
-        mode: "none",
-        sidebarBackgroundActive: true,
-      }),
-    ).toBe("none");
-  });
 });

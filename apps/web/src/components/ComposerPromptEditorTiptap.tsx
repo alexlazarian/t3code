@@ -122,7 +122,6 @@ import { ComposerCodeBlockNodeView } from "./chat/ComposerCodeBlockNodeView";
 import { resolveAssistantCitationCommentDismissal } from "./chat/assistantCitationCommentDismissal";
 import { composerCodeBlockHighlight } from "./composerCodeBlockHighlight";
 import { importPastedComposerText } from "./composerInlineTokenPaste";
-import { didComposerSelectionChangeVisibly } from "./composerSelection";
 import type { ComposerDraftContextRecords } from "./composerContextPresentation";
 
 export interface ComposerPromptEditorHandle {
@@ -170,7 +169,6 @@ export interface ComposerPromptEditorProps {
     cursorAdjacentToMention: boolean,
     contextIds: string[],
   ) => void;
-  onVisibleSelectionChange?: () => void;
   onCommandKeyDown?: (key: string, event: KeyboardEvent, isTaskItem?: boolean) => boolean;
   onPageScrollKeyDown?: (key: "PageUp" | "PageDown") => void;
   onPageScrollKeyUp?: (key: string) => void;
@@ -942,7 +940,6 @@ function ComposerPromptEditorTiptapInner(
     className,
     placeholderClassName,
     onChange,
-    onVisibleSelectionChange,
     onCommandKeyDown,
     onPageScrollKeyDown,
     onPageScrollKeyUp,
@@ -968,7 +965,6 @@ function ComposerPromptEditorTiptapInner(
   // The editor config is built once, so its handlers reach the current callbacks through here.
   const readCallbacks = useStableCallback(() => ({
     onChange,
-    onVisibleSelectionChange,
     onCommandKeyDown,
     isPathQueryActive,
     importContextFragment,
@@ -1027,7 +1023,6 @@ function ComposerPromptEditorTiptapInner(
       start: Math.min(nextExpandedCursor, flatToMarkdown(map, toFlat)),
       end: Math.max(nextExpandedCursor, flatToMarkdown(map, toFlat)),
     };
-    const previousSelectionRange = selectionRangeRef.current;
     selectionRangeRef.current = nextSelectionRange;
     setIsEmpty(nextValue.length === 0);
     const previousSnapshot = snapshotRef.current;
@@ -1039,12 +1034,7 @@ function ComposerPromptEditorTiptapInner(
       previousSnapshot.contextIds.every((id, index) => id === contextIds[index])
     );
     if (isApplyingControlledUpdateRef.current) return;
-    if (!snapshotChanged) {
-      if (didComposerSelectionChangeVisibly(previousSelectionRange, nextSelectionRange)) {
-        readCallbacks().onVisibleSelectionChange?.();
-      }
-      return;
-    }
+    if (!snapshotChanged) return;
     // Ignore selection-only updates while a controlled rewrite is pending to avoid overwriting the new
     // prompt.
     if (previousSnapshot.value === nextValue && nextValue !== latestValueRef.current) {

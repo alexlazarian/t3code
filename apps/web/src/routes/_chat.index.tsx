@@ -1,7 +1,7 @@
 import { workspaceAreaProps } from "../lib/workspaceFocus";
 import { RefreshIcon } from "~/components/ui/refresh-icon";
 import { scopeProjectRef } from "@t3tools/client-runtime/environment";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Navigate, useRouter } from "@tanstack/react-router";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 import { isElectron } from "../env";
@@ -12,6 +12,7 @@ import { HostedEmptyState } from "../components/HostedEmptyState";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "../components/ui/empty";
 import { SidebarInset } from "../components/ui/sidebar";
 import { WorkspacePageHeader } from "../components/WorkspacePageHeader";
+import { useClientSettings, useClientSettingsHydrationStatus } from "../hooks/useSettings";
 import { useNewThreadHandler } from "../hooks/useHandleNewThread";
 import {
   readProject,
@@ -24,12 +25,17 @@ import { useEnvironments } from "../state/environments";
 function ChatIndexRouteView() {
   const { authGateState } = Route.useRouteContext();
   const { environments, isReady } = useEnvironments();
+  const threadView = useClientSettings((s) => s.threadView);
+  const settingsStatus = useClientSettingsHydrationStatus();
 
   if (authGateState.status === "hosted-static") {
     if (!isReady) return null;
     if (environments.length === 0) return <HostedEmptyState />;
   }
 
+  // A draft started before the saved view loads would replace the Overview redirect.
+  if (settingsStatus === "pending" || settingsStatus === "retrying") return null;
+  if (threadView === "overview") return <Navigate to="/overview" replace />;
   return <IndexDraftLanding />;
 }
 
@@ -92,7 +98,7 @@ function DraftStartError({ onRetry }: { readonly onRetry: () => void }) {
     <SidebarInset
       {...contentArea}
       role="main"
-      className="h-dvh min-h-0 overflow-hidden overscroll-y-none"
+      className="h-(--app-height) min-h-0 overflow-hidden overscroll-y-none"
     >
       {isElectron ? <WorkspacePageHeader electron /> : null}
       <Empty className="flex-1">

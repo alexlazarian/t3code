@@ -716,7 +716,7 @@ export default function DiffPanel({
       <div className="@container/diff-refs flex min-w-0 flex-1 items-center gap-3 [-webkit-app-region:no-drag]">
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={<Button size="xs" variant="secondary" />}
+            render={<Button size="xs" variant="outline" />}
             className="max-w-full"
             aria-label={`Diff scope: ${selectedScopeLabel}`}
             data-workspace-focus-default

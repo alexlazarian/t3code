@@ -12,6 +12,8 @@ import * as Option from "effect/Option";
 import type { SetStateAction } from "react";
 import { applyClaudePromptEffortPrefix, resolvePromptInjectedEffort } from "@t3tools/shared/model";
 import { getProviderModelCapabilities } from "../providerModels";
+import { resolveAppModelSelectionForInstance } from "../modelSelection";
+import type { UnifiedSettings } from "@t3tools/contracts/settings";
 import { sanitizeThreadErrorMessage } from "@t3tools/client-runtime/errors";
 import type {
   EnvironmentThread,
@@ -34,6 +36,7 @@ import {
   type PreviewAnnotationPayload,
   type ProviderInteractionMode,
   ProviderDriverKind,
+  type ProviderOptionSelection,
   type ProviderInstanceId,
   type ServerProvider,
   type ScopedProjectRef,
@@ -108,7 +111,6 @@ type ThreadProjection = EnvironmentThread["projection"];
 type ThreadStructureRow = ThreadStructure["visibleTurnItems"][number];
 
 export const LAST_INVOKED_SCRIPT_BY_PROJECT_KEY = "t3code:last-invoked-script-by-project";
-export const MAX_HIDDEN_MOUNTED_TERMINAL_THREADS = 10;
 
 export const ENVIRONMENT_RECONNECT_WARNING_GRACE_MS = 2_000;
 
@@ -584,37 +586,6 @@ export function getAntigravitySendBlockReason(
   return null;
 }
 
-export function reconcileMountedTerminalThreadIds(input: {
-  currentThreadIds: ReadonlyArray<string>;
-  openThreadIds: ReadonlyArray<string>;
-  activeThreadId: string | null;
-  activeThreadTerminalOpen: boolean;
-  maxHiddenThreadCount?: number;
-}): string[] {
-  const openThreadIdSet = new Set(input.openThreadIds);
-  const hiddenThreadIds = input.currentThreadIds.filter(
-    (threadId) => threadId !== input.activeThreadId && openThreadIdSet.has(threadId),
-  );
-  const maxHiddenThreadCount = Math.max(
-    0,
-    input.maxHiddenThreadCount ?? MAX_HIDDEN_MOUNTED_TERMINAL_THREADS,
-  );
-  const nextThreadIds =
-    hiddenThreadIds.length > maxHiddenThreadCount
-      ? hiddenThreadIds.slice(-maxHiddenThreadCount)
-      : hiddenThreadIds;
-
-  if (
-    input.activeThreadId &&
-    input.activeThreadTerminalOpen &&
-    !nextThreadIds.includes(input.activeThreadId)
-  ) {
-    nextThreadIds.push(input.activeThreadId);
-  }
-
-  return nextThreadIds;
-}
-
 // Null identifies the project checkout when a launch or session is known.
 export function resolveTerminalWorktreePath(input: {
   launchContext: { readonly worktreePath: string | null } | null;
@@ -938,6 +909,46 @@ export function getStartedThreadModelChangeBlockReason(input: {
     title: "Start a new chat to switch providers",
     description: "This thread does not support switching providers after it has started.",
   };
+}
+
+/** The model picker's switch for a started or fresh thread: the next selection, or why it can't. */
+export function resolveThreadModelSwitch(input: {
+  readonly instanceId: ProviderInstanceId;
+  readonly model: string;
+  readonly settings: UnifiedSettings;
+  readonly providers: ReadonlyArray<ServerProvider>;
+  readonly stickyOptionsByModelByProvider: Partial<
+    Record<ProviderInstanceId, Partial<Record<string, ReadonlyArray<ProviderOptionSelection>>>>
+  >;
+  readonly currentModelSelection: ModelSelection;
+  readonly currentProviderInstanceId: ProviderInstanceId | null;
+  readonly hasStartedSession: boolean;
+  readonly supportsProviderSwitchingViaHandoff: boolean;
+}):
+  | { readonly kind: "unresolved" }
+  | { readonly kind: "blocked"; readonly reason: { title: string; description: string } }
+  | { readonly kind: "ok"; readonly selection: ModelSelection } {
+  const { instanceId } = input;
+  const model = resolveAppModelSelectionForInstance(
+    instanceId,
+    input.settings,
+    input.providers,
+    input.model,
+  );
+  if (!model) return { kind: "unresolved" };
+  const remembered = input.stickyOptionsByModelByProvider[instanceId]?.[model];
+  const selection: ModelSelection =
+    remembered !== undefined && remembered.length > 0
+      ? { instanceId, model, options: [...remembered] }
+      : { instanceId, model };
+  const reason = getStartedThreadModelChangeBlockReason({
+    hasStartedSession: input.hasStartedSession,
+    supportsProviderSwitchingViaHandoff: input.supportsProviderSwitchingViaHandoff,
+    currentModelSelection: input.currentModelSelection,
+    currentProviderInstanceId: input.currentProviderInstanceId,
+    nextModelSelection: selection,
+  });
+  return reason ? { kind: "blocked", reason } : { kind: "ok", selection };
 }
 
 export async function waitForStartedServerThread(

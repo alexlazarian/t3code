@@ -23,6 +23,7 @@ import {
   formatAssistantCitationForComposer,
   isPathSuggestionCurrent,
   replaceTextRange,
+  resolveComposerSendHint,
 } from "./composer-logic";
 import { carryDisplacedCustomAnswerIntoPrompt } from "./pendingUserInput";
 import { formatTerminalContextReference } from "./lib/terminalContext";
@@ -46,6 +47,65 @@ const citation: AssistantCitation = {
   suffix: " 後",
 };
 const citationSource = serializeAssistantCitation(citation).replaceAll("+", "%20");
+
+describe("resolveComposerSendHint", () => {
+  const base = {
+    sendShortcut: "enter" as const,
+    prompt: "",
+    modEnterLabel: "\u2318Enter",
+    isRunning: false,
+    isAnsweringQuestion: false,
+    isEditingQueuedMessage: false,
+    followUpBehavior: "steer" as const,
+    canSteer: true,
+    alternateShortcutLabel: "\u2318Enter",
+  };
+
+  it("names the key that sends when idle", () => {
+    expect(resolveComposerSendHint(base)).toBe("Enter sends");
+    expect(resolveComposerSendHint({ ...base, sendShortcut: "mod-enter" })).toBe(
+      "\u2318Enter sends",
+    );
+  });
+
+  it("requires the modifier for multiline prompts only when configured", () => {
+    const multiline = { ...base, sendShortcut: "mod-enter-multiline" as const };
+    expect(resolveComposerSendHint({ ...multiline, prompt: "one line" })).toBe("Enter sends");
+    expect(resolveComposerSendHint({ ...multiline, prompt: "two\nlines" })).toBe(
+      "\u2318Enter sends",
+    );
+  });
+
+  it("names the follow-up default and its alternate while running", () => {
+    expect(resolveComposerSendHint({ ...base, isRunning: true })).toBe(
+      "Enter steers, \u2318Enter queues",
+    );
+    expect(resolveComposerSendHint({ ...base, isRunning: true, followUpBehavior: "queue" })).toBe(
+      "Enter queues, \u2318Enter steers",
+    );
+    expect(
+      resolveComposerSendHint({ ...base, isRunning: true, alternateShortcutLabel: null }),
+    ).toBe("Enter steers");
+  });
+
+  it("sends an answer to a pending question while the turn waits", () => {
+    expect(resolveComposerSendHint({ ...base, isRunning: true, isAnsweringQuestion: true })).toBe(
+      "Enter sends",
+    );
+  });
+
+  it("sends a queued-message edit during a run", () => {
+    expect(
+      resolveComposerSendHint({ ...base, isRunning: true, isEditingQueuedMessage: true }),
+    ).toBe("Enter sends");
+  });
+
+  it("only queues while steering is unavailable", () => {
+    expect(resolveComposerSendHint({ ...base, isRunning: true, canSteer: false })).toBe(
+      "Enter queues",
+    );
+  });
+});
 
 describe("isPathSuggestionCurrent", () => {
   const searchedTarget = {

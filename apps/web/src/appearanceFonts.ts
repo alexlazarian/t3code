@@ -68,7 +68,7 @@ export interface AppearanceFontPreferences {
   readonly smoothing: boolean;
 }
 
-/** Always writes sizes: interface size sets the root; prompt and code use pixels to avoid double scaling. */
+/** Always writes sizes: interface size feeds the desktop root size in index.css; prompt and code use pixels to avoid double scaling. */
 export function applyAppearanceFontVariables(
   root: HTMLElement,
   preferences: AppearanceFontPreferences,
@@ -87,7 +87,10 @@ export function applyAppearanceFontVariables(
     }
   }
 
-  root.style.fontSize = `${clampInterfaceFontSize(preferences.sizeInterface)}px`;
+  root.style.setProperty(
+    "--font-size-interface",
+    `${clampInterfaceFontSize(preferences.sizeInterface)}px`,
+  );
   root.style.setProperty("--font-size-prompt", `${clampPromptFontSize(preferences.sizePrompt)}px`);
   const code = clampCodeFontSize(preferences.sizeCode);
   root.style.setProperty("--font-size-code", `${code}px`);

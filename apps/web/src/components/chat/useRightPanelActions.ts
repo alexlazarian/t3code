@@ -13,14 +13,12 @@ import {
   squashAtomCommandFailure,
 } from "@t3tools/client-runtime/state/runtime";
 import { useDiffPanelStore } from "../../diffPanelStore";
-import { type ThreadPanelPresentation } from "../../rightPanelLayout";
 import {
   selectActiveRightPanel,
-  selectThreadPanelOpen,
   type RightPanelSurface,
   useRightPanelStore,
 } from "../../rightPanelStore";
-import { requestWorkspaceContentFocus, requestWorkspaceFocus } from "../../lib/workspaceFocus";
+import { requestWorkspaceFocus } from "../../lib/workspaceFocus";
 import { setActivePreviewTab } from "../../previewStateStore";
 import { BrowserSettingsReadError } from "../../browser/openFileInPreview";
 import { addBrowserSurface } from "../preview/addBrowserSurface";
@@ -43,7 +41,6 @@ interface RightPanelActionsInput {
   readonly deviceState: ReturnType<typeof useDeviceState>["state"];
   readonly deviceStateLoaded: boolean;
   readonly pullRequestPanelTarget: ReturnType<typeof threadPullRequestPanelTarget> | null;
-  readonly threadPanelPresentation: ThreadPanelPresentation;
   readonly isServerThread: boolean;
   readonly isGitRepo: boolean;
   readonly browserAvailable: boolean;
@@ -76,7 +73,6 @@ export function useRightPanelActions(input: RightPanelActionsInput) {
     deviceState,
     deviceStateLoaded,
     pullRequestPanelTarget,
-    threadPanelPresentation,
     isServerThread,
     isGitRepo,
     browserAvailable,
@@ -149,6 +145,18 @@ export function useRightPanelActions(input: RightPanelActionsInput) {
     useRightPanelStore.getState().open(activeThreadRef, "pull-requests");
   };
   const addPullRequestsSurfaceStable = useStableCallback(addPullRequestsSurface);
+  const toggleFilesSurface = () => {
+    if (!activeThreadRef) return;
+    if (activeRightPanelSurface?.kind !== "files" && !activeProject) return;
+    useRightPanelStore.getState().toggle(activeThreadRef, "files");
+  };
+  const toggleFilesSurfaceStable = useStableCallback(toggleFilesSurface);
+  const togglePullRequestsSurface = () => {
+    if (!activeThreadRef) return;
+    if (activeRightPanelSurface?.kind !== "pull-requests" && !pullRequestsSurfaceAvailable) return;
+    useRightPanelStore.getState().toggle(activeThreadRef, "pull-requests");
+  };
+  const togglePullRequestsSurfaceStable = useStableCallback(togglePullRequestsSurface);
   const addDeviceSurface = () => {
     if (!activeThreadRef) return;
     if (!deviceState.onboardingCompleted || deviceState.hostStatus === "disabled") {
@@ -227,20 +235,8 @@ export function useRightPanelActions(input: RightPanelActionsInput) {
   const toggleRightPanelStable = useStableCallback(toggleRightPanel);
   const toggleThreadPanel = () => {
     if (!activeThreadRef) return;
-    const store = useRightPanelStore.getState();
-    if (threadPanelPresentation === "inline") {
-      const open = selectThreadPanelOpen(
-        store.threadPanelVisibilityByThreadKey,
-        activeThreadRef,
-        "inline",
-      );
-      if (!open) requestWorkspaceFocus({ area: "details" });
-      else if (document.activeElement?.closest('[data-workspace-area="details"]'))
-        requestWorkspaceContentFocus();
-    }
-    store.toggleThreadPanel(activeThreadRef, threadPanelPresentation);
+    useRightPanelStore.getState().toggleThreadPanel(activeThreadRef);
   };
-  const toggleThreadPanelStable = useStableCallback(toggleThreadPanel);
   const toggleRightPanelMaximized = () => {
     if (!canMaximizeRightPanel || !activeThreadRef) return;
     if (!rightPanelMaximized) requestWorkspaceFocus({ area: "panel" });
@@ -353,8 +349,10 @@ export function useRightPanelActions(input: RightPanelActionsInput) {
     onToggleDiffStable,
     openChangesFromThreadPanelStable,
     openFileSurfaceStable,
+    toggleFilesSurfaceStable,
+    togglePreviewPanelStable,
+    togglePullRequestsSurfaceStable,
     toggleRightPanelMaximizedStable,
     toggleRightPanelStable,
-    toggleThreadPanelStable,
   };
 }

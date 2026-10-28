@@ -310,7 +310,7 @@ export function ProviderModelsSection({
             <Button
               type="button"
               size="xs"
-              variant="ghost-muted"
+              variant="outline"
               onClick={() =>
                 onHiddenModelsChange(
                   nextHiddenModelsForBulkToggle(models, hiddenModels),
@@ -333,9 +333,9 @@ export function ProviderModelsSection({
           <Button
             type="button"
             size="xs"
-            variant="ghost-muted"
+            variant="outline"
             // The ghost padding would inset the label from the column edge the toggles align to.
-            className="-me-2 ml-auto"
+            className="ml-auto"
             onClick={() => setIsAdding(true)}
           >
             <PlusIcon className="size-3" />

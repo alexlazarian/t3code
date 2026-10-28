@@ -91,7 +91,7 @@ function Alert({
           controlAlignment === "first-line" ? "items-start" : "items-center",
           controlAlignment === "first-line" &&
             action.length > 0 &&
-            "min-h-7 pt-1 sm:min-h-6 sm:pt-0.5",
+            "min-h-7 pt-1 sm:min-h-6.5 sm:pt-0.5",
         )}
       >
         {icon.length > 0 && (

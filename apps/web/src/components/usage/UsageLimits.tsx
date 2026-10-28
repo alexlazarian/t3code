@@ -76,7 +76,7 @@ export function PaceIcon({ pace }: { readonly pace: LimitPace }) {
 
 // The tick sits in a transparent gap cut from the bar, clamped so it stays inside at 0% and 100%.
 // The gap is a clip-path slot rather than a mask: a mask composites its layer and re-antialiases
-// the bar's rounded ends, and the polygon reaches 1px past the box so only the slot edges clip.
+// the bar's rounded-none ends, and the polygon reaches 1px past the box so only the slot edges clip.
 function paceMarkStyles(timeLeft: number | null) {
   if (timeLeft === null) return null;
   const at = `clamp(3px, ${timeLeft}%, calc(100% - 3px))`;
@@ -142,16 +142,16 @@ function WindowBar({
             role="img"
             aria-label={summary}
             tabIndex={0}
-            className="relative h-6 cursor-default rounded-full outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="relative h-6 cursor-default rounded-none outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           />
         }
       >
         {/* Clip both layers so the gap exposes even a translucent composer surface. */}
         <div className="absolute inset-0" style={paceMark?.gap}>
-          <div className="absolute inset-x-0 inset-y-1.5 rounded-full bg-muted" />
+          <div className="absolute inset-x-0 inset-y-1.5 rounded-none bg-muted" />
           {remaining > 0 ? (
             <div
-              className="absolute inset-y-1.5 left-0 rounded-full"
+              className="absolute inset-y-1.5 left-0 rounded-none"
               style={{ width: `${remaining}%`, backgroundColor: color }}
             />
           ) : null}
@@ -159,7 +159,7 @@ function WindowBar({
         {paceMark ? (
           <span
             aria-hidden
-            className="absolute inset-y-1 w-0.5 -translate-x-1/2 rounded-full bg-foreground"
+            className="absolute inset-y-1 w-0.5 -translate-x-1/2 rounded-none bg-foreground"
             style={paceMark.tick}
           />
         ) : null}

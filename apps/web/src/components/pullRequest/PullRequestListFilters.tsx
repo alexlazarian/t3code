@@ -417,7 +417,7 @@ function PullRequestLabelChoices({
             <span className="flex min-w-0 items-center gap-2">
               <span
                 aria-hidden
-                className="size-2.5 shrink-0 rounded-full bg-muted-foreground"
+                className="size-2.5 shrink-0 rounded-none bg-muted-foreground"
                 {...(dot ? { style: { backgroundColor: dot } } : {})}
               />
               <span className="min-w-0 flex-1 truncate">{option.name}</span>
@@ -566,7 +566,7 @@ export function PullRequestFiltersMenu({
         <ListFilterIcon className="size-4" />
         <span>Filters</span>
         {filterCount > 0 ? (
-          <span className="rounded-full bg-muted px-1.5 text-xs text-muted-foreground tabular-nums">
+          <span className="rounded-none bg-muted px-1.5 text-xs text-muted-foreground tabular-nums">
             {filterCount}
           </span>
         ) : null}

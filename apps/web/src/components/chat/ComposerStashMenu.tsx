@@ -13,7 +13,7 @@ function missingImageCount(entry: PromptStashEntry): number {
   return entry.droppedImageNames.length + (entry.unreadableImageNames?.length ?? 0);
 }
 
-function stashEntrySnippet(entry: PromptStashEntry): string {
+export function stashEntrySnippet(entry: PromptStashEntry): string {
   const trimmed = assistantCitationsToPlainText(entry.prompt).trim().replace(/\s+/g, " ");
   if (trimmed.length > 0) {
     return trimmed.length > SNIPPET_MAX_CHARS ? `${trimmed.slice(0, SNIPPET_MAX_CHARS)}…` : trimmed;
@@ -204,7 +204,7 @@ export const ComposerStashMenu = memo(function ComposerStashMenu(props: {
                           src={attachment.dataUrl}
                           alt=""
                           aria-hidden="true"
-                          className="size-4 rounded border border-border/70 object-cover"
+                          className="size-4 rounded-none border border-border/70 object-cover"
                         />
                       ))}
                     </span>

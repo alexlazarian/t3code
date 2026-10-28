@@ -60,6 +60,7 @@ export const ComposerFooterModeControls = memo(function ComposerFooterModeContro
         render={
           <ComposerControl
             size={size}
+            variant="boxed"
             className="shrink-0 whitespace-nowrap"
             aria-pressed={props.interactionMode === "plan"}
             type="button"
@@ -112,6 +113,7 @@ export const ComposerFooterModeControls = memo(function ComposerFooterModeContro
                   ref={permissionsChipRef}
                   data-composer-shortcut="composer.mode"
                   size={size}
+                  variant="boxed"
                   // Mirrors the effort chip's trailing pe-1 so both gaps around the bars match.
                   className="ps-1.5"
                   aria-label={`Permissions: ${runtimeModeOption.label}`}
@@ -260,6 +262,7 @@ export const ComposerFooterPrimaryActions = memo(function ComposerFooterPrimaryA
   followUpBehavior: "queue" | "steer";
   canSteer: boolean;
   alternateShortcutLabel: string | null;
+  sendHint: string | null;
   showPlanFollowUpPrompt: boolean;
   promptHasText: boolean;
   isSendBusy: boolean;
@@ -269,6 +272,7 @@ export const ComposerFooterPrimaryActions = memo(function ComposerFooterPrimaryA
   canResume: boolean;
   preserveComposerFocusOnPointerDown?: boolean;
   isEditingQueuedMessage: boolean;
+  isApprovalPending: boolean;
   onSubmitMessage: React.MouseEventHandler<HTMLButtonElement>;
   onResume: () => void;
   onPreviousPendingQuestion: () => void;
@@ -294,6 +298,11 @@ export const ComposerFooterPrimaryActions = memo(function ComposerFooterPrimaryA
       ) : props.reserveContextWindowMeter ? (
         <ContextWindowMeterPlaceholder />
       ) : null}
+      {props.sendHint ? (
+        <span className="hidden whitespace-nowrap px-1 text-muted-foreground text-xs sm:inline">
+          {props.sendHint}
+        </span>
+      ) : null}
       <ComposerPrimaryActions
         compact={props.compact}
         canOperateThread={props.canOperateThread}
@@ -313,6 +322,7 @@ export const ComposerFooterPrimaryActions = memo(function ComposerFooterPrimaryA
         canResume={props.canResume}
         preserveComposerFocusOnPointerDown={props.preserveComposerFocusOnPointerDown ?? false}
         isEditingQueuedMessage={props.isEditingQueuedMessage}
+        isApprovalPending={props.isApprovalPending}
         onSubmitMessage={props.onSubmitMessage}
         onResume={props.onResume}
         onPreviousPendingQuestion={props.onPreviousPendingQuestion}

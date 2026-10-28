@@ -4,12 +4,12 @@ import { isPasteAsTextShortcut } from "@t3tools/client-runtime/text-paste";
 import { useEffect, useRef } from "react";
 import { isMacPlatform } from "../../lib/utils";
 import { isCommandPaletteOpen } from "../../commandPaletteBus";
-import { getTerminalFocusOwner } from "../../lib/terminalFocus";
+import { isTerminalFocused } from "../../lib/terminalFocus";
 import type { ThreadId } from "@t3tools/contracts";
 import type { ComposerHandleRef } from "../../composerHandleContext";
 /**
- * Paste-to-focus: the resting composer blurs on a click into the timeline, so a paste that
- * follows has no editable target and would be dropped. This sends it to the composer instead.
+ * Paste-to-focus: the composer blurs on a click into the timeline, so a paste that follows has
+ * no editable target and would be dropped. This sends it to the composer instead.
  */
 export function usePasteToFocusComposer(
   activeThreadId: ThreadId | null,
@@ -28,7 +28,7 @@ export function usePasteToFocusComposer(
     };
     const handler = (event: ClipboardEvent) => {
       if (!activeThreadId || isCommandPaletteOpen()) return;
-      if (getTerminalFocusOwner() !== null) return;
+      if (isTerminalFocused()) return;
       if (composerRef.current?.isModelPickerOpen()) return;
       const text = pasteTextToFocusComposer(event);
       const clipboardData = event.clipboardData;

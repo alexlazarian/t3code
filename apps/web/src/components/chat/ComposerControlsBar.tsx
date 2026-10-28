@@ -35,8 +35,8 @@ import { resolveComposerControlsOwnership } from "./composerControlsOwnership";
  * blocks that do not fit. Rendered in the expanded footer or the resting controls host.
  */
 // Model and effort sit a word space apart, so hover and open states brighten text, not a box.
-const TEXT_CONTROL_STATES =
-  "hover:bg-transparent data-pressed:bg-transparent data-popup-open:bg-transparent data-pressed:text-foreground data-popup-open:text-foreground";
+// Boxed pickers keep their hover fill; only the open state brightens the text.
+const TEXT_CONTROL_STATES = "data-pressed:text-foreground data-popup-open:text-foreground";
 
 export function ComposerControlsBar(props: {
   environmentId: EnvironmentId;

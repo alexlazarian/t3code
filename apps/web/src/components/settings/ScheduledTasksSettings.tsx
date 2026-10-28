@@ -407,7 +407,7 @@ export function ScheduledTasksSettings(target: {
         headerAction={
           <Button
             size="xs"
-            variant="ghost-muted"
+            variant="outline"
             disabled={!defaultEnvironment || !canCreate}
             onClick={() =>
               defaultEnvironment &&
@@ -1705,8 +1705,6 @@ function ScheduledTaskEditorForm({
                 </div>
                 <ToggleGroup
                   multiple
-                  variant="outline"
-                  size="sm"
                   aria-label="Days to run"
                   value={[...draft.weekdays].map(String)}
                   onValueChange={(values) => {

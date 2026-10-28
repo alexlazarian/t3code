@@ -184,13 +184,8 @@ export function useComposerRestingTransition(
         footer.style.top = "auto";
         footer.style.bottom = `${String(footerBottom)}px`;
         footer.style.height = "3rem";
-        if (nextIsCollapsed) {
-          footer.style.left = "auto";
-          footer.style.right = "1px";
-        } else {
-          footer.style.left = "1px";
-          footer.style.right = "1px";
-        }
+        footer.style.left = "1px";
+        footer.style.right = "1px";
       }
 
       const animation = element.animate(

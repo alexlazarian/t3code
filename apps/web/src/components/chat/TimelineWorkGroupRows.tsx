@@ -69,8 +69,7 @@ export const WorkGroupSection = memo(function WorkGroupSection({
 }) {
   const { workspaceRoot, routeThreadKey, onToggleWorkEntry, pendingApprovals } =
     use(TimelineRowCtx);
-  const onToggleStandaloneEntry = (collapsed: boolean) =>
-    onToggleWorkEntry(disclosureAnchorKey, collapsed);
+  const onToggleStandaloneEntry = () => onToggleWorkEntry(disclosureAnchorKey);
   const nonEmptyEntries = groupedEntries.filter((entry) => {
     const item = entry.projectedItem?.item;
     return (
@@ -119,7 +118,9 @@ function WorkingTimer({ createdAt }: { createdAt: string }) {
   );
 }
 
-const compactWorkEntryHeight = 24;
+// Collapsed WorkLog row in px at the default 13px root: a text-sm leading-snug line plus
+// borders (~17.6px, above min-h-5) and pb-0.75 (~2.4px). An estimate; rows are measured.
+const compactWorkEntryHeight = 20;
 
 function ExpandedWorkGroupEntries({
   anchorKey,
@@ -154,7 +155,7 @@ function ExpandedWorkGroupEntries({
 
   const groupView = {
     state: viewState,
-    onToggleEntry: (collapsed: boolean) => onToggleWorkEntry(disclosureAnchorKey, collapsed),
+    onToggleEntry: () => onToggleWorkEntry(disclosureAnchorKey),
   };
   const updateScrollFades = () => {
     const element = listRef.current?.getScrollableNode();
@@ -360,7 +361,8 @@ function CompactingLabel({ createdAt }: { createdAt: string | null }) {
 export function ThinkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "thinking" }> }) {
   const ctx = use(TimelineRowCtx);
   const { isCompacting, isPreparingWorktree } = use(TimelineRowActivityCtx);
-  if (isPreparingWorktree || isCompacting) return <WorkLogRow label="" />;
+  if (isPreparingWorktree || isCompacting)
+    return <div aria-hidden className="h-5 pb-0.75 box-content" />;
   // A failed group keeps this disclosure while an approval waits, but nothing is thinking then.
   const live = ctx.pendingApprovals.size === 0;
   const activity = (
@@ -400,7 +402,7 @@ function LiveActivityRow({
   return (
     <div
       ref={animated ? observeVisibleAnimation : undefined}
-      className="relative min-h-6 w-fit max-w-full min-w-0 overflow-hidden rounded-md text-sm leading-relaxed"
+      className="w-full min-w-0 text-sm leading-snug"
     >
       <LiveActivityContent
         label={label}
@@ -409,12 +411,8 @@ function LiveActivityRow({
         failed={failed}
         announceFailure={failed}
         active={animated && !shimmer}
+        shimmer={showShimmer}
       />
-      {showShimmer ? (
-        <ActivityShimmerOverlay>
-          <LiveActivityContent label={label} iconName={iconName} toolIcon={toolIcon} highlighted />
-        </ActivityShimmerOverlay>
-      ) : null}
     </div>
   );
 }
@@ -426,7 +424,7 @@ function LiveActivityContent({
   failed = false,
   announceFailure = false,
   active = false,
-  highlighted = false,
+  shimmer = false,
 }: {
   label: ReactNode;
   iconName: WorkEntryIconName | undefined;
@@ -434,7 +432,7 @@ function LiveActivityContent({
   failed?: boolean;
   announceFailure?: boolean;
   active?: boolean;
-  highlighted?: boolean;
+  shimmer?: boolean;
 }) {
   const showTrailingFailureMark =
     failed && iconName !== undefined && !toolIconAcceptsTint(toolIcon);
@@ -446,11 +444,7 @@ function LiveActivityContent({
           <span
             className={cn(
               "flex size-4 items-center justify-center",
-              failed
-                ? failedToolIconClassName
-                : highlighted
-                  ? "text-foreground"
-                  : "text-icon-muted",
+              failed ? failedToolIconClassName : "text-icon-muted",
             )}
             role={announceFailure ? "img" : undefined}
             aria-label={announceFailure ? "Tool call failed" : undefined}
@@ -459,20 +453,22 @@ function LiveActivityContent({
               icon={toolIcon}
               fallbackName={iconName}
               className="block size-4 shrink-0 stroke-2"
-              muted={!highlighted}
+              muted
             />
           </span>
         ) : null
       }
       label={
+        // Label width, not row width, so the shine and shimmer sweep only the text.
         <span
-          className={cn(
-            "block truncate",
-            highlighted && "text-foreground",
-            active && "live-tool-shine",
-          )}
+          className={cn("relative block w-fit max-w-full truncate", active && "live-tool-shine")}
         >
           {label}
+          {shimmer ? (
+            <ActivityShimmerOverlay>
+              <span className="block truncate">{label}</span>
+            </ActivityShimmerOverlay>
+          ) : null}
         </span>
       }
       trailing={

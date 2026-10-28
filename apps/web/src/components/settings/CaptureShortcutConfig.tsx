@@ -274,7 +274,7 @@ export function CaptureShortcutConfig({
             </Button>
             <Button
               size="sm"
-              variant="ghost"
+              variant="outline"
               disabled={actionBusy || !bridge}
               onClick={() => void read(customFile, "remove")}
             >

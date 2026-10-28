@@ -11,6 +11,8 @@ import {
   getFallbackThreadIdAfterDelete,
   hasUnseenCompletion,
   resolveSidebarRowThreadId,
+  applySidebarStatusFilter,
+  matchesSidebarStatusFilter,
   orderItemsByPreferredIds,
   pinOrderKeyBetween,
   resolveProjectStatusIndicator,
@@ -22,6 +24,8 @@ import {
   shouldRecedeSidebarThread,
   sortInboxThreadsByReturn,
   resolveSidebarDropTarget,
+  buildSidebarListItems,
+  sidebarMarkerId,
   planSidebarThreadDrop,
   sortPinnedThreadsForSidebar,
   sortProjectsForSidebar,
@@ -1152,6 +1156,31 @@ describe("Working shelf (beta)", () => {
       row("s1", "settled"),
     ];
 
+    it("gives every section a header row, and a collapsed section only its header", () => {
+      const built = buildSidebarListItems({
+        pinned: [],
+        active: ["a1"],
+        working: [],
+        snoozed: null,
+        settled: [],
+      });
+      expect(built).toEqual([
+        marker("pinned-header"),
+        marker("pinned-placeholder"),
+        marker("pinned-divider"),
+        marker("active-placeholder"),
+        row("a1", "active"),
+        marker("working-header"),
+        marker("settled-header"),
+        marker("settled-placeholder"),
+      ]);
+      expect(resolveSidebarDropTarget(built, "a1", sidebarMarkerId("pinned-divider"))).toEqual({
+        section: "pinned",
+        pinnedOrder: ["a1"],
+        activeOrder: [],
+      });
+    });
+
     it("never drops into the Working shelf, and keeps it out of the inbox order", () => {
       expect(resolveSidebarDropTarget(items, "a1", "w1")).toBeNull();
       expect(resolveSidebarDropTarget(items, "p1", "a2")).toEqual({
@@ -1445,5 +1474,59 @@ describe("resolveSidebarFolderDot", () => {
     expect(resolveSidebarFolderDot([idle, working])).toBe("working");
     expect(resolveSidebarFolderDot([working, unread])).toBe("unread");
     expect(resolveSidebarFolderDot([unread, limited])).toBe("attention");
+  });
+});
+
+describe("status filter", () => {
+  const runtime = {
+    status: "running" as const,
+    activeRunId: null,
+    providerInstanceId: ProviderInstanceId.make("codex"),
+    providerName: "Codex",
+    lastError: null,
+    updatedAt: "2026-03-09T10:00:00.000Z",
+  };
+  const approvalThread = makeThread({ id: ThreadId.make("approval"), hasPendingApprovals: true });
+  const workingThread = makeThread({ id: ThreadId.make("working"), runtime });
+  const planReadyThread = makeThread({
+    id: ThreadId.make("plan-ready"),
+    hasActionableProposedPlan: true,
+  });
+  const doneThread = makeThread({ id: ThreadId.make("done") });
+
+  it("needs-you matches approval, input, request and plan ready", () => {
+    expect(matchesSidebarStatusFilter("approval", false, "needs-you")).toBe(true);
+    expect(matchesSidebarStatusFilter("input", false, "needs-you")).toBe(true);
+    expect(matchesSidebarStatusFilter("request", false, "needs-you")).toBe(true);
+    expect(matchesSidebarStatusFilter("ready", true, "needs-you")).toBe(true);
+    expect(matchesSidebarStatusFilter("ready", false, "needs-you")).toBe(false);
+    expect(matchesSidebarStatusFilter("working", false, "needs-you")).toBe(false);
+  });
+  it("working matches only working", () => {
+    expect(matchesSidebarStatusFilter("working", false, "working")).toBe(true);
+    expect(matchesSidebarStatusFilter("waiting", false, "working")).toBe(false);
+  });
+  it("all matches everything", () => {
+    expect(matchesSidebarStatusFilter("failed", false, "all")).toBe(true);
+  });
+  it("counts both chips", () => {
+    expect(
+      applySidebarStatusFilter(
+        [approvalThread, workingThread, planReadyThread, doneThread],
+        "all",
+        null,
+        (thread) => thread.id,
+      ).counts,
+    ).toEqual({ "needs-you": 2, working: 1 });
+  });
+  it("keeps the route thread listed under a filter it no longer matches", () => {
+    const threads = [approvalThread, doneThread];
+    const key = (thread: { id: string }) => thread.id;
+    expect(applySidebarStatusFilter(threads, "needs-you", null, key).visible).toEqual([
+      approvalThread,
+    ]);
+    const kept = applySidebarStatusFilter(threads, "needs-you", "done", key);
+    expect(kept.visible).toEqual([approvalThread, doneThread]);
+    expect(kept.counts).toEqual({ "needs-you": 1, working: 0 });
   });
 });

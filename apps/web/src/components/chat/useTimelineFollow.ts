@@ -348,8 +348,8 @@ export function useTimelineFollow(input: TimelineFollowInput) {
     });
   };
   const scrollToEndStable = useStableCallback(scrollToEnd);
-  // The list does not follow footer layout, so the resting composer cannot scroll it. Growth
-  // above the composer (a new notice) would cover the last rows instead.
+  // The list does not follow its bottom inset, so composer growth (a new notice, a longer
+  // prompt) would cover the last rows instead.
   const followedInsetRef = useRef(composerTimelineInset);
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- scrolls the list after its bottom inset grows
   useLayoutEffect(() => {

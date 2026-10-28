@@ -17,12 +17,11 @@ import { scopeThreadRef } from "@t3tools/client-runtime/environment";
 import { type SetStateAction } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toastManager } from "../ui/toast";
-import { resolveAppModelSelectionForInstance } from "../../modelSelection";
 import { resolveNewDraftStartFromOrigin } from "../../lib/chatThreadActions";
 import { type DraftThreadEnvMode, useComposerDraftStore } from "../../composerDraftStore";
 import {
-  getStartedThreadModelChangeBlockReason,
   deriveLockedProvider,
+  resolveThreadModelSwitch,
   makeModelDisabledReason,
 } from "../ChatView.logic";
 interface ComposerSelectionInput {
@@ -173,38 +172,30 @@ export function useComposerSelection(input: ComposerSelectionInput) {
         return;
       }
     }
-    const resolvedModel = resolveAppModelSelectionForInstance(
+    const modelSwitch = resolveThreadModelSwitch({
       instanceId,
-      settings,
-      providerStatuses,
       model,
-    );
-    if (!resolvedModel) {
-      if (options?.focusComposer !== false) scheduleComposerFocus();
-      return;
-    }
-    const rememberedOptions =
-      useComposerDraftStore.getState().stickyOptionsByModelByProvider[instanceId]?.[resolvedModel];
-    const nextModelSelection: ModelSelection =
-      rememberedOptions !== undefined && rememberedOptions.length > 0
-        ? { instanceId, model: resolvedModel, options: [...rememberedOptions] }
-        : { instanceId, model: resolvedModel };
-    const modelChangeBlockReason = getStartedThreadModelChangeBlockReason({
-      hasStartedSession: activeRuntime !== null,
-      supportsProviderSwitchingViaHandoff,
+      settings,
+      providers: providerStatuses,
+      stickyOptionsByModelByProvider:
+        useComposerDraftStore.getState().stickyOptionsByModelByProvider,
       currentModelSelection: activeThread.modelSelection,
       currentProviderInstanceId: activeRuntime?.providerInstanceId ?? null,
-      nextModelSelection,
+      hasStartedSession: activeRuntime !== null,
+      supportsProviderSwitchingViaHandoff,
     });
-    if (modelChangeBlockReason) {
-      toastManager.add({
-        type: "warning",
-        title: modelChangeBlockReason.title,
-        description: modelChangeBlockReason.description,
-      });
+    if (modelSwitch.kind !== "ok") {
+      if (modelSwitch.kind === "blocked") {
+        toastManager.add({
+          type: "warning",
+          title: modelSwitch.reason.title,
+          description: modelSwitch.reason.description,
+        });
+      }
       if (options?.focusComposer !== false) scheduleComposerFocus();
       return;
     }
+    const nextModelSelection = modelSwitch.selection;
     setComposerDraftModelSelection(
       scopeThreadRef(activeThread.environmentId, activeThread.id),
       nextModelSelection,

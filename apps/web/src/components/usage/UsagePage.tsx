@@ -770,7 +770,7 @@ function UsageOverview({
                   <span className="flex min-w-0 items-center gap-2 text-sm text-foreground">
                     <span
                       aria-hidden
-                      className="size-2 shrink-0 rounded-full"
+                      className="size-2 shrink-0 rounded-none"
                       style={{
                         backgroundColor: PROVIDER_PRESENTATION[provider].color,
                       }}
@@ -970,7 +970,7 @@ function UsageOverview({
                         {hasBar ? (
                           <div aria-hidden className={cn("mt-1.5 h-0.5 max-w-48", rowFigures)}>
                             <div
-                              className="h-full rounded-full"
+                              className="h-full rounded-none"
                               style={{
                                 width: `max(0.5rem, ${(value / breakdownPeak) * 100}%)`,
                                 backgroundColor: PROVIDER_PRESENTATION[model.provider].color,
@@ -1155,7 +1155,7 @@ function CursorEnableRow({
       <span className="flex min-w-0 items-center gap-2 text-sm text-foreground">
         <span
           aria-hidden
-          className="size-2 shrink-0 rounded-full"
+          className="size-2 shrink-0 rounded-none"
           style={{ backgroundColor: PROVIDER_PRESENTATION.cursor.color }}
         />
         <ProviderMark provider="cursor" className="size-4" />

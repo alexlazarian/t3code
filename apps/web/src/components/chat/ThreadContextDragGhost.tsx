@@ -15,7 +15,7 @@ export function ThreadContextDragGhost() {
       <MessagesSquareIcon className="size-4 shrink-0 text-secondary-label" />
       <span className="truncate">{ghost.title}</span>
       {ghost.count > 1 ? (
-        <span className="shrink-0 rounded-full bg-muted px-1.5 text-xs text-secondary-label">
+        <span className="shrink-0 rounded-none bg-muted px-1.5 text-xs text-secondary-label">
           +{ghost.count - 1}
         </span>
       ) : null}

@@ -363,13 +363,6 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["image picture photo svg wallpaper pattern hex overlay tile theme"],
   },
   {
-    id: "environment-identification",
-    title: "Environment identification",
-    to: "/settings/appearance",
-    searchTerms: ["dev nightly latest channel artwork pill label hide none"],
-    targetId: "appearance-interface",
-  },
-  {
     id: "interface-font",
     title: "Interface font",
     to: "/settings/appearance",
@@ -448,6 +441,18 @@ export const SETTINGS_SEARCH_ITEMS = [
     title: "Resume after usage limits",
     to: "/settings/threads",
     searchTerms: ["usage quota rate limit reset recover continue"],
+  },
+  {
+    id: "thread-view",
+    title: "Thread view",
+    to: "/settings/general",
+    searchTerms: ["list overview columns board projects sidebar layout"],
+  },
+  {
+    id: "info-bar",
+    title: "Info bar",
+    to: "/settings/appearance",
+    searchTerms: ["bottom status tooltip hint shortcut hover help"],
   },
   {
     id: "working-shelf",

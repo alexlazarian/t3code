@@ -322,7 +322,7 @@ export function SnapShotSetupDialog({
                 state.shortcutCanRetry !== false &&
                 !isModifierPairShortcut(state.shortcut) ? (
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     disabled={busy}
                     onClick={() => void onAction("retry-shortcut")}
@@ -357,7 +357,7 @@ export function SnapShotSetupDialog({
                   {step === "access" && backend === "gnome" && extension?.status === "enabled" ? (
                     <Button
                       size="xs"
-                      variant="ghost"
+                      variant="outline"
                       disabled={busy}
                       onClick={() => void onAction("disable-extension")}
                     >
@@ -367,7 +367,7 @@ export function SnapShotSetupDialog({
                   {step === "access" && helperBackend && helper?.status !== "not-installed" ? (
                     <Button
                       size="xs"
-                      variant="ghost"
+                      variant="outline"
                       disabled={busy}
                       onClick={() => void onAction(removeHelper)}
                     >

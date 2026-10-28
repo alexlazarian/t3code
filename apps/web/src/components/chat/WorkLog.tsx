@@ -1,14 +1,5 @@
-import {
-  createContext,
-  use,
-  useLayoutEffect,
-  useRef,
-  type ComponentProps,
-  type ReactNode,
-} from "react";
+import { useLayoutEffect, useRef, type ComponentProps, type ReactNode } from "react";
 import { cn } from "../../lib/utils";
-
-const GroupedRows = createContext(false);
 
 /** Groups may span virtualized timeline items. Each part owns its trailing space. */
 export function WorkLogBlock({
@@ -26,8 +17,8 @@ export function WorkLogBlock({
         continues || layout === "group-header"
           ? "pb-0"
           : layout === "group-content"
-            ? "pb-1"
-            : "pb-2"
+            ? "pb-0.5"
+            : "pb-1"
       }
     >
       {children}
@@ -36,11 +27,7 @@ export function WorkLogBlock({
 }
 
 export function WorkLogList({ children }: { children: ReactNode }) {
-  return (
-    <GroupedRows value>
-      <div className="flex min-w-0 flex-col">{children}</div>
-    </GroupedRows>
-  );
+  return <div className="flex min-w-0 flex-col">{children}</div>;
 }
 
 type RowContent = {
@@ -54,14 +41,14 @@ function WorkLogLine({ icon, label, trailing, wrapLabel }: RowContent) {
   return (
     <div
       className={cn(
-        "flex min-h-6 min-w-0 gap-1.5 text-sm leading-relaxed select-none [&_*]:select-none",
-        wrapLabel ? "items-start" : "items-center",
+        "flex min-h-5 min-w-0 gap-1.5 border border-border bg-code px-1.5 text-sm leading-snug select-none [&_*]:select-none",
+        wrapLabel ? "items-start py-0.5" : "items-center",
       )}
     >
       <div className="flex min-w-0 flex-1 items-baseline gap-1.5">
         {icon ? (
-          <span className="relative w-6 shrink-0 leading-0">
-            <span className="inline-block size-6 overflow-hidden align-[calc(0.5cap_-_0.75rem)]">
+          <span className="relative w-4 shrink-0 leading-0">
+            <span className="inline-block size-4 overflow-hidden align-[calc(0.5cap_-_0.5rem)]">
               <span className="flex size-full items-center justify-center">{icon}</span>
             </span>
           </span>
@@ -83,11 +70,10 @@ function WorkLogLine({ icon, label, trailing, wrapLabel }: RowContent) {
 const interactionClassName =
   "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70";
 
-function useRowClassName(interactive: boolean) {
-  const grouped = use(GroupedRows);
+function rowClassName(interactive: boolean) {
+  // Padding, not margin: a virtualized item measures its own box, so a margin would be lost.
   return cn(
-    "group/timeline-row relative w-full min-w-0 rounded-md px-0.5 text-left transition-colors",
-    grouped ? "py-0" : "py-0.5",
+    "group/timeline-row relative w-full min-w-0 pb-0.75 text-left transition-colors",
     interactive && interactionClassName,
   );
 }
@@ -99,7 +85,7 @@ export function WorkLogButton({
   wrapLabel = false,
   ...buttonProps
 }: RowContent & Omit<ComponentProps<"button">, "className" | "style" | "children">) {
-  const className = useRowClassName(true);
+  const className = rowClassName(true);
   return (
     <button {...buttonProps} type="button" className={className}>
       <WorkLogLine icon={icon} label={label} trailing={trailing} wrapLabel={wrapLabel} />
@@ -116,7 +102,7 @@ export function WorkLogRow({
   children,
   ...rowProps
 }: RowContent & Omit<ComponentProps<"div">, "className" | "style">) {
-  const className = useRowClassName(rowProps.onClick !== undefined);
+  const className = rowClassName(rowProps.onClick !== undefined);
   return (
     <div {...rowProps} className={className}>
       <WorkLogLine icon={icon} label={label} trailing={trailing} wrapLabel={wrapLabel} />

@@ -24,6 +24,7 @@ import {
   turnItemNeedsDetailFetch,
 } from "@t3tools/client-runtime/work-log/item-detail";
 import { claudeSkillInvocation } from "@t3tools/shared/toolActivity";
+import { commandDisplayText } from "@t3tools/client-runtime/work-log/command-label";
 import { memo, use, useState, type KeyboardEvent } from "react";
 import {
   workEntryDisplayIndicatesToolFailure,
@@ -145,7 +146,7 @@ type WorkEntryRowProps = {
   workEntry: TimelineWorkEntry;
   workspaceRoot: string | undefined;
   displayLabel?: string | undefined;
-  onToggleEntry?: ((collapsed: boolean) => void) | undefined;
+  onToggleEntry?: (() => void) | undefined;
 };
 
 export const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: WorkEntryRowProps) {
@@ -190,11 +191,11 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
   const toggleExpanded = () => {
     const next = !expanded;
     if (groupView) {
-      groupView.onToggleEntry(!next);
+      groupView.onToggleEntry();
       if (next) groupView.state.expandedEntries.add(workEntry.id);
       else groupView.state.expandedEntries.delete(workEntry.id);
     } else {
-      props.onToggleEntry?.(!next);
+      props.onToggleEntry?.();
     }
     setExpanded(next);
   };
@@ -366,6 +367,7 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
       : workLogEntryIsToolLike(workEntry)
         ? "text-secondary-label"
         : "text-foreground/80";
+  const commandLabel = workEntry.command?.trim() ? commandDisplayText(workEntry.command) : null;
   const threadLabel = isReasoning ? null : threadReadLabel(previewText, threadTarget);
   const accessiblePreview = [threadLabel?.text ?? previewText, answerPreview]
     .filter(Boolean)
@@ -410,9 +412,14 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
       }
       label={
         <div className="min-w-0 flex-1 overflow-hidden">
-          <p className="flex min-w-0 w-full items-baseline gap-1.5 text-sm leading-relaxed">
+          <p className="flex min-w-0 w-full items-baseline gap-1.5 text-sm leading-snug">
             <span
-              className={cn(answerPreview ? "min-w-0" : "min-w-0 flex-1", "truncate", headingClass)}
+              className={cn(
+                answerPreview ? "min-w-0" : "min-w-0 flex-1",
+                "truncate",
+                headingClass,
+                previewText === commandLabel && "font-mono text-xs",
+              )}
             >
               {isReasoning && !expanded ? (
                 <ChatMarkdown
@@ -608,7 +615,7 @@ function QuestionAnswerHistory({
                     <img
                       src={url}
                       alt={attachment.name}
-                      className="h-20 max-w-32 rounded object-contain"
+                      className="h-20 max-w-32 rounded-none object-contain"
                     />
                   ) : (
                     attachment.name

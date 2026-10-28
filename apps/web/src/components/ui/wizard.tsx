@@ -103,7 +103,7 @@ export function WizardSteps({
           >
             <span
               className={cn(
-                "grid size-5 shrink-0 place-items-center rounded-full text-sm font-medium ring-1",
+                "grid size-5 shrink-0 place-items-center rounded-none text-sm font-medium ring-1",
                 index < currentStep
                   ? "bg-primary text-primary-foreground ring-primary"
                   : index === currentStep
