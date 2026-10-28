@@ -81,8 +81,16 @@ export function ThreadDetailsCard({
         align="end"
         collisionAvoidance={{ side: "shift", align: "shift", fallbackAxisSide: "none" }}
         side="bottom"
-        // Clears the find bar, which sits below the header at the canvas's top right.
-        sideOffset={topInset}
+        // Clears the find bar, which sits below the header at the canvas's top right;
+        // the inset is measured from the header's bottom, not the anchor's.
+        sideOffset={() => {
+          const button = anchor.current;
+          const header = button?.closest("header");
+          if (topInset === 0 || !button || !header) return topInset;
+          return (
+            topInset + header.getBoundingClientRect().bottom - button.getBoundingClientRect().bottom
+          );
+        }}
         variant="panel"
         padding="none"
         aria-label="Thread details"
