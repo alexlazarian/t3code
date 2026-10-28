@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useReconnectEnvironment } from "../../hooks/useReconnectEnvironment";
 import { useEnvironments } from "../../state/environments";
 import { LibraryItemList } from "./LibraryItemList";
+import { moveSettingsIntoLibrary } from "../settings/settingsPlacement";
 
 export function LibraryMachines() {
   const { environments } = useEnvironments();
@@ -11,7 +12,10 @@ export function LibraryMachines() {
   const navigate = useNavigate();
   const openSettings = {
     label: "Open in Settings",
-    onSelect: () => void navigate({ to: "/settings/connections" }),
+    onSelect: () => {
+      moveSettingsIntoLibrary();
+      void navigate({ to: "/settings/connections" });
+    },
   };
   return (
     <LibraryItemList

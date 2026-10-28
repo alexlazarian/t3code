@@ -1,5 +1,5 @@
 import { useAtomValue } from "@effect/atom-react";
-import { ChartNoAxesColumnIcon, SearchIcon } from "lucide-react";
+import { ChartNoAxesColumnIcon, SearchIcon, SettingsIcon } from "lucide-react";
 import * as Schema from "effect/Schema";
 import {
   useEffect,
@@ -46,7 +46,17 @@ import {
 import { InfoBar } from "./InfoBar";
 import { BackgroundThreadAnnouncer } from "./BackgroundThreadAnnouncer";
 import ThreadSidebar from "./Sidebar";
-import { isAppModalPage } from "./sidebar/mainAppLocation";
+import {
+  appModalReturnLocation,
+  appModalReturnPathname,
+  isAppModalPage,
+} from "./sidebar/mainAppLocation";
+import {
+  isSettingsPath,
+  moveSettingsOutOfLibrary,
+  useSettingsInLibrary,
+} from "./settings/settingsPlacement";
+import { useUiStateStore } from "../uiStateStore";
 import type { SidebarRouteReveal } from "./sidebar/routeReveal";
 import { SidebarBackgroundLayer } from "./sidebar/SidebarBackgroundLayer";
 import {
@@ -309,9 +319,17 @@ function registerThreadUndoCommands(
   };
 }
 
+// The top bar, menu and keyboard open the page; Library > Settings opens it in the sidebar.
+// Pressing it on the page goes back.
 function openSettings(router: AnyRouter) {
-  if (!/^\/settings(\/|$)/.test(router.state.location.pathname))
-    void router.navigate({ to: "/settings" });
+  const onSettings = isSettingsPath(router.state.location.pathname);
+  const { sidebarPanel, libraryCategory } = useUiStateStore.getState();
+  if (onSettings && !(sidebarPanel === "library" && libraryCategory === "settings")) {
+    void router.navigate({ href: appModalReturnLocation() });
+    return;
+  }
+  moveSettingsOutOfLibrary();
+  if (!onSettings) void router.navigate({ to: "/settings" });
 }
 
 /** Keyboard and menu commands that live as long as the app shell. */
@@ -349,9 +367,31 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
     select: (params) => "threadId" in params || "draftId" in params,
   });
   const setThreadView = useSwitchThreadView();
+  const settingsRouteOpen = useLocation({
+    select: (location) => isSettingsPath(location.pathname),
+  });
+  const settingsInLibrary = useSettingsInLibrary();
+  const settingsPageOpen = settingsRouteOpen && !settingsInLibrary;
+  // Over Settings in Library the switch still names the view underneath it.
+  const shownView = settingsPageOpen
+    ? "settings"
+    : overviewOpen || (settingsRouteOpen && isOverviewPathname(appModalReturnPathname()))
+      ? "overview"
+      : "list";
+  const pickView = (view: "list" | "overview") => {
+    // Leaving Settings for the view that opened it goes back to the exact place.
+    if (
+      settingsRouteOpen &&
+      isOverviewPathname(appModalReturnPathname()) === (view === "overview")
+    ) {
+      void router.navigate({ href: appModalReturnLocation() });
+      return;
+    }
+    setThreadView(view);
+  };
   const viewShortcutLabel = shortcutLabelForCommand(keybindings, "view.toggleOverview");
   const sidebarToggleLabel = `Toggle main sidebar${shortcutLabel ? ` (${shortcutLabel})` : ""}`;
-  const viewSwitchLabel = `Switch to ${overviewOpen ? "List" : "Overview"}${viewShortcutLabel ? ` (${viewShortcutLabel})` : ""}`;
+  const viewSwitchLabel = `Switch to ${shownView === "overview" ? "List" : "Overview"}${viewShortcutLabel ? ` (${viewShortcutLabel})` : ""}`;
   const newThreadShortcutLabel = shortcutLabelForCommand(keybindings, "chat.new", {
     context: { terminalFocus: false },
   });
@@ -448,21 +488,23 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
             <ToggleGroup
               aria-label="Thread view"
               variant="mode"
-              value={[overviewOpen ? "overview" : "list"]}
+              value={[shownView]}
               onValueChange={(next) => {
                 const view = next[0];
-                if (view === "list" || view === "overview") setThreadView(view);
+                if (view === "list" || view === "overview") pickView(view);
+                if (view === "settings") openSettings(router);
               }}
             >
               <Toggle
                 value="list"
                 onClick={() => {
-                  if (!overviewOpen && !onThreadRoute) setThreadView("list");
+                  if (!overviewOpen && !onThreadRoute && !settingsRouteOpen) setThreadView("list");
                 }}
               >
                 List
               </Toggle>
               <Toggle value="overview">Overview</Toggle>
+              <Toggle value="settings">Settings</Toggle>
             </ToggleGroup>
           </TooltipTrigger>
           <TooltipPopup side="bottom">{viewSwitchLabel}</TooltipPopup>
@@ -506,9 +548,17 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
           <span className="max-md:hidden">Usage</span>
           {usageShortcutLabel ? <TopBarShortcut label={usageShortcutLabel} /> : null}
         </Button>
-        <Button variant="ghost" onClick={() => openSettings(router)} data-info="Open settings">
-          Settings
-        </Button>
+        {/* Wide windows open Settings from the view switch, which narrow ones hide. */}
+        <span className="md:hidden">
+          <Button
+            variant="ghost"
+            aria-label="Settings"
+            onClick={() => openSettings(router)}
+            data-info="Open settings"
+          >
+            <SettingsIcon />
+          </Button>
+        </span>
       </div>
     </header>
   );

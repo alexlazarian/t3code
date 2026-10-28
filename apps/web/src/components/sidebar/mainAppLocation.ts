@@ -2,7 +2,7 @@ import { useNavigate, type AnyRouter } from "@tanstack/react-router";
 
 import { GUEST_PAGE_PATH } from "../../guestPage";
 
-/** Settings and Usage open as modals over the last main-app view. */
+/** Settings and Usage open over the last main-app view; Settings can also be a page of its own. */
 export function isAppModalPage(pathname: string) {
   return pathname === "/settings" || pathname.startsWith("/settings/") || pathname === "/usage";
 }
@@ -36,8 +36,17 @@ export function useNavigateToMainApp() {
   return () => navigate({ href: mainAppHref ?? "/" });
 }
 
+/** Where leaving Settings or Usage goes: the page that opened it. */
+export function appModalReturnLocation() {
+  return appModalReturnHref ?? mainAppHref ?? "/";
+}
+
+export function appModalReturnPathname() {
+  return new URL(appModalReturnLocation(), "http://t3.invalid").pathname;
+}
+
 /** Leaves Settings or Usage for the page that opened it. */
 export function useCloseAppModal() {
   const navigate = useNavigate();
-  return () => navigate({ href: appModalReturnHref ?? mainAppHref ?? "/" });
+  return () => navigate({ href: appModalReturnLocation() });
 }

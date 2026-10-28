@@ -3,7 +3,11 @@ import { Outlet, createFileRoute, redirect, useMatches } from "@tanstack/react-r
 import { useState } from "react";
 
 import { ThreadRouteView } from "../components/ThreadRouteView";
-import { isAppModalPage } from "../components/sidebar/mainAppLocation";
+import { OverviewView } from "../components/overview/OverviewView";
+import { SettingsInLibraryBar } from "../components/settings/SettingsInLibraryBar";
+import { isSettingsPath, useSettingsInLibrary } from "../components/settings/settingsPlacement";
+import { appModalReturnPathname, isAppModalPage } from "../components/sidebar/mainAppLocation";
+import { isOverviewPathname } from "../threadView";
 import { SidebarInset } from "../components/ui/sidebar";
 import { resolveThreadRouteTarget, type ThreadRouteTarget } from "../threadRoutes";
 import { retainThreadFindForRoute } from "../components/chat/threadFindStore";
@@ -22,12 +26,21 @@ function ChatRouteLayout() {
   const modalOpen = useMatches({
     select: (matches) => matches.some((match) => isAppModalPage(match.pathname)),
   });
-  // Settings and Usage render over the thread that opened them, so ChatView never remounts.
+  const settingsOpen = useMatches({
+    select: (matches) => matches.some((match) => isSettingsPath(match.pathname)),
+  });
+  const settingsInLibrary = useSettingsInLibrary();
+  // Settings is a page unless it sits in Library; then, like Usage, it leaves the view under it.
+  const settingsPage = settingsOpen && !settingsInLibrary;
+  // Settings and Usage keep the view that opened them, so ChatView never remounts.
   const [backgroundTarget, setBackgroundTarget] = useState(threadTarget);
   if (!modalOpen && threadRouteTargetKey(backgroundTarget) !== threadRouteTargetKey(threadTarget)) {
     setBackgroundTarget(threadTarget);
   }
   const shownTarget = modalOpen ? backgroundTarget : threadTarget;
+  const overviewUnderSettings =
+    settingsInLibrary && !shownTarget && isOverviewPathname(appModalReturnPathname());
+  if (settingsPage) return <Outlet />;
   return (
     <>
       {shownTarget?.kind === "server" && !modalOpen ? (
@@ -35,12 +48,18 @@ function ChatRouteLayout() {
       ) : null}
       {shownTarget ? (
         <ThreadRouteView target={shownTarget} background={modalOpen} />
+      ) : overviewUnderSettings ? (
+        // A wrapper would break the inset's layout; `contents` keeps it while making it inert.
+        <div inert className="contents">
+          <OverviewView />
+        </div>
       ) : modalOpen ? (
         <SidebarInset className="h-(--app-height)" />
       ) : (
         <Outlet />
       )}
       {modalOpen ? <Outlet /> : null}
+      {settingsOpen && settingsInLibrary ? <SettingsInLibraryBar /> : null}
     </>
   );
 }

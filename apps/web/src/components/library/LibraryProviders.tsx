@@ -5,6 +5,7 @@ import { getProviderSummary } from "../settings/providerStatus";
 import type { LibraryContext } from "./Library.logic";
 import { LibraryItemList } from "./LibraryItemList";
 import { useLibraryProvider } from "./useLibrary";
+import { moveSettingsIntoLibrary } from "../settings/settingsPlacement";
 
 export function LibraryProviders(props: { readonly ctx: LibraryContext }) {
   const { environmentId, entries } = useLibraryProvider(props.ctx);
@@ -23,14 +24,16 @@ export function LibraryProviders(props: { readonly ctx: LibraryContext }) {
           actions: [
             {
               label: "Open in Settings",
-              onSelect: () =>
+              onSelect: () => {
+                moveSettingsIntoLibrary();
                 void navigate({
                   to: "/settings/providers",
                   search: {
                     ...(environmentId === null ? {} : { environmentId }),
                     instanceId: entry.instanceId,
                   },
-                }),
+                });
+              },
             },
           ],
         };

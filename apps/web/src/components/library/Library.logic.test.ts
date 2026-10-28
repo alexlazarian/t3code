@@ -45,6 +45,7 @@ describe("LIBRARY_GROUPS", () => {
     expect(LIBRARY_GROUPS.map((g) => [g.group, g.categories.map((c) => c.id)])).toEqual([
       ["Library", ["skills", "models", "providers", "access", "stash", "scheduled"]],
       ["Places", ["projects", "machines"]],
+      ["App", ["settings"]],
     ]);
   });
 });

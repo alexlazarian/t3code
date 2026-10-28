@@ -7,15 +7,18 @@ import { LibraryModels } from "./LibraryModels";
 import { LibraryProjects } from "./LibraryProjects";
 import { LibraryProviders } from "./LibraryProviders";
 import { LibraryScheduled } from "./LibraryScheduled";
+import { LibrarySettings } from "./LibrarySettings";
 import { LibrarySkills } from "./LibrarySkills";
 import { LibraryStash } from "./LibraryStash";
 import { useLibraryContext } from "./useLibrary";
+import { moveSettingsIntoLibrary } from "../settings/settingsPlacement";
 
 export function LibraryPanel() {
   const category = useUiStateStore((store) => store.libraryCategory);
   const setCategory = useUiStateStore((store) => store.setLibraryCategory);
   const active = LIBRARY_CATEGORIES.find((entry) => entry.id === category) ?? LIBRARY_CATEGORIES[0];
 
+  if (active?.id === "settings") return <LibrarySettings />;
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2 px-2 py-2">
       <nav aria-label="Library categories" className="flex flex-col gap-px">
@@ -29,7 +32,9 @@ export function LibraryPanel() {
                 key={entry.id}
                 type="button"
                 aria-current={entry.id === active?.id ? "true" : undefined}
-                onClick={() => setCategory(entry.id)}
+                onClick={() =>
+                  entry.id === "settings" ? moveSettingsIntoLibrary() : setCategory(entry.id)
+                }
                 className={cn(
                   "h-6 cursor-pointer px-2 text-left text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
                   entry.id === active?.id
@@ -77,5 +82,7 @@ function LibraryCategoryItems(props: { readonly category: LibraryCategory }) {
       return <LibraryProjects />;
     case "machines":
       return <LibraryMachines />;
+    case "settings":
+      return null;
   }
 }

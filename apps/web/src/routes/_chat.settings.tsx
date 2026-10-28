@@ -1,11 +1,19 @@
 import { workspaceAreaProps } from "../lib/workspaceFocus";
 import { Outlet, createFileRoute, redirect, useLocation } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
-import { RotateCcwIcon } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { ArrowLeftIcon, PanelLeftIcon, RotateCcwIcon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { useSettingsRestore } from "../components/settings/SettingsPanels";
 
-import { AppRouteModal, AppRouteModalClose } from "../components/AppRouteModal";
+import { useCloseAppModal } from "../components/sidebar/mainAppLocation";
+import {
+  moveSettingsIntoLibrary,
+  useLibrarySettingsHost,
+  useSettingsInLibrary,
+} from "../components/settings/settingsPlacement";
+import { SidebarInset, useSidebar } from "../components/ui/sidebar";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "../components/ui/tooltip";
 import { SettingsBreadcrumb } from "../components/settings/SettingsBreadcrumb";
 import { SettingsSidebarNav } from "../components/settings/SettingsSidebarNav";
 import {
@@ -119,9 +127,31 @@ function SettingsContentLayout() {
       ? environment?.environmentId
       : JSON.stringify(search);
   const [restoreSignal, setRestoreSignal] = useState(0);
+  const inLibrary = useSettingsInLibrary();
+  const libraryHost = useLibrarySettingsHost();
+
+  const content = (
+    <div key={`${contentScopeKey}:${restoreSignal}`} className="min-h-0 flex flex-1 flex-col">
+      <SettingsScopeBoundary pathname={location.pathname}>
+        <Outlet />
+      </SettingsScopeBoundary>
+    </div>
+  );
+  if (inLibrary) {
+    // The section list shows instead while the host is absent.
+    return libraryHost
+      ? createPortal(
+          <div {...contentArea} className="flex min-h-0 flex-1 flex-col">
+            {content}
+          </div>,
+          libraryHost,
+        )
+      : null;
+  }
 
   return (
-    <AppRouteModal label="Settings">
+    <SidebarInset className="h-(--app-height) min-h-0 overflow-hidden overscroll-y-none">
+      <SettingsPageEscape />
       <div className="relative flex min-h-0 flex-1">
         <SettingsSidebarNav pathname={location.pathname} />
         <div {...contentArea} className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -133,18 +163,76 @@ function SettingsContentLayout() {
                   onRestored={() => setRestoreSignal((value) => value + 1)}
                 />
               ) : null}
-              <AppRouteModalClose />
+              <ShowInLibraryButton />
+              <BackButton />
             </div>
           </header>
-          <div key={`${contentScopeKey}:${restoreSignal}`} className="min-h-0 flex flex-1 flex-col">
-            <SettingsScopeBoundary pathname={location.pathname}>
-              <Outlet />
-            </SettingsScopeBoundary>
-          </div>
+          {content}
         </div>
       </div>
-    </AppRouteModal>
+    </SidebarInset>
   );
+}
+
+function ShowInLibraryButton() {
+  const { isMobile, setOpen } = useSidebar();
+  if (isMobile) return null;
+  return (
+    <Button
+      size="xs"
+      variant="ghost"
+      onClick={() => {
+        moveSettingsIntoLibrary();
+        setOpen(true);
+      }}
+      data-info="Show this section in the Library sidebar, next to your thread"
+    >
+      <PanelLeftIcon />
+      <span className="max-sm:sr-only">Show in Library</span>
+    </Button>
+  );
+}
+
+function BackButton() {
+  const closeAppModal = useCloseAppModal();
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={<Button size="xs" variant="ghost" onClick={() => void closeAppModal()} />}
+      >
+        <ArrowLeftIcon />
+        Back
+      </TooltipTrigger>
+      <TooltipPopup side="bottom">Back to where you were (Esc)</TooltipPopup>
+    </Tooltip>
+  );
+}
+
+// Esc that a field, popup or dialog did not claim leaves the page, as it closed the modal.
+function SettingsPageEscape() {
+  const closeAppModal = useCloseAppModal();
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- window keydown listener for Esc while the Settings page is open
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented || event.isComposing) return;
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target.closest(
+            'input, textarea, select, [role="dialog"], [role="menu"], [data-slot$="popup"]',
+          ) !== null)
+      ) {
+        return;
+      }
+      if (document.querySelector('[aria-modal="true"]')) return;
+      event.preventDefault();
+      void closeAppModal();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [closeAppModal]);
+  return null;
 }
 
 function SettingsRouteLayout() {
