@@ -11,6 +11,7 @@ import { buildSidebarProjectSnapshots } from "../sidebarProjectGrouping";
 import { useEnvironmentIdentities, usePrimaryEnvironmentId } from "../state/environments";
 import { readThreadShell, useProjects } from "../state/entities";
 import { useClientSettings } from "../hooks/useSettings";
+import { useStableCallback } from "../hooks/useStableCallback";
 import { environmentPresentations } from "../state/presentation";
 import { useUiStateStore } from "../uiStateStore";
 import {
@@ -113,6 +114,9 @@ function useProjectNameByKey(): ReadonlyMap<string, string> {
 export function InfoBar() {
   const text = useInfoBarStore((store) => store.text);
   const projectNameByKey = useProjectNameByKey();
+  const lookup = useStableCallback((threadKey: string) =>
+    lookupThread(threadKey, projectNameByKey),
+  );
 
   // oxlint-disable-next-line t3code/react-effect-budget -- document-level pointer listener
   useEffect(() => {
@@ -123,13 +127,7 @@ export function InfoBar() {
         event.target instanceof Element ? event.target.closest(TARGET_SELECTOR) : null;
       if (element === lastElement) return;
       lastElement = element;
-      set(
-        element
-          ? resolveInfoBarText(targetOf(element), (threadKey) =>
-              lookupThread(threadKey, projectNameByKey),
-            )
-          : null,
-      );
+      set(element ? resolveInfoBarText(targetOf(element), lookup) : null);
     };
     const onLeave = () => {
       lastElement = null;
@@ -142,7 +140,7 @@ export function InfoBar() {
       document.documentElement.removeEventListener("pointerleave", onLeave);
       set(null);
     };
-  }, [projectNameByKey]);
+  }, [lookup]);
 
   return (
     <div
