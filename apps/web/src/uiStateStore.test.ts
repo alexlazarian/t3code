@@ -21,6 +21,8 @@ function makeUiState(overrides: Partial<UiState> = {}): UiState {
     projectOrder: [],
     sidebarProjectScopeKey: null,
     sidebarStatusFilter: "all",
+    sidebarPanel: "threads",
+    libraryCategory: "skills",
     threadLastVisitedAtById: {},
     threadChangedFilesExpandedById: {},
     defaultAdvertisedEndpointKey: null,
@@ -128,6 +130,8 @@ describe("parsePersistedState", () => {
       defaultAdvertisedEndpointKey: "desktop-core:lan:http",
       sidebarProjectScopeKey: null,
       sidebarStatusFilter: "all",
+      sidebarPanel: "threads",
+      libraryCategory: "skills",
       pullRequestMergeMethod: "merge",
       threadChangedFilesExpandedById: {
         "environment:thread-1": {
@@ -149,6 +153,19 @@ describe("parsePersistedState", () => {
     });
 
     expect(parsed.threadChangedFilesExpandedById).toEqual({});
+  });
+
+  it("keeps a valid sidebar panel and library category and drops invalid ones", () => {
+    expect(
+      parsePersistedState({ sidebarPanel: "library", libraryCategory: "machines" }),
+    ).toMatchObject({
+      sidebarPanel: "library",
+      libraryCategory: "machines",
+    });
+    expect(parsePersistedState({ sidebarPanel: "nope", libraryCategory: "sched" })).toMatchObject({
+      sidebarPanel: "threads",
+      libraryCategory: "skills",
+    });
   });
 
   it("migrates legacy CWD project preferences into local alias keys", () => {
@@ -234,6 +251,8 @@ describe("uiStateStore persistence", () => {
       defaultAdvertisedEndpointKey: "desktop-core:lan:http",
       sidebarProjectScopeKey: null,
       sidebarStatusFilter: "all",
+      sidebarPanel: "threads",
+      libraryCategory: "skills",
       threadChangedFilesExpansionVersion: 2,
       threadChangedFilesExpandedById: {
         "environment:thread-1": {

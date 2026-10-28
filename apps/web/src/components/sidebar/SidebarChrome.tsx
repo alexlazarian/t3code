@@ -30,11 +30,14 @@ import { SidebarProviderUpdatePill } from "./SidebarProviderUpdatePill";
 import { SidebarUpdateArchitectureWarning, SidebarUpdatePill } from "./SidebarUpdatePill";
 import { PullRequestGlyph } from "~/components/pullRequest/pullRequestIcons";
 import { observeResize } from "~/lib/observeResize";
+import { useUiStateStore, type SidebarPanel } from "../../uiStateStore";
 
 export const SidebarChromeHeader = memo(function SidebarChromeHeader({
   isElectron,
+  showPanelTabs = false,
 }: {
   isElectron: boolean;
+  showPanelTabs?: boolean;
 }) {
   const stageLabel = useEnvironmentStageLabel();
   const environmentIdentificationMode = useEnvironmentIdentificationMode();
@@ -72,9 +75,44 @@ export const SidebarChromeHeader = memo(function SidebarChromeHeader({
           </div>
         ) : null}
       </div>
+      {showPanelTabs ? <SidebarPanelTabs /> : null}
     </div>
   );
 });
+
+const PANEL_TABS: ReadonlyArray<{ id: SidebarPanel; label: string }> = [
+  { id: "threads", label: "Threads" },
+  { id: "library", label: "Library" },
+];
+
+function SidebarPanelTabs() {
+  const panel = useUiStateStore((store) => store.sidebarPanel);
+  const setPanel = useUiStateStore((store) => store.setSidebarPanel);
+  return (
+    <div role="tablist" aria-label="Left panel" className="relative z-10 flex shrink-0 gap-0.5">
+      {PANEL_TABS.map((tab) => {
+        const on = panel === tab.id;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={on}
+            onClick={() => setPanel(tab.id)}
+            className={cn(
+              "h-5 cursor-pointer whitespace-nowrap border px-1.5 text-2xs leading-4.5 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+              on
+                ? "border-sidebar-border bg-sidebar-row-hover text-sidebar-foreground"
+                : "border-sidebar-border/60 text-sidebar-muted-foreground hover:text-sidebar-foreground",
+            )}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export function SidebarBrandWidthProbe({
   onWidthChange,
