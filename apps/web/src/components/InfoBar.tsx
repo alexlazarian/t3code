@@ -123,7 +123,7 @@ export function InfoBar() {
     lookupThread(threadKey, projectNameByKey),
   );
 
-  // oxlint-disable-next-line t3code/react-effect-budget -- document-level pointer listener
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- document-level pointer listener
   useEffect(() => {
     const { set } = useInfoBarStore.getState();
     let lastElement: Element | null = null;

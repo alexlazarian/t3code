@@ -237,7 +237,7 @@ export function OverviewView() {
   const findCard = (threadKey: string) =>
     gridRef.current?.querySelector<HTMLElement>(`[data-thread-key="${CSS.escape(threadKey)}"]`) ??
     null;
-  // oxlint-disable-next-line t3code/react-effect-budget -- a peek whose card vanished unmounts without closing, so focus must be moved in the DOM after commit
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- a peek whose card vanished unmounts without closing, so focus must be moved in the DOM after commit
   useEffect(() => {
     if (lostPeekCount === handledLostPeekCount.current) return;
     handledLostPeekCount.current = lostPeekCount;
