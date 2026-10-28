@@ -58,7 +58,6 @@ import {
 import { useAvailableSettingsSearchItems } from "./useAvailableSettingsSearchItems";
 import { validateSettingsScopeSearch } from "./settingsScope";
 import { useSettingsSectionNavigation } from "./useSettingsSectionNavigation";
-import { isSettingsPath } from "./settingsPlacement";
 import { workspaceAreaProps } from "../../lib/workspaceFocus";
 import { ProviderUpdateIndicator } from "../ProviderUpdateIndicator";
 
@@ -128,16 +127,7 @@ function SettingsSectionIcon({ to }: { to: SettingsPath }) {
   return <Icon className="size-4 shrink-0 text-(--sidebar-icon-color)" />;
 }
 
-export function SettingsSidebarNav({
-  pathname,
-  inLibrary = false,
-  onNavigate,
-}: {
-  pathname: string;
-  // In the Library sidebar the nav fills the panel and leaves find and / to the thread.
-  inLibrary?: boolean;
-  onNavigate?: () => void;
-}) {
+export function SettingsSidebarNav({ pathname }: { pathname: string }) {
   const navArea = workspaceAreaProps("settings-nav", 0, "Settings sections");
   const navigate = useNavigate();
   const currentHash = useLocation({ select: (location) => location.hash });
@@ -167,7 +157,6 @@ export function SettingsSidebarNav({
 
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- window keydown listener for the find and slash search shortcuts
   useEffect(() => {
-    if (inLibrary) return;
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.defaultPrevented || event.isComposing) return;
       const isFindShortcut =
@@ -200,21 +189,18 @@ export function SettingsSidebarNav({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [inLibrary]);
+  }, []);
 
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- focuses the search input DOM node after the compact search opens
   useEffect(() => {
     if (compactSearchOpen) searchInputRef.current?.focus();
   }, [compactSearchOpen]);
 
-  // Moving between sections replaces history; arriving from outside Settings pushes it.
-  const replace = isSettingsPath(pathname);
   const handleSectionClick = (to: SettingsPath) => {
-    onNavigate?.();
     void navigate({
       to,
       hash: "",
-      replace,
+      replace: true,
       hashScrollIntoView: false,
     });
   };
@@ -226,7 +212,6 @@ export function SettingsSidebarNav({
   const handleSearchResultClick = (item: SettingsSearchItem) => {
     clearSearch();
     setCompactSearchOpen(false);
-    onNavigate?.();
     const targetId = item.targetId ?? item.id;
     revealSettingsSearchTarget(targetId);
     if (pathname === item.to && currentHash.replace(/^#/, "") === targetId) {
@@ -236,7 +221,7 @@ export function SettingsSidebarNav({
     void navigate({
       to: item.to,
       hash: targetId,
-      replace,
+      replace: true,
       hashScrollIntoView: false,
       state: { settingsTargetHighlight: true },
     });
@@ -272,11 +257,8 @@ export function SettingsSidebarNav({
       {...navArea}
       role="navigation"
       className={cn(
-        inLibrary
-          ? "flex w-full min-w-0 flex-col text-sidebar-foreground"
-          : "flex w-60 shrink-0 flex-col border-e bg-sidebar text-sidebar-foreground max-md:w-14",
+        "flex w-60 shrink-0 flex-col border-e bg-sidebar text-sidebar-foreground max-md:w-14",
         compactSearchOpen &&
-          !inLibrary &&
           "max-md:absolute max-md:inset-y-0 max-md:start-0 max-md:z-10 max-md:w-full",
       )}
     >
@@ -455,16 +437,14 @@ export function SettingsSidebarNav({
           </div>
         </SidebarGroup>
       </SidebarContent>
-      {inLibrary ? null : (
-        <SidebarFooter className="max-md:hidden">
-          <Suspense fallback={null}>
-            <T3ConnectSidebarSignIn />
-          </Suspense>
-          <Suspense fallback={null}>
-            <T3ConnectSidebarAvatar />
-          </Suspense>
-        </SidebarFooter>
-      )}
+      <SidebarFooter className="max-md:hidden">
+        <Suspense fallback={null}>
+          <T3ConnectSidebarSignIn />
+        </Suspense>
+        <Suspense fallback={null}>
+          <T3ConnectSidebarAvatar />
+        </Suspense>
+      </SidebarFooter>
     </nav>
   );
 }

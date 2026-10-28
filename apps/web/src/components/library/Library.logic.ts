@@ -24,8 +24,7 @@ export type LibraryCategory =
   | "stash"
   | "scheduled"
   | "projects"
-  | "machines"
-  | "settings";
+  | "machines";
 
 export type LibraryContext = {
   threadRef: ScopedThreadRef | null;
@@ -35,7 +34,7 @@ export type LibraryContext = {
 };
 
 export const LIBRARY_GROUPS: ReadonlyArray<{
-  group: "Library" | "Places" | "App";
+  group: "Library" | "Places";
   categories: ReadonlyArray<{ id: LibraryCategory; name: string; tip: string }>;
 }> = [
   {
@@ -85,16 +84,6 @@ export const LIBRARY_GROUPS: ReadonlyArray<{
         id: "machines",
         name: "Machines",
         tip: "Connected machines and their status. Managed in Settings > Environments.",
-      },
-    ],
-  },
-  {
-    group: "App",
-    categories: [
-      {
-        id: "settings",
-        name: "Settings",
-        tip: "Every setting, searchable. Opens here so the thread or Overview stays in view.",
       },
     ],
   },

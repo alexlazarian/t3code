@@ -13,7 +13,6 @@ import { toastManager } from "../ui/toast";
 import { libraryModelAction, type LibraryContext } from "./Library.logic";
 import { type LibraryItem, LibraryItemList } from "./LibraryItemList";
 import { useLibraryProvider } from "./useLibrary";
-import { moveSettingsIntoLibrary } from "../settings/settingsPlacement";
 
 export function LibraryModels(props: { readonly ctx: LibraryContext }) {
   const provider = useLibraryProvider(props.ctx);
@@ -104,13 +103,11 @@ function LibraryModelList(props: {
             actions: [
               {
                 label: "Open provider setup",
-                onSelect: () => {
-                  moveSettingsIntoLibrary();
+                onSelect: () =>
                   void navigate({
                     to: "/settings/providers",
                     search: { environmentId, instanceId: candidate.instanceId },
-                  });
-                },
+                  }),
               },
             ],
           };

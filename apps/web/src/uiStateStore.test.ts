@@ -168,10 +168,13 @@ describe("parsePersistedState", () => {
     });
   });
 
-  it("falls back to skills for the dropped project actions category", () => {
+  it("falls back to skills for the dropped actions and settings categories", () => {
     expect(
       parsePersistedState({ sidebarPanel: "library", libraryCategory: "actions" }),
     ).toMatchObject({ libraryCategory: "skills" });
+    expect(
+      parsePersistedState({ sidebarPanel: "library", libraryCategory: "settings" }),
+    ).toMatchObject({ sidebarPanel: "library", libraryCategory: "skills" });
   });
 
   it("migrates legacy CWD project preferences into local alias keys", () => {

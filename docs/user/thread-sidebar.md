@@ -244,6 +244,10 @@ and get the full grid back, click an empty spot in the grid, press `Esc`, or dra
 divider all the way down. A double-click or `Enter` opens the thread in List view at
 full size.
 
+**Settings** in the **List | Overview | Pull requests | Settings** switch above the
+main area, the command palette, and the app menu open Settings as a page; `Esc` or
+**Back** returns to where you were.
+
 ## Use the Library
 
 On web and desktop, the **Library** tab beside **Threads** gathers skills and
@@ -251,13 +255,6 @@ commands, models, providers, access modes, your prompt stash, scheduled tasks,
 projects, and machines in one place. Skills, commands, and stashed prompts go into
 the open thread's composer. Models and access modes apply to the open thread, and
 projects start a new thread. Each category explains what its items do.
-
-**Library → Settings** opens Settings in the sidebar, so you can watch a change,
-such as a new theme, land on the open thread or Overview. That view stays
-read-only until you close Settings. **Open as page** moves Settings into the main
-area at the same section, and **Show in Library** on the page moves it back. **Settings**
-in the **List | Overview | Pull requests | Settings** switch above the main area, the command palette, and
-the app menu open the page; `Esc` or **Back** returns to where you were.
 
 ## Find and reference work
 

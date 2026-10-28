@@ -20,7 +20,6 @@ import { scheduleLabel } from "../settings/ScheduledTasksSettings";
 import { stackedThreadToast, toastManager } from "../ui/toast";
 import type { LibraryContext } from "./Library.logic";
 import { LibraryItemList } from "./LibraryItemList";
-import { moveSettingsIntoLibrary } from "../settings/settingsPlacement";
 
 export function LibraryScheduled(props: { readonly ctx: LibraryContext }) {
   const primaryEnvironmentId = usePrimaryEnvironmentId();
@@ -63,13 +62,11 @@ function ScheduledTaskList(props: { readonly environmentId: EnvironmentId }) {
       );
     }
   };
-  const openInSettings = (task: ScheduledTask) => {
-    moveSettingsIntoLibrary();
+  const openInSettings = (task: ScheduledTask) =>
     void navigate({
       to: "/settings/scheduled-tasks",
       search: { environmentId, taskId: task.id },
     });
-  };
 
   return (
     <LibraryItemList

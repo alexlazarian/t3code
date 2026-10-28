@@ -11,7 +11,6 @@ import { getProviderSummary } from "../settings/providerStatus";
 import type { LibraryContext } from "./Library.logic";
 import { LibraryItemList, type LibraryItemAction } from "./LibraryItemList";
 import { useLibraryProvider } from "./useLibrary";
-import { moveSettingsIntoLibrary } from "../settings/settingsPlacement";
 
 const EMPTY = "No providers reported yet.";
 
@@ -62,13 +61,11 @@ function LibraryProviderList(props: {
             ...updateAction,
             {
               label: "Open in Settings",
-              onSelect: () => {
-                moveSettingsIntoLibrary();
+              onSelect: () =>
                 void navigate({
                   to: "/settings/providers",
                   search: { environmentId, instanceId: entry.instanceId },
-                });
-              },
+                }),
             },
           ],
         };

@@ -2,8 +2,7 @@ import { useNavigate, type AnyRouter } from "@tanstack/react-router";
 
 import { GUEST_PAGE_PATH } from "../../guestPage";
 
-/** Settings opens over the last main-app view, or as a page of its own. */
-export function isAppModalPage(pathname: string) {
+export function isSettingsPath(pathname: string) {
   return pathname === "/settings" || pathname.startsWith("/settings/");
 }
 
@@ -23,7 +22,7 @@ let appModalReturnHref: string | null = null;
 export function startMainAppLocationTracking(router: AnyRouter): () => void {
   const record = () => {
     const { pathname, href } = router.state.location;
-    if (isAppModalPage(pathname) || SHELL_LESS_PATHS.has(pathname)) return;
+    if (isSettingsPath(pathname) || SHELL_LESS_PATHS.has(pathname)) return;
     appModalReturnHref = href;
     if (!isSidebarUtilityPage(pathname)) mainAppHref = href;
   };

@@ -1,18 +1,12 @@
 import { workspaceAreaProps } from "../lib/workspaceFocus";
 import { Outlet, createFileRoute, redirect, useLocation } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
-import { ArrowLeftIcon, PanelLeftIcon, RotateCcwIcon } from "lucide-react";
+import { ArrowLeftIcon, RotateCcwIcon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { useSettingsRestore } from "../components/settings/SettingsPanels";
 
 import { useCloseAppModal } from "../components/sidebar/mainAppLocation";
-import {
-  moveSettingsIntoLibrary,
-  useLibrarySettingsHost,
-  useSettingsInLibrary,
-} from "../components/settings/settingsPlacement";
-import { SidebarInset, useSidebar } from "../components/ui/sidebar";
+import { SidebarInset } from "../components/ui/sidebar";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../components/ui/tooltip";
 import { SettingsBreadcrumb } from "../components/settings/SettingsBreadcrumb";
 import { SettingsSidebarNav } from "../components/settings/SettingsSidebarNav";
@@ -132,27 +126,6 @@ function SettingsContentLayout() {
       ? environment?.environmentId
       : JSON.stringify(search);
   const [restoreSignal, setRestoreSignal] = useState(0);
-  const inLibrary = useSettingsInLibrary();
-  const libraryHost = useLibrarySettingsHost();
-
-  const content = (
-    <div key={`${contentScopeKey}:${restoreSignal}`} className="min-h-0 flex flex-1 flex-col">
-      <SettingsScopeBoundary pathname={location.pathname}>
-        <Outlet />
-      </SettingsScopeBoundary>
-    </div>
-  );
-  if (inLibrary) {
-    // The section list shows instead while the host is absent.
-    return libraryHost
-      ? createPortal(
-          <div {...contentArea} className="flex min-h-0 flex-1 flex-col">
-            {content}
-          </div>,
-          libraryHost,
-        )
-      : null;
-  }
 
   return (
     <SidebarInset className="h-(--app-height) min-h-0 overflow-hidden overscroll-y-none">
@@ -168,33 +141,17 @@ function SettingsContentLayout() {
                   onRestored={() => setRestoreSignal((value) => value + 1)}
                 />
               ) : null}
-              <ShowInLibraryButton />
               <BackButton />
             </div>
           </header>
-          {content}
+          <div key={`${contentScopeKey}:${restoreSignal}`} className="min-h-0 flex flex-1 flex-col">
+            <SettingsScopeBoundary pathname={location.pathname}>
+              <Outlet />
+            </SettingsScopeBoundary>
+          </div>
         </div>
       </div>
     </SidebarInset>
-  );
-}
-
-function ShowInLibraryButton() {
-  const { isMobile, setOpen } = useSidebar();
-  if (isMobile) return null;
-  return (
-    <Button
-      size="xs"
-      variant="ghost"
-      onClick={() => {
-        moveSettingsIntoLibrary();
-        setOpen(true);
-      }}
-      data-info="Show this section in the Library sidebar, next to your thread"
-    >
-      <PanelLeftIcon />
-      <span className="max-sm:sr-only">Show in Library</span>
-    </Button>
   );
 }
 

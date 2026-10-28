@@ -53,14 +53,8 @@ import ThreadSidebar from "./Sidebar";
 import {
   appModalReturnLocation,
   appModalReturnPathname,
-  isAppModalPage,
-} from "./sidebar/mainAppLocation";
-import {
   isSettingsPath,
-  moveSettingsOutOfLibrary,
-  useSettingsInLibrary,
-} from "./settings/settingsPlacement";
-import { useUiStateStore } from "../uiStateStore";
+} from "./sidebar/mainAppLocation";
 import type { SidebarRouteReveal } from "./sidebar/routeReveal";
 import { SidebarBackgroundLayer } from "./sidebar/SidebarBackgroundLayer";
 import {
@@ -272,7 +266,7 @@ function registerThreadUndoCommands(
   router: AnyRouter,
   readSidebarVisible: () => boolean,
 ): () => void {
-  const threadSidebarShown = () => !isAppModalPage(router.state.location.pathname);
+  const threadSidebarShown = () => !isSettingsPath(router.state.location.pathname);
   const unregister = registerCommands(
     {},
     {
@@ -329,17 +323,13 @@ function registerThreadUndoCommands(
   };
 }
 
-// The top bar, menu and keyboard open the page; Library > Settings opens it in the sidebar.
-// Pressing it on the page goes back.
+// Pressing it on the Settings page goes back.
 function openSettings(router: AnyRouter) {
-  const onSettings = isSettingsPath(router.state.location.pathname);
-  const { sidebarPanel, libraryCategory } = useUiStateStore.getState();
-  if (onSettings && !(sidebarPanel === "library" && libraryCategory === "settings")) {
+  if (isSettingsPath(router.state.location.pathname)) {
     void router.navigate({ href: appModalReturnLocation() });
     return;
   }
-  moveSettingsOutOfLibrary();
-  if (!onSettings) void router.navigate({ to: "/settings" });
+  void router.navigate({ to: "/settings" });
 }
 
 /** Keyboard and menu commands that live as long as the app shell. */
@@ -506,15 +496,8 @@ function MainViewHeader() {
   const settingsRouteOpen = useLocation({
     select: (location) => isSettingsPath(location.pathname),
   });
-  const settingsInLibrary = useSettingsInLibrary();
-  const settingsPageOpen = settingsRouteOpen && !settingsInLibrary;
   const pullRequestsSupported = usePullRequestsSupported();
-  // Over Settings in Library the switch still names the view underneath it.
-  const shownView = settingsPageOpen
-    ? "settings"
-    : settingsRouteOpen
-      ? topBarViewForPathname(appModalReturnPathname())
-      : routeView;
+  const shownView = settingsRouteOpen ? "settings" : routeView;
   const pickView = (view: TopBarView) => {
     // Leaving Settings for the view that opened it goes back to the exact place.
     if (settingsRouteOpen && topBarViewForPathname(appModalReturnPathname()) === view) {

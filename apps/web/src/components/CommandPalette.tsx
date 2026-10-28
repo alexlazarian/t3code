@@ -158,7 +158,6 @@ import {
 } from "../lib/utils";
 import { buildThreadRouteParams } from "../threadRoutes";
 import { useAvailableSettingsSearchItems } from "./settings/useAvailableSettingsSearchItems";
-import { moveSettingsOutOfLibrary } from "./settings/settingsPlacement";
 import {
   applyWslEnvironmentConfiguration,
   parseWslUncPath,
@@ -1574,7 +1573,6 @@ function OpenCommandPaletteDialog(props: {
     title: "Open settings",
     icon: <SettingsIcon className={ITEM_ICON_CLASS} />,
     run: async () => {
-      moveSettingsOutOfLibrary();
       await navigate({ to: "/settings" });
     },
   });

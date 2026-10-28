@@ -6,7 +6,7 @@ import { isPreviewAvailableFor } from "../browser/previewRuntime";
 import { isCommandPaletteOpen, openCommandPalette } from "../commandPaletteBus";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { dispatchPreviewAction, type PreviewAction } from "../components/preview/previewActionBus";
-import { isAppModalPage } from "../components/sidebar/mainAppLocation";
+import { isSettingsPath } from "../components/sidebar/mainAppLocation";
 import { createNewThreadHandler, resolveDefaultProjectRef } from "../hooks/useHandleNewThread";
 import { createScratchProjectActions } from "../hooks/useScratchProject";
 import { getClientSettings } from "../hooks/useSettings";
@@ -177,7 +177,7 @@ export function installChatRouteCommands(router: AnyRouter): () => void {
     {
       when: () =>
         router.state.matches.some((match) => match.routeId === CHAT_ROUTE_ID) &&
-        !router.state.matches.some((match) => isAppModalPage(match.pathname)) &&
+        !router.state.matches.some((match) => isSettingsPath(match.pathname)) &&
         !isCommandPaletteOpen(),
       context: () => {
         const threadRef = readRouteThreadRef();
