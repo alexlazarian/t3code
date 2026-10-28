@@ -23,6 +23,8 @@ import {
   type SidebarSection,
 } from "../Sidebar.logic";
 import type { SidebarProviderEntry } from "../sidebar/SidebarThreadRow";
+import { UnsentDraftLabel } from "../sidebar/UnsentDraftLabel";
+import { useThreadHasUnsentDraft } from "../../composerDraftStore";
 import { AgentElapsed } from "../chat/AgentElapsed";
 import { ProviderInstanceIcon } from "../chat/ProviderInstanceIcon";
 import { PullRequestGlyph } from "../pullRequest/pullRequestIcons";
@@ -149,6 +151,9 @@ export const OverviewCard = memo(function OverviewCard(props: {
     : null;
   const files = activity?.files;
   const queuedCount = thread.source.queuedRunCount ?? 0;
+  // The selected card's composer is open in the pane below, like the sidebar's route thread.
+  const hasUnsentDraft =
+    useThreadHasUnsentDraft(scopeThreadRef(thread.environmentId, thread.id)) && !props.selected;
   const wait = light === "waiting" ? overviewWaitStrip(thread.pendingBackgroundTasks) : null;
 
   const handleKeyDown = (event: KeyboardEvent) => {
@@ -287,6 +292,7 @@ export const OverviewCard = memo(function OverviewCard(props: {
             )
           ) : null}
           {queuedCount > 0 ? <span>{queuedCount} queued</span> : null}
+          {hasUnsentDraft ? <UnsentDraftLabel /> : null}
           {props.machineLabel ? <span className="truncate">{props.machineLabel}</span> : null}
           <span
             className={cn(

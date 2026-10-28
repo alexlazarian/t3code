@@ -2,9 +2,9 @@ import { useNavigate, type AnyRouter } from "@tanstack/react-router";
 
 import { GUEST_PAGE_PATH } from "../../guestPage";
 
-/** Settings and Usage open over the last main-app view; Settings can also be a page of its own. */
+/** Settings opens over the last main-app view, or as a page of its own. */
 export function isAppModalPage(pathname: string) {
-  return pathname === "/settings" || pathname.startsWith("/settings/") || pathname === "/usage";
+  return pathname === "/settings" || pathname.startsWith("/settings/");
 }
 
 export function isSidebarUtilityPage(pathname: string) {
@@ -19,7 +19,7 @@ const SHELL_LESS_PATHS = new Set(["/pair", "/connect", "/connect-agent", GUEST_P
 let mainAppHref: string | null = null;
 let appModalReturnHref: string | null = null;
 
-/** Remembers where Settings, Usage, and the utility pages lead back to. */
+/** Remembers where Settings and the utility pages lead back to. */
 export function startMainAppLocationTracking(router: AnyRouter): () => void {
   const record = () => {
     const { pathname, href } = router.state.location;
@@ -36,7 +36,7 @@ export function useNavigateToMainApp() {
   return () => navigate({ href: mainAppHref ?? "/" });
 }
 
-/** Where leaving Settings or Usage goes: the page that opened it. */
+/** Where leaving Settings goes: the page that opened it. */
 export function appModalReturnLocation() {
   return appModalReturnHref ?? mainAppHref ?? "/";
 }
@@ -45,7 +45,7 @@ export function appModalReturnPathname() {
   return new URL(appModalReturnLocation(), "http://t3.invalid").pathname;
 }
 
-/** Leaves Settings or Usage for the page that opened it. */
+/** Leaves Settings for the page that opened it. */
 export function useCloseAppModal() {
   const navigate = useNavigate();
   return () => navigate({ href: appModalReturnLocation() });

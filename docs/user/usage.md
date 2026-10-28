@@ -1,7 +1,7 @@
 # Usage and limits
 
-Open **Usage** from the top bar or the command palette, or press `mod+u` on web and
-desktop when the terminal is not focused. Customize `usage.open` in
+On web and desktop, open **Settings → Usage**, choose **Usage** from the command palette, or press
+`mod+u` when the terminal is not focused. Usage also opens in **Library → Settings**. Customize `usage.open` in
 **Settings → Keybindings**.
 
 On mobile, choose **Usage** in the workspace navigation.
@@ -159,5 +159,5 @@ On web and desktop, open Usage from the command palette. While on Usage,
 press `C`, `T`, or `L` for Cost, Tokens, or Limits while not typing in a field.
 Use `Ctrl+Shift+1/2/3/4` (`Cmd+Shift+1/2/3/4` on macOS) for the past
 24 hours, 7 days, 30 days, or 90 days. Period shortcuts do nothing on Limits.
-Press `Escape` to return to the previous page. Customize these shortcuts in
+On the Settings page, press `Escape` to return to the previous page. Customize these shortcuts in
 **Settings → Keybindings**.

@@ -1,6 +1,6 @@
 import { discardComposerDraft } from "../../lib/discardComposerDraft";
 import { replaceComposerContextReferences } from "@t3tools/shared/composerContextReferences";
-import { SquarePenIcon, XIcon } from "lucide-react";
+import { XIcon } from "lucide-react";
 import {
   memo,
   useState,
@@ -19,7 +19,7 @@ import {
   type ComposerThreadDraftState,
   type DraftSessionState,
 } from "../../composerDraftStore";
-import { draftPenClassName, draftSurfaceClassName } from "./SidebarThreadRow";
+import { UnsentDraftLabel } from "./UnsentDraftLabel";
 
 const SidebarDraftRow = memo(function SidebarDraftRow(props: {
   draftId: DraftId;
@@ -89,7 +89,7 @@ const SidebarDraftRow = memo(function SidebarDraftRow(props: {
         data-testid="sidebar-draft-row"
         className={cn(
           "group/sidebar-row relative w-full cursor-pointer overflow-hidden rounded-md text-left text-sidebar-foreground outline-none select-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-          props.isActive ? "bg-sidebar-row-active" : draftSurfaceClassName,
+          props.isActive ? "bg-sidebar-row-active" : "hover:bg-sidebar-row-hover",
         )}
         onClick={handleActivate}
         onContextMenu={handleContextMenu}
@@ -98,12 +98,14 @@ const SidebarDraftRow = memo(function SidebarDraftRow(props: {
         <span className="sr-only">{preview}</span>
         <div className="relative z-10 h-[4.875rem] px-(--sidebar-row-content-inset) py-(--sidebar-content-inset)">
           <div className="flex h-5 min-w-0 items-center gap-1.5">
-            <SquarePenIcon aria-hidden className={draftPenClassName} />
             {props.project ? (
               <ProjectFavicon project={props.project} className="size-4 shrink-0" />
             ) : null}
             <span className="min-w-0 flex-1 truncate text-xs font-medium text-secondary-label">
               {props.projectDisplayName}
+            </span>
+            <span className="shrink-0 text-xs">
+              <UnsentDraftLabel />
             </span>
             <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-end">
               <Tooltip>

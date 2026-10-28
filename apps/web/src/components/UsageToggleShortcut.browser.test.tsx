@@ -46,7 +46,7 @@ describe("usage toggle shortcut on Usage", () => {
   it("goes back", async () => {
     vi.clearAllMocks();
     using _platform = vi.spyOn(navigator, "platform", "get").mockReturnValue("Linux x86_64");
-    await using screen = await render(null, { router: "/usage" });
+    await using screen = await render(null, { router: "/settings/usage" });
     using _commands = { [Symbol.dispose]: registerNavigationHistoryCommands(screen.router!) };
 
     using back = vi.spyOn(window.history, "back").mockImplementation(() => undefined);
@@ -59,7 +59,7 @@ describe("usage toggle shortcut on Usage", () => {
   it("does not reopen Usage from the command palette", async () => {
     vi.clearAllMocks();
     using _platform = vi.spyOn(navigator, "platform", "get").mockReturnValue("Linux x86_64");
-    await using screen = await render(<MountedPalette />, { router: "/usage" });
+    await using screen = await render(<MountedPalette />, { router: "/settings/usage" });
     using navigate = vi.spyOn(screen.router!, "navigate");
     using commands = new DisposableStack();
     commands.defer(

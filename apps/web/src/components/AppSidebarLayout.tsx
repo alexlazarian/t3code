@@ -1,5 +1,5 @@
 import { useAtomValue } from "@effect/atom-react";
-import { ChartNoAxesColumnIcon, SearchIcon, SettingsIcon } from "lucide-react";
+import { SearchIcon, SettingsIcon } from "lucide-react";
 import * as Schema from "effect/Schema";
 import {
   useEffect,
@@ -38,6 +38,8 @@ import { cn, isMacPlatform } from "../lib/utils";
 import { primaryServerKeybindingsAtom } from "../state/server";
 import { useClientSettings } from "../hooks/useSettings";
 import { useProjects } from "../state/entities";
+import { usePullRequestsSupported } from "../state/environments";
+import { readPullRequestListPreferences } from "./pullRequest/pullRequestListPreferences";
 import {
   PanelAnimationSuppressionProvider,
   usePanelAnimationSettings,
@@ -139,7 +141,14 @@ function readInitialThreadSidebarWidth(): number {
 }
 
 function readUsagePageOpen(router: AnyRouter) {
-  return router.state.location.pathname === "/usage";
+  return router.state.location.pathname === "/settings/usage";
+}
+
+type TopBarView = "list" | "overview" | "pull-requests";
+
+function topBarViewForPathname(pathname: string): TopBarView {
+  if (isOverviewPathname(pathname)) return "overview";
+  return pathname === "/pull-requests" ? "pull-requests" : "list";
 }
 
 function isKeybindingCaptureTarget(event: KeyboardEvent) {
@@ -255,7 +264,7 @@ const MODIFIER_KEYS = new Set(["Alt", "Control", "Meta", "Shift"]);
 // hold must survive whatever that re-renders.
 let heldUndoKey: string | null = null;
 
-// Undoes the thread actions in the sidebar's notice. Settings and Usage own
+// Undoes the thread actions in the sidebar's notice. Settings owns
 // mod+z while open. Captured so mod+z reaches it before the composer's own
 // undo handler consumes the key.
 function registerThreadUndoCommands(
@@ -355,13 +364,15 @@ function registerAppShellCommands(router: AnyRouter, shellElement: Element): () 
 /** The full-width bar above the sidebar and main area. On desktop it is the window's drag region. */
 function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSSProperties }) {
   const router = useRouter();
-  const usagePageOpen = useLocation({ select: (location) => location.pathname === "/usage" });
+  const usagePageOpen = useLocation({
+    select: (location) => location.pathname === "/settings/usage",
+  });
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
   const { toggleSidebar, setOpen, setOpenMobile, isMobile } = useSidebar();
   const shortcutLabel = shortcutLabelForCommand(keybindings, "sidebar.toggle", {
     context: { usagePageOpen },
   });
-  const overviewOpen = useLocation({ select: (location) => isOverviewPathname(location.pathname) });
+  const routeView = useLocation({ select: (location) => topBarViewForPathname(location.pathname) });
   const onThreadRoute = useParams({
     strict: false,
     select: (params) => "threadId" in params || "draftId" in params,
@@ -372,19 +383,21 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
   });
   const settingsInLibrary = useSettingsInLibrary();
   const settingsPageOpen = settingsRouteOpen && !settingsInLibrary;
+  const pullRequestsSupported = usePullRequestsSupported();
   // Over Settings in Library the switch still names the view underneath it.
   const shownView = settingsPageOpen
     ? "settings"
-    : overviewOpen || (settingsRouteOpen && isOverviewPathname(appModalReturnPathname()))
-      ? "overview"
-      : "list";
-  const pickView = (view: "list" | "overview") => {
+    : settingsRouteOpen
+      ? topBarViewForPathname(appModalReturnPathname())
+      : routeView;
+  const pickView = (view: TopBarView) => {
     // Leaving Settings for the view that opened it goes back to the exact place.
-    if (
-      settingsRouteOpen &&
-      isOverviewPathname(appModalReturnPathname()) === (view === "overview")
-    ) {
+    if (settingsRouteOpen && topBarViewForPathname(appModalReturnPathname()) === view) {
       void router.navigate({ href: appModalReturnLocation() });
+      return;
+    }
+    if (view === "pull-requests") {
+      void router.navigate({ to: "/pull-requests", search: readPullRequestListPreferences() });
       return;
     }
     setThreadView(view);
@@ -397,9 +410,6 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
   });
   const paletteShortcutLabel = shortcutLabelForCommand(keybindings, "commandPalette.toggle", {
     context: { terminalFocus: false },
-  });
-  const usageShortcutLabel = shortcutLabelForCommand(keybindings, "usage.open", {
-    context: { terminalFocus: false, usagePageOpen },
   });
   const [startNewThread] = useState(() => createStartNewThread(router));
   const hasProjects = useProjects().length > 0;
@@ -491,19 +501,24 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
               value={[shownView]}
               onValueChange={(next) => {
                 const view = next[0];
-                if (view === "list" || view === "overview") pickView(view);
+                if (view === "list" || view === "overview" || view === "pull-requests")
+                  pickView(view);
                 if (view === "settings") openSettings(router);
               }}
             >
               <Toggle
                 value="list"
                 onClick={() => {
-                  if (!overviewOpen && !onThreadRoute && !settingsRouteOpen) setThreadView("list");
+                  if (routeView === "list" && !onThreadRoute && !settingsRouteOpen)
+                    setThreadView("list");
                 }}
               >
                 List
               </Toggle>
               <Toggle value="overview">Overview</Toggle>
+              {pullRequestsSupported || shownView === "pull-requests" ? (
+                <Toggle value="pull-requests">Pull requests</Toggle>
+              ) : null}
               <Toggle value="settings">Settings</Toggle>
             </ToggleGroup>
           </TooltipTrigger>
@@ -525,7 +540,7 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
         </Tooltip>
       </div>
       <div className="min-w-0 flex-1 px-0!" />
-      <div className="border-r">
+      <div className="max-md:border-r md:pr-0!">
         <Button
           variant="ghost"
           aria-label="Search and commands"
@@ -537,28 +552,16 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
           {paletteShortcutLabel ? <TopBarShortcut label={paletteShortcutLabel} /> : null}
         </Button>
       </div>
-      <div className="pr-0!">
+      {/* Wide windows open Settings from the view switch, which narrow ones hide. */}
+      <div className="pr-0! md:hidden">
         <Button
           variant="ghost"
-          aria-label="Usage"
-          onClick={() => void router.navigate({ to: "/usage" })}
-          data-info={`See your usage${usageShortcutLabel ? ` (${usageShortcutLabel})` : ""}`}
+          aria-label="Settings"
+          onClick={() => openSettings(router)}
+          data-info="Open settings"
         >
-          <ChartNoAxesColumnIcon className="md:hidden" />
-          <span className="max-md:hidden">Usage</span>
-          {usageShortcutLabel ? <TopBarShortcut label={usageShortcutLabel} /> : null}
+          <SettingsIcon />
         </Button>
-        {/* Wide windows open Settings from the view switch, which narrow ones hide. */}
-        <span className="md:hidden">
-          <Button
-            variant="ghost"
-            aria-label="Settings"
-            onClick={() => openSettings(router)}
-            data-info="Open settings"
-          >
-            <SettingsIcon />
-          </Button>
-        </span>
       </div>
     </header>
   );

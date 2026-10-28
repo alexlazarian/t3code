@@ -35,7 +35,6 @@ import {
   GitBranchIcon,
   PinIcon,
   PinOffIcon,
-  SquarePenIcon,
   TerminalIcon,
   Undo2Icon,
   XIcon,
@@ -107,6 +106,7 @@ import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuShortcut, MenuTrigger } f
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { MiddleTruncate } from "../ui/middle-truncate";
 import { useThreadHasUnsentDraft } from "../../composerDraftStore";
+import { UnsentDraftLabel } from "./UnsentDraftLabel";
 
 // The fields thread rows show. Provider status pushes refresh `checkedAt`,
 // status and auth on every provider; leaving those out keeps each
@@ -352,9 +352,6 @@ type SortableThreadRowBag = Pick<
   ReturnType<typeof useSortable>,
   "listeners" | "setNodeRef" | "transform" | "transition" | "isDragging"
 >;
-
-export const draftSurfaceClassName = "bg-warning/4 hover:bg-warning/8";
-export const draftPenClassName = "size-3 shrink-0 text-warning-foreground";
 
 // useSortable memoizes on its `disabled` object, so a fresh one per render
 // re-renders every row and marker on each sidebar update.
@@ -813,11 +810,9 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
       ? "bg-sidebar-row-active text-sidebar-foreground light:ring-1 light:ring-inset light:ring-sidebar-border/70"
       : isSelected || props.sweepAction !== null
         ? "bg-sidebar-row-selected text-sidebar-foreground light:ring-1 light:ring-inset light:ring-sidebar-border/70"
-        : hasUnsentDraft
-          ? cn(draftSurfaceClassName, "text-sidebar-foreground")
-          : shouldRecede
-            ? "text-sidebar-muted-foreground/75 hover:bg-sidebar-row-hover hover:text-sidebar-foreground"
-            : "bg-transparent text-sidebar-foreground hover:bg-sidebar-row-hover",
+        : shouldRecede
+          ? "text-sidebar-muted-foreground/75 hover:bg-sidebar-row-hover hover:text-sidebar-foreground"
+          : "bg-transparent text-sidebar-foreground hover:bg-sidebar-row-hover",
     shouldRecede &&
       status === "working" &&
       "opacity-70 transition-opacity hover:opacity-100 focus-within:opacity-100 motion-reduce:transition-none",
@@ -916,23 +911,6 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
       onThreadActivate={onThreadActivate}
     />
   );
-  const draftIndicator = hasUnsentDraft ? (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <span
-            role="img"
-            aria-label="Unsent draft"
-            data-testid={`sidebar-draft-indicator-${thread.id}`}
-            className="inline-flex shrink-0 items-center"
-          />
-        }
-      >
-        <SquarePenIcon aria-hidden className={draftPenClassName} />
-      </TooltipTrigger>
-      <TooltipPopup side="top">Unsent draft</TooltipPopup>
-    </Tooltip>
-  ) : null;
   const showPin =
     props.isPinned && (!sortable?.isDragging || (props.dragOverPinned && props.dropVerb === null));
   const pinIndicator = showPin ? (
@@ -1185,7 +1163,6 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
             ) : null}
           </span>
           <span className="flex min-w-0 items-center gap-1.5">
-            {draftIndicator}
             {title}
             {pinIndicator}
             {terminalStatusIcon}
@@ -1228,6 +1205,9 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
               <span className="shrink-0 tabular-nums text-muted-foreground/80">
                 {queuedCount} queued
               </span>
+            ) : null}
+            {hasUnsentDraft ? (
+              <UnsentDraftLabel testId={`sidebar-draft-indicator-${thread.id}`} />
             ) : null}
             {prBadge}
           </span>

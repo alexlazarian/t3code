@@ -252,7 +252,7 @@ projects start a new thread. Each category explains what its items do.
 such as a new theme, land on the open thread or Overview. That view stays
 read-only until you close Settings. **Open as page** moves Settings into the main
 area at the same section, and **Show in Library** on the page moves it back. **Settings**
-in the top bar's **List | Overview | Settings** switch, the command palette, and
+in the top bar's **List | Overview | Pull requests | Settings** switch, the command palette, and
 the app menu open the page; `Esc` or **Back** returns to where you were.
 
 ## Find and reference work

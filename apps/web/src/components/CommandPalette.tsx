@@ -1548,7 +1548,7 @@ function OpenCommandPaletteDialog(props: {
     icon: <ChartNoAxesColumnIcon className={ITEM_ICON_CLASS} />,
     shortcutCommand: "usage.open",
     run: async () => {
-      await navigate({ to: "/usage" });
+      await navigate({ to: "/settings/usage" });
     },
   });
 

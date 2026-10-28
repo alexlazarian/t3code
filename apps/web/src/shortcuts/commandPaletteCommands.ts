@@ -93,7 +93,7 @@ export function installCommandPaletteCommands(
       "usage.open": (event) => {
         consume(event);
         dispatchCommandPalette({ _tag: "SetOpen", open: false });
-        void router.navigate({ to: "/usage" });
+        void router.navigate({ to: "/settings/usage" });
       },
       "commandPalette.toggle": toggleOverlay("commandPalette.toggle"),
       "filePicker.toggle": toggleOverlay("filePicker.toggle"),
@@ -113,7 +113,7 @@ export function installCommandPaletteCommands(
             ? selectActiveRightPanel(useRightPanelStore.getState().byThreadKey, threadRef) ===
               "preview"
             : false,
-          usagePageOpen: router.state.location.pathname === "/usage",
+          usagePageOpen: router.state.location.pathname === "/settings/usage",
         };
       },
     },

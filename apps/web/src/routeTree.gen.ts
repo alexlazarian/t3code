@@ -23,6 +23,7 @@ import { Route as ChatPullRequestsRouteImport } from './routes/_chat.pull-reques
 import { Route as ChatOverviewRouteImport } from './routes/_chat.overview'
 import { Route as ChatNewRouteImport } from './routes/_chat.new'
 import { Route as ChatSettingsWorktreesRouteImport } from './routes/_chat.settings.worktrees'
+import { Route as ChatSettingsUsageRouteImport } from './routes/_chat.settings.usage'
 import { Route as ChatSettingsThreadsRouteImport } from './routes/_chat.settings.threads'
 import { Route as ChatSettingsStorageRouteImport } from './routes/_chat.settings.storage'
 import { Route as ChatSettingsSourceControlRouteImport } from './routes/_chat.settings.source-control'
@@ -117,6 +118,11 @@ const ChatNewRoute = ChatNewRouteImport.update({
 const ChatSettingsWorktreesRoute = ChatSettingsWorktreesRouteImport.update({
   id: '/worktrees',
   path: '/worktrees',
+  getParentRoute: () => ChatSettingsRoute,
+} as any)
+const ChatSettingsUsageRoute = ChatSettingsUsageRouteImport.update({
+  id: '/usage',
+  path: '/usage',
   getParentRoute: () => ChatSettingsRoute,
 } as any)
 const ChatSettingsThreadsRoute = ChatSettingsThreadsRouteImport.update({
@@ -294,6 +300,7 @@ export interface FileRoutesByFullPath {
   '/settings/source-control': typeof ChatSettingsSourceControlRoute
   '/settings/storage': typeof ChatSettingsStorageRoute
   '/settings/threads': typeof ChatSettingsThreadsRoute
+  '/settings/usage': typeof ChatSettingsUsageRoute
   '/settings/worktrees': typeof ChatSettingsWorktreesRoute
 }
 export interface FileRoutesByTo {
@@ -335,6 +342,7 @@ export interface FileRoutesByTo {
   '/settings/source-control': typeof ChatSettingsSourceControlRoute
   '/settings/storage': typeof ChatSettingsStorageRoute
   '/settings/threads': typeof ChatSettingsThreadsRoute
+  '/settings/usage': typeof ChatSettingsUsageRoute
   '/settings/worktrees': typeof ChatSettingsWorktreesRoute
 }
 export interface FileRoutesById {
@@ -378,6 +386,7 @@ export interface FileRoutesById {
   '/_chat/settings/source-control': typeof ChatSettingsSourceControlRoute
   '/_chat/settings/storage': typeof ChatSettingsStorageRoute
   '/_chat/settings/threads': typeof ChatSettingsThreadsRoute
+  '/_chat/settings/usage': typeof ChatSettingsUsageRoute
   '/_chat/settings/worktrees': typeof ChatSettingsWorktreesRoute
 }
 export interface FileRouteTypes {
@@ -421,6 +430,7 @@ export interface FileRouteTypes {
     | '/settings/source-control'
     | '/settings/storage'
     | '/settings/threads'
+    | '/settings/usage'
     | '/settings/worktrees'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -462,6 +472,7 @@ export interface FileRouteTypes {
     | '/settings/source-control'
     | '/settings/storage'
     | '/settings/threads'
+    | '/settings/usage'
     | '/settings/worktrees'
   id:
     | '__root__'
@@ -504,6 +515,7 @@ export interface FileRouteTypes {
     | '/_chat/settings/source-control'
     | '/_chat/settings/storage'
     | '/_chat/settings/threads'
+    | '/_chat/settings/usage'
     | '/_chat/settings/worktrees'
   fileRoutesById: FileRoutesById
 }
@@ -615,6 +627,13 @@ declare module '@tanstack/react-router' {
       path: '/worktrees'
       fullPath: '/settings/worktrees'
       preLoaderRoute: typeof ChatSettingsWorktreesRouteImport
+      parentRoute: typeof ChatSettingsRoute
+    }
+    '/_chat/settings/usage': {
+      id: '/_chat/settings/usage'
+      path: '/usage'
+      fullPath: '/settings/usage'
+      preLoaderRoute: typeof ChatSettingsUsageRouteImport
       parentRoute: typeof ChatSettingsRoute
     }
     '/_chat/settings/threads': {
@@ -827,6 +846,7 @@ interface ChatSettingsRouteChildren {
   ChatSettingsSourceControlRoute: typeof ChatSettingsSourceControlRoute
   ChatSettingsStorageRoute: typeof ChatSettingsStorageRoute
   ChatSettingsThreadsRoute: typeof ChatSettingsThreadsRoute
+  ChatSettingsUsageRoute: typeof ChatSettingsUsageRoute
   ChatSettingsWorktreesRoute: typeof ChatSettingsWorktreesRoute
 }
 
@@ -855,6 +875,7 @@ const ChatSettingsRouteChildren: ChatSettingsRouteChildren = {
   ChatSettingsSourceControlRoute: ChatSettingsSourceControlRoute,
   ChatSettingsStorageRoute: ChatSettingsStorageRoute,
   ChatSettingsThreadsRoute: ChatSettingsThreadsRoute,
+  ChatSettingsUsageRoute: ChatSettingsUsageRoute,
   ChatSettingsWorktreesRoute: ChatSettingsWorktreesRoute,
 }
 

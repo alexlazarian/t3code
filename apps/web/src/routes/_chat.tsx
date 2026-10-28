@@ -30,9 +30,9 @@ function ChatRouteLayout() {
     select: (matches) => matches.some((match) => isSettingsPath(match.pathname)),
   });
   const settingsInLibrary = useSettingsInLibrary();
-  // Settings is a page unless it sits in Library; then, like Usage, it leaves the view under it.
+  // Settings is a page unless it sits in Library; then it leaves the view under it.
   const settingsPage = settingsOpen && !settingsInLibrary;
-  // Settings and Usage keep the view that opened them, so ChatView never remounts.
+  // Settings keeps the view that opened it, so ChatView never remounts.
   const [backgroundTarget, setBackgroundTarget] = useState(threadTarget);
   if (!modalOpen && threadRouteTargetKey(backgroundTarget) !== threadRouteTargetKey(threadTarget)) {
     setBackgroundTarget(threadTarget);
