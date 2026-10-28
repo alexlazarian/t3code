@@ -495,7 +495,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
   const infoBarEnabled = useClientSettings((s) => s.infoBarEnabled);
   const infoBarHeightStyle = {
     "--info-bar-height": infoBarEnabled ? "20px" : "0px",
-    "--app-height": "calc(100dvh - var(--info-bar-height) - var(--workspace-topbar-height))",
+    "--app-height": "calc(100dvh - var(--info-bar-height) - var(--app-top-bar-bottom))",
   } as CSSProperties;
   const [sidebarRouteReveal] = useState<SidebarRouteReveal>(() => ({
     observedKey: null,
