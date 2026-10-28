@@ -16,7 +16,7 @@ import {
   NO_PROJECT_KEY,
   overviewColumnMachines,
   overviewProjectKeyOf,
-  overviewStatusBlock,
+  overviewLaunchCell,
 } from "./Overview.logic";
 
 const envA = EnvironmentId.make("env-a");
@@ -281,7 +281,7 @@ describe("overview offline machines", () => {
   });
 });
 
-describe("overviewStatusBlock", () => {
+describe("overviewLaunchCell", () => {
   it("uses the prototype glyph for each status", () => {
     const glyphs = (
       [
@@ -295,14 +295,15 @@ describe("overviewStatusBlock", () => {
         "done",
         "woke",
       ] as const
-    ).map((icon) => overviewStatusBlock(icon).glyph);
-    expect(glyphs).toEqual(["play", "!", "?", "?", "P", "x", "~", "", ""]);
+    ).map((icon) => overviewLaunchCell(icon).glyph);
+    expect(glyphs).toEqual(["play", "!", "?", "?", "P", "x", "hollow", "stop", "stop"]);
   });
 
-  it("colors the block by status group and leaves idle threads unlit", () => {
-    expect(overviewStatusBlock("working").className).toBe("bg-status-working");
-    expect(overviewStatusBlock("plan").className).toBe(overviewStatusBlock("approval").className);
-    expect(overviewStatusBlock("failed").className).toBe("bg-status-failed");
-    expect(overviewStatusBlock(null)).toEqual(overviewStatusBlock("done"));
+  it("lights the cell by status group and leaves waiting and done threads unlit", () => {
+    expect(overviewLaunchCell("working").lit).toBe("working");
+    expect(overviewLaunchCell("plan").lit).toBe(overviewLaunchCell("approval").lit);
+    expect(overviewLaunchCell("failed").lit).toBe("failed");
+    expect(overviewLaunchCell("waiting").lit).toBeNull();
+    expect(overviewLaunchCell(null)).toEqual(overviewLaunchCell("done"));
   });
 });

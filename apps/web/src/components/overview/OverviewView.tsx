@@ -52,7 +52,6 @@ import {
   moveOverviewFocus,
   overviewColumnMachines,
   overviewProjectKeyOf,
-  overviewStatusBlock,
   type OverviewColumn,
   type OverviewFocusDirection,
 } from "./Overview.logic";
@@ -69,10 +68,10 @@ const SECTION_LABELS: Record<SidebarSection, { readonly name: string; readonly w
 };
 
 const LEGEND = [
-  { label: "Working", className: overviewStatusBlock("working").className },
-  { label: "Needs you", className: overviewStatusBlock("approval").className },
-  { label: "Failed", className: overviewStatusBlock("failed").className },
-  { label: "Waiting or done", className: overviewStatusBlock("waiting").className },
+  { label: "Working", className: "bg-status-working" },
+  { label: "Needs you", className: "bg-status-needs-you" },
+  { label: "Failed", className: "bg-status-failed" },
+  { label: "Waiting or done", className: "bg-overview-idle" },
 ] as const;
 
 const ARROW_DIRECTIONS: Partial<Record<string, OverviewFocusDirection>> = {
@@ -376,7 +375,7 @@ export function OverviewView() {
                         </button>
                       </div>
                       {expanded
-                        ? columns.map((column, index) => (
+                        ? columns.map((column) => (
                             <div
                               key={column.projectKey}
                               role="gridcell"
@@ -393,7 +392,6 @@ export function OverviewView() {
                                     thread={thread}
                                     section={row.section}
                                     projectName={column.displayName}
-                                    fill={fills[index]!}
                                     machineLabel={
                                       machineLabelsByColumn
                                         .get(column.projectKey)

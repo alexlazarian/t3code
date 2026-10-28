@@ -1,9 +1,9 @@
 import { resolveThreadCurrentPullRequestLink } from "@t3tools/client-runtime/thread-pull-requests";
 import { resolveSettledThreadTimestamp } from "@t3tools/client-runtime/state/thread-sort";
-import { memo, type KeyboardEvent, type MouseEvent } from "react";
+import { Fragment, memo, type KeyboardEvent, type MouseEvent } from "react";
 
 import { readLocalApi } from "../../localApi";
-import { OVERVIEW_INK } from "../../projectAccentColor.logic";
+import { deriveActiveWorkStartedAt } from "../../session-logic";
 import { cn } from "~/lib/utils";
 import type { SidebarThreadSummary } from "../../types";
 import { RelativeTimeLabel, threadTimeTimestamp } from "../sidebar/RelativeTimeLabel";
@@ -18,13 +18,19 @@ import {
   threadShellKey,
   type SidebarSection,
 } from "../Sidebar.logic";
-import { overviewStatusBlock } from "./Overview.logic";
+import { AgentElapsed } from "../chat/AgentElapsed";
+import { overviewLaunchCell, type OverviewLaunchCell } from "./Overview.logic";
+
+const LIT_CELL: Record<NonNullable<OverviewLaunchCell["lit"]>, string> = {
+  working: "bg-status-working text-background",
+  "needs-you": "bg-status-needs-you text-background",
+  failed: "bg-status-failed text-background",
+};
 
 export const OverviewCard = memo(function OverviewCard(props: {
   readonly thread: SidebarThreadSummary;
   readonly section: SidebarSection;
   readonly projectName: string;
-  readonly fill: string;
   readonly machineLabel: string | null;
   readonly providerName: string;
   readonly lastVisitedAt: string | undefined;
@@ -37,11 +43,12 @@ export const OverviewCard = memo(function OverviewCard(props: {
 }) {
   const { thread, lastVisitedAt } = props;
   const threadKey = threadShellKey(thread);
+  const isUnread = hasUnseenCompletion({ ...thread, lastVisitedAt });
   const status = resolveSidebarStatusLabel({
     status: resolveSidebarThreadStatus(thread),
     goalActive: thread.goal?.status === "active",
     hasActionableProposedPlan: thread.hasActionableProposedPlan,
-    isUnread: hasUnseenCompletion({ ...thread, lastVisitedAt }),
+    isUnread,
     isCompleted: isSidebarThreadCompleted(thread),
     isWoke: isSidebarThreadWoke({
       wokeAt: props.wokeAt,
@@ -49,12 +56,33 @@ export const OverviewCard = memo(function OverviewCard(props: {
       settledOverride: thread.settledOverride,
     }),
   });
-  const block = overviewStatusBlock(status?.icon ?? null);
+  const cell = overviewLaunchCell(status?.icon ?? null);
+  const working = status?.icon === "working";
+  const workingSince = working
+    ? deriveActiveWorkStartedAt(thread.latestRun, thread.runtime, null)
+    : null;
+  const quiet = status === null || (status.icon === "done" && !isUnread);
   const prNumber = (
     resolveThreadCurrentPullRequestLink(thread.pullRequests) ??
     thread.linkedPullRequest ??
     thread.branchPullRequest
   )?.number;
+  const meta = [
+    status ? (
+      <span key="status" className={cn("font-semibold", status.className)}>
+        {status.label}
+      </span>
+    ) : null,
+    <span key="provider" className="truncate">
+      {props.providerName}
+    </span>,
+    props.machineLabel ? (
+      <span key="machine" className="truncate">
+        {props.machineLabel}
+      </span>
+    ) : null,
+    prNumber === undefined ? null : <span key="pr">#{prNumber}</span>,
+  ].filter((part) => part !== null);
 
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.key === "Enter") {
@@ -91,10 +119,8 @@ export const OverviewCard = memo(function OverviewCard(props: {
       onDoubleClick={() => props.onOpen(threadKey)}
       onKeyDown={handleKeyDown}
       onContextMenu={handleContextMenu}
-      style={{ backgroundColor: props.fill, color: OVERVIEW_INK }}
       className={cn(
-        "grid min-h-9 cursor-pointer grid-cols-[20px_minmax(0,1fr)] border border-border outline-0 -outline-offset-1 outline-ring select-none focus-visible:outline-2",
-        status?.icon === "working" && "bg-overview-working",
+        "grid min-h-9 cursor-pointer grid-cols-[20px_minmax(0,1fr)] border border-border bg-muted text-foreground outline-0 -outline-offset-1 outline-ring select-none focus-visible:outline-2",
         props.selected && "outline-2 outline-primary",
         props.offline
           ? "opacity-50"
@@ -105,22 +131,43 @@ export const OverviewCard = memo(function OverviewCard(props: {
       <span
         aria-hidden
         className={cn(
-          "flex items-center justify-center text-2xs font-bold text-background",
-          block.className,
+          "flex items-center justify-center border-r border-border text-2xs font-bold",
+          cell.lit === null ? "bg-background text-muted-foreground" : LIT_CELL[cell.lit],
         )}
       >
-        {block.glyph === "play" ? (
-          <span className="size-0 border-y-4 border-l-6 border-y-transparent border-l-current" />
+        {cell.glyph === "play" || cell.glyph === "hollow" ? (
+          <span
+            className={cn(
+              "ms-px size-0 border-y-4 border-l-6 border-y-transparent border-l-current",
+              cell.glyph === "hollow" && "opacity-80",
+            )}
+          />
+        ) : cell.glyph === "stop" ? (
+          <span className="size-2.25 bg-muted-foreground/45" />
         ) : (
-          block.glyph
+          cell.glyph
         )}
       </span>
       <span className="min-w-0 px-1.5 py-0.75">
-        <span className="block truncate text-xs font-semibold">{thread.title}</span>
-        <span className="flex gap-1.5 overflow-hidden text-3xs whitespace-nowrap">
-          <span className="font-semibold">
-            {status ? (
-              status.label
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span
+            className={cn(
+              "min-w-0 flex-1 truncate text-xs",
+              quiet ? "text-muted-foreground" : "font-semibold",
+            )}
+          >
+            {thread.title}
+          </span>
+          <span
+            className={cn(
+              "shrink-0 text-3xs tabular-nums",
+              working ? "text-status-working" : "text-muted-foreground",
+            )}
+          >
+            {workingSince !== null ? (
+              <AgentElapsed
+                agent={{ status: "running", startedAt: workingSince, completedAt: null }}
+              />
             ) : (
               <RelativeTimeLabel
                 timestamp={
@@ -131,9 +178,14 @@ export const OverviewCard = memo(function OverviewCard(props: {
               />
             )}
           </span>
-          <span className="truncate">{props.providerName}</span>
-          {props.machineLabel ? <span className="truncate">{props.machineLabel}</span> : null}
-          {prNumber === undefined ? null : <span>#{prNumber}</span>}
+        </span>
+        <span className="flex gap-1.5 overflow-hidden text-3xs whitespace-nowrap text-muted-foreground">
+          {meta.map((part, index) => (
+            <Fragment key={part.key}>
+              {index > 0 ? <span aria-hidden>&middot;</span> : null}
+              {part}
+            </Fragment>
+          ))}
         </span>
       </span>
     </div>

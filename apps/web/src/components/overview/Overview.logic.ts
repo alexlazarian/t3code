@@ -170,23 +170,24 @@ export function overviewColumnMachines(
   }));
 }
 
-export type OverviewStatusBlock = {
-  readonly glyph: "" | "play" | "!" | "?" | "P" | "x" | "~";
-  readonly className: string;
+export type OverviewLaunchCell = {
+  readonly glyph: "play" | "!" | "?" | "P" | "x" | "hollow" | "stop";
+  /** Lit cells take the status color; unlit ones stay dark like an idle clip slot. */
+  readonly lit: "working" | "needs-you" | "failed" | null;
 };
 
-const IDLE_BLOCK: OverviewStatusBlock = { glyph: "", className: "bg-black/20" };
-const STATUS_BLOCKS: Partial<Record<SidebarStatusLabel["icon"], OverviewStatusBlock>> = {
-  working: { glyph: "play", className: "bg-status-working" },
-  approval: { glyph: "!", className: "bg-status-needs-you" },
-  input: { glyph: "?", className: "bg-status-needs-you" },
-  request: { glyph: "?", className: "bg-status-needs-you" },
-  plan: { glyph: "P", className: "bg-status-needs-you" },
-  failed: { glyph: "x", className: "bg-status-failed" },
-  waiting: { glyph: "~", className: "bg-overview-idle text-white" },
+const STOPPED_CELL: OverviewLaunchCell = { glyph: "stop", lit: null };
+const LAUNCH_CELLS: Partial<Record<SidebarStatusLabel["icon"], OverviewLaunchCell>> = {
+  working: { glyph: "play", lit: "working" },
+  approval: { glyph: "!", lit: "needs-you" },
+  input: { glyph: "?", lit: "needs-you" },
+  request: { glyph: "?", lit: "needs-you" },
+  plan: { glyph: "P", lit: "needs-you" },
+  failed: { glyph: "x", lit: "failed" },
+  waiting: { glyph: "hollow", lit: null },
 };
 
-/** Glyphs match the prototype's STATUS table; Done, Woke and unlabeled threads show an empty block. */
-export function overviewStatusBlock(icon: SidebarStatusLabel["icon"] | null): OverviewStatusBlock {
-  return (icon === null ? undefined : STATUS_BLOCKS[icon]) ?? IDLE_BLOCK;
+/** The clip-slot cell on a card's left edge; Done, Woke and unlabeled threads show a stop square. */
+export function overviewLaunchCell(icon: SidebarStatusLabel["icon"] | null): OverviewLaunchCell {
+  return (icon === null ? undefined : LAUNCH_CELLS[icon]) ?? STOPPED_CELL;
 }
