@@ -86,10 +86,6 @@ export function getThemePreviewAppearance(): ThemeAppearance | null {
   return themePreviewAppearance;
 }
 
-export function getThemePreviewSidebarArtwork(): boolean | null {
-  return themePreviewAppearance === null ? null : false;
-}
-
 export function subscribeToThemePreview(listener: () => void): () => void {
   themePreviewListeners.add(listener);
   return () => themePreviewListeners.delete(listener);
@@ -145,7 +141,16 @@ function lenientThemeColorOverrides(
 
 function parseStoredThemeColors(value: unknown, appearance: ThemeAppearance): ThemeColors | null {
   if (!isRecord(value)) return null;
-  return { ...getDefaultThemeColors(appearance), ...lenientThemeColorOverrides(value) };
+  return mergeThemeColors(getDefaultThemeColors(appearance), lenientThemeColorOverrides(value));
+}
+
+/** Themes saved before a role existed fall back to the role it was split from. */
+function mergeThemeColors(fallback: ThemeColors, overrides: ThemeColorOverrides): ThemeColors {
+  return {
+    ...fallback,
+    navSelected: overrides.sidebarRowHover ?? fallback.navSelected,
+    ...overrides,
+  };
 }
 
 function parseStoredThemeVariants(
@@ -258,7 +263,7 @@ function publishedThemeColors(
     appearance === theme.appearance && theme.canvas !== undefined && theme.accent !== undefined
       ? createVividThemeColors(appearance, theme.canvas, theme.accent)
       : getDefaultThemeColors(appearance);
-  return { ...base, ...lenientThemeColorOverrides(colors ?? {}) };
+  return mergeThemeColors(base, lenientThemeColorOverrides(colors ?? {}));
 }
 
 function environmentThemeDefinition(theme: EnvironmentTheme): ThemeDefinition {
@@ -847,6 +852,9 @@ export function createVividThemeColors(
   const searchMatchActive = themeOklchToRgb(surfaceAt(0.4, Math.min(0.18, accent.C)));
 
   const actionHover: ThemeOklch = { ...action, L: action.L + (dark ? 0.06 : -0.06) };
+  const sidebarRowHover = themeColor(
+    surfaceAt(dark ? 0.08 : 0.06, Math.min(0.08, accent.C * 0.45)),
+  );
 
   return {
     ...defaults,
@@ -896,7 +904,9 @@ export function createVividThemeColors(
     sidebarForeground: foregroundOn(sidebarRgb),
     sidebarMutedForeground: themeRgbToThemeColor(standardMutedThemeText(sidebarRgb, textRgb)),
     sidebarControlSurface: themeColor(surfaceAt(dark ? 0.1 : 0.07, tintC * 1.5)),
-    sidebarRowHover: themeColor(surfaceAt(dark ? 0.08 : 0.06, Math.min(0.08, accent.C * 0.45))),
+    sidebarRowHover,
+    // Neutral and one step past hover, so selection never reads as an accent or as a hover.
+    navSelected: themeColor(surfaceAt(dark ? 0.11 : 0.09, 0)),
     sidebarRowActive: themeColor(surfaceAt(dark ? 0.12 : 0.09, Math.min(0.1, accent.C * 0.55))),
     sidebarRowSelected: themeColor(surfaceAt(dark ? 0.14 : 0.1, Math.min(0.11, accent.C * 0.6))),
     sidebarBorder: themeColor(surfaceAt(dark ? 0.17 : 0.12, Math.min(0.08, accent.C * 0.4))),
@@ -1181,12 +1191,6 @@ export function getThemeDefinition(theme: ThemePreference): ThemeDefinition | nu
     getEnvironmentThemes().find((definition) => definition.id === themeId) ??
     null
   );
-}
-
-export function themeAllowsSidebarArtwork(theme: ThemePreference): boolean {
-  const themeId = themeIdFromPreference(theme);
-  const builtIn = BUILT_IN_THEME_DEFINITIONS.find((definition) => definition.id === themeId);
-  return builtIn ? builtIn.sidebarArtwork === true : getThemeDefinition(theme) !== null;
 }
 
 /** Every selection path must check single-appearance themes to keep mix and appearance tiles in sync. */
@@ -1489,10 +1493,10 @@ export function parseThemeFile(value: unknown): ThemeDefinition {
         throw new Error(`Theme variants must not repeat the base appearance "${appearance}".`);
       }
       const variantFallback = getDefaultThemeColors(variantAppearance);
-      variants[variantAppearance] = {
-        ...variantFallback,
-        ...parseThemeColorOverrides(variantColors),
-      };
+      variants[variantAppearance] = mergeThemeColors(
+        variantFallback,
+        parseThemeColorOverrides(variantColors),
+      );
     }
   }
 
@@ -1500,7 +1504,7 @@ export function parseThemeFile(value: unknown): ThemeDefinition {
     id,
     label: name.trim(),
     appearance,
-    colors: { ...fallback, ...overrides },
+    colors: mergeThemeColors(fallback, overrides),
     ...(Object.keys(variants).length > 0 ? { variants } : {}),
     ...(collection ? { collection } : {}),
     ...(value.managed === true ? { managed: true } : {}),
@@ -1577,6 +1581,7 @@ const APP_THEME_VARIABLES: Readonly<Record<ThemeColorRole, string>> = {
   sidebarRowHover: "--app-theme-sidebar-row-hover",
   sidebarRowActive: "--app-theme-sidebar-row-active",
   sidebarRowSelected: "--app-theme-sidebar-row-selected",
+  navSelected: "--app-theme-nav-selected",
   sidebarBorder: "--app-theme-sidebar-border",
   terminalBackground: "--app-theme-terminal-background",
   terminalForeground: "--app-theme-terminal-foreground",

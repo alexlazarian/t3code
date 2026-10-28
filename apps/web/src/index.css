@@ -100,7 +100,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
    * Compact UI geometry. Keep these values semantic so sidebar, palette,
    * tooltip, and toolbar controls cannot quietly drift apart.
    */
-  --control-radius: 0.5rem;
+  --control-radius: 0;
   --sidebar-content-inset: 0.5rem;
   --sidebar-control-gap: 0.5rem;
   --sidebar-icon-color: color-mix(
@@ -112,21 +112,20 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   --command-shell-inset: 0.5rem;
   --command-content-inset: 1rem;
   --floating-content-inset: 0.75rem;
-  /* App layer order: the bottom terminal drawer (45, above the timeline minimap),
-     docked sheets, then the floating preview player (47–49, see
+  /* App layer order: docked sheets (46), then the floating preview player (47–49, see
      previewMiniPlayerLayout.ts), then dialogs and popovers (50 and up). */
   --z-sheet: 46;
   --glass-blur: 12px;
   --glass-opacity: 80%;
   --glass-saturation: 1.14;
   --desktop-window-right-resize-inset: 0px;
-  --workspace-topbar-height: 52px;
-  --workspace-controls-top: 0px;
+  --workspace-topbar-height: 32px;
+  /* Where the full-width top bar ends, for fixed surfaces that sit below it. */
+  --app-top-bar-bottom: calc(var(--workspace-topbar-height) + max(env(safe-area-inset-top), 0px));
   --workspace-controls-left: calc(env(safe-area-inset-left) + 0.75rem);
   --workspace-controls-right: calc(env(safe-area-inset-right) + 0.75rem);
   --workspace-native-controls-inset: 0px;
-  --workspace-titlebar-control-size: 1.75rem;
-  --workspace-titlebar-control-gap: 0.75rem;
+  --workspace-titlebar-control-size: 1.5rem;
   --workspace-titlebar-scroll-fade-height: 1.5rem;
   --chat-content-max-width: 46rem;
   --thread-details-panel-width: 17.5rem;
@@ -153,12 +152,8 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
 
 .wco {
   --native-titlebar-height: env(titlebar-area-height, 0px);
-  --workspace-topbar-height: max(40px, env(titlebar-area-height, 52px));
-  --workspace-controls-top: env(titlebar-area-y, 0px);
+  --workspace-topbar-height: max(32px, env(titlebar-area-height, 32px));
   --workspace-controls-left: calc(env(titlebar-area-x, 0px) + 0.75rem);
-  --workspace-controls-right: calc(
-    100vw - env(titlebar-area-width, 100vw) - env(titlebar-area-x, 0px) + 0.75rem
-  );
   --workspace-native-controls-inset: calc(
     100vw - env(titlebar-area-width, 100vw) - env(titlebar-area-x, 0px) + 0.75rem
   );
@@ -197,28 +192,6 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
      by the composer, its context strip and attached banners. */
   --shadow-composer: 0 1px 2px rgb(0 0 0 / 5%);
   --shadow-composer-dark: 0 14px 32px -18px rgb(0 0 0 / 75%);
-  /* Overlap the lower toolbar backdrop by one pixel to cover the composer seam. */
-  --spacing-composer-seam: calc(var(--spacing) * 4 - 1px);
-  /* Dark-mode shade where an attached surface meets the composer: 10px of
-     shadow fading away from the seam. Inline, so the offsets resolve on the
-     element. below: the context strip under the composer (1rem seam, faint
-     white fill). above: an attached banner over it (its tint on top). */
-  --background-image-composer-seam-below:
-    linear-gradient(
-      to bottom,
-      transparent 0 1rem,
-      rgb(0 0 0 / 18%) 1rem,
-      transparent calc(1rem + 10px)
-    ),
-    linear-gradient(rgb(255 255 255 / 1%), rgb(255 255 255 / 1%));
-  --background-image-composer-seam-above:
-    linear-gradient(var(--chat-composer-attached-tint), var(--chat-composer-attached-tint)),
-    linear-gradient(
-      to top,
-      transparent 0 var(--chat-composer-attachment-overlap),
-      rgb(0 0 0 / 18%) var(--chat-composer-attachment-overlap),
-      transparent calc(var(--chat-composer-attachment-overlap) + 10px)
-    );
   --color-zinc-25: oklch(99.2% 0 0);
   --animate-skeleton: skeleton 2.4s infinite;
   /* Duty-cycled indicator animations: long holds with stepped ramps, so the
@@ -241,6 +214,9 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   --color-update: var(--update);
   --color-success-foreground: var(--success-foreground);
   --color-success: var(--success);
+  --color-status-working: var(--status-working);
+  --color-status-needs-you: var(--status-needs-you);
+  --color-status-failed: var(--status-failed);
   --color-diff-addition: var(--diff-addition);
   --color-diff-deletion: var(--diff-deletion);
   --color-diff-addition-foreground: var(--diff-addition-foreground);
@@ -285,13 +261,16 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   --color-sidebar-row-hover: var(--sidebar-row-hover);
   --color-sidebar-row-active: var(--sidebar-row-active);
   --color-sidebar-row-selected: var(--sidebar-row-selected);
+  --color-nav-selected: var(--nav-selected);
   --color-sidebar-border: var(--contrast-sidebar-border);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  --radius-4xl: 0;
   @keyframes skeleton {
     /* The single loading-bar breath used by every skeleton: one opacity pulse
        per container, stepped so however many bars sit under it, the compositor
@@ -523,31 +502,6 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
     var(--app-scrollbar-width) 100%;
 }
 
-/* Stage-channel art needs a mask and pseudo-element gradient, so keep the
-   behavior composable without tying it to the global components layer. */
-@utility sidebar-stage-backdrop {
-  --stage-fade: var(--sidebar-stage-fade, var(--app-chrome-background));
-  mask-image: linear-gradient(to bottom, black 0%, black 55%, transparent 92%);
-  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 55%, transparent 92%);
-
-  &::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      to bottom,
-      transparent 0%,
-      transparent 28%,
-      color-mix(in srgb, var(--stage-fade) 10%, transparent) 40%,
-      color-mix(in srgb, var(--stage-fade) 30%, transparent) 52%,
-      color-mix(in srgb, var(--stage-fade) 58%, transparent) 64%,
-      color-mix(in srgb, var(--stage-fade) 82%, transparent) 75%,
-      color-mix(in srgb, var(--stage-fade) 96%, transparent) 85%,
-      var(--stage-fade) 93%
-    );
-  }
-}
-
 @keyframes live-tool-shine {
   from {
     background-position:
@@ -731,6 +685,12 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   html,
   body {
     background-color: var(--app-chrome-background);
+  }
+  /* Phones and touch screens keep the 16px root so rem-sized touch targets stay full size. */
+  @media (min-width: 48rem) and (not (pointer: coarse)) {
+    html {
+      font-size: var(--font-size-interface);
+    }
   }
   body {
     @apply text-foreground relative;
@@ -933,7 +893,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   [data-settings-page-scroll] div.settings-search-target-pulse,
   [data-settings-page-scroll] section.settings-search-target-pulse > div:first-child {
     animation: settings-search-target-pulse 650ms ease-in-out 2;
-    border-radius: 0.75rem;
+    border-radius: 0;
   }
 
   /* The pulse is the destination indicator; without it (reduced motion), the
@@ -974,7 +934,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
 
   .settings-slider::-webkit-slider-runnable-track {
     height: 0.375rem;
-    border-radius: 9999px;
+    border-radius: 0;
     background: linear-gradient(
       to right,
       var(--primary) 0 var(--settings-slider-fill-position),
@@ -986,14 +946,14 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
 
   .settings-slider::-moz-range-track {
     height: 0.375rem;
-    border-radius: 9999px;
+    border-radius: 0;
     background: color-mix(in srgb, var(--contrast-muted-foreground) 22%, transparent);
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--contrast-border) 55%, transparent);
   }
 
   .settings-slider::-moz-range-progress {
     height: 0.375rem;
-    border-radius: 9999px;
+    border-radius: 0;
     background: var(--primary);
   }
 
@@ -1003,7 +963,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
     height: 1rem;
     margin-top: -0.3125rem;
     border: 2px solid var(--primary);
-    border-radius: 9999px;
+    border-radius: 0;
     background: var(--background);
     box-shadow: 0 1px 2px color-mix(in srgb, var(--contrast-foreground) 12%, transparent);
     transition:
@@ -1015,7 +975,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
     width: 1rem;
     height: 1rem;
     border: 2px solid var(--primary);
-    border-radius: 9999px;
+    border-radius: 0;
     background: var(--background);
     box-shadow: 0 1px 2px color-mix(in srgb, var(--contrast-foreground) 12%, transparent);
     transition:
@@ -1110,10 +1070,12 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   animation-duration: 0s !important;
 }
 
+/* Default look: the Ableton Live palette. Light applies the same role mapping to
+   T3 Code's light theme colors (packages/shared/src/themePalettes.ts). */
 :root {
   color-scheme: light;
-  --radius: 0.5rem;
-  --background: var(--color-zinc-25);
+  --radius: 0;
+  --background: color-mix(in oklab, #fcfcfc, black 9%);
   --app-chrome-background: var(--background);
   --toolbar-background: var(--app-chrome-background);
   --toolbar-foreground: var(--foreground);
@@ -1121,36 +1083,35 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   --toolbar-control: var(--popover);
   --toolbar-control-foreground: var(--foreground);
   --toolbar-control-hover: var(--accent);
-  --surface-raised: color-mix(in srgb, var(--card) 20%, transparent);
-  --foreground: var(--color-zinc-900);
-  --card: var(--color-white);
-  --card-foreground: var(--color-zinc-900);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-zinc-900);
-  --primary: oklch(0.488 0.217 264);
-  --primary-foreground: var(--color-white);
-  --secondary: var(--color-zinc-50);
-  --secondary-foreground: var(--color-zinc-800);
-  --muted: var(--color-zinc-50);
-  --muted-foreground: var(--color-zinc-500);
-  --placeholder: var(--muted-foreground);
+  --surface-raised: #fcfcfc;
+  --foreground: #27272a;
+  --card: #ffffff;
+  --card-foreground: var(--foreground);
+  --popover: #ffffff;
+  --popover-foreground: var(--foreground);
+  --primary: #1b4ed8;
+  --primary-foreground: #ffffff;
+  --secondary: #ffffff;
+  --secondary-foreground: var(--foreground);
+  --muted: #fcfcfc;
+  --muted-foreground: color-mix(in oklab, #71717b, #27272a 22%);
+  --placeholder: color-mix(in oklab, #71717b, #ffffff 6%);
   --secondary-label: var(--muted-foreground);
   --icon-muted: var(--muted-foreground);
-  /* One step past the accent, so a user turn stands off the near-white canvas. */
-  --message-surface: color-mix(in srgb, var(--color-zinc-200) 55%, var(--color-zinc-100));
+  --message-surface: #fcfcfc;
   --message-foreground: var(--foreground);
   --message-action: var(--primary);
   --message-action-foreground: var(--primary-foreground);
   --message-action-hover: color-mix(in srgb, var(--primary) 90%, var(--background));
-  --accent: var(--color-zinc-100);
-  --accent-foreground: var(--color-zinc-900);
+  --accent: color-mix(in oklab, #ffffff, #27272a 6%);
+  --accent-foreground: var(--foreground);
   --error: var(--color-red-500);
   --error-foreground: var(--color-red-700);
   --tool-error-icon: var(--error);
   --error-surface: color-mix(in srgb, var(--error) 8%, transparent);
   --destructive: var(--error);
-  --border: var(--color-zinc-200);
-  --input: var(--color-zinc-300);
+  --border: color-mix(in oklab, #e4e4e7, black 14%);
+  --input: color-mix(in oklab, #e4e4e7, black 38%);
   --ring: var(--primary);
   --destructive-foreground: var(--error-foreground);
   --info: var(--color-blue-500);
@@ -1164,116 +1125,68 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   --warning: var(--color-amber-500);
   --warning-foreground: var(--color-amber-700);
   --warning-surface: color-mix(in srgb, var(--warning) 8%, transparent);
-  --update: var(--primary);
-  --update-foreground: var(--primary);
-  /* Keep every sidebar primitive on the same light surface hierarchy, including
-     portaled mobile sheets and settings navigation outside the app sidebar. */
-  --sidebar: var(--color-zinc-50);
+  --update: #1b4ed8;
+  --update-foreground: var(--update);
+  --status-working: color-mix(in oklab, #7fd34e, black 48%);
+  --status-needs-you: color-mix(in oklab, #fe9a00, black 48%);
+  --status-failed: color-mix(in oklab, #fb2c36, black 22%);
+  --sidebar: #ffffff;
   --sidebar-foreground: var(--foreground);
   --sidebar-muted-foreground: var(--muted-foreground);
-  --sidebar-control-surface: var(--color-zinc-100);
-  --sidebar-row-hover: var(--color-zinc-25);
-  --sidebar-row-active: var(--color-white);
-  --sidebar-row-selected: var(--color-white);
+  --sidebar-control-surface: #fcfcfc;
+  --sidebar-row-hover: var(--accent);
+  --sidebar-row-active: var(--accent);
+  --sidebar-row-selected: color-mix(in oklab, #ffffff, #1b4ed8 16%);
+  /* The one selected-item fill for navigation lists (Library, Settings, panels): neutral, a step past hover. */
+  --nav-selected: color-mix(in oklab, #ffffff, #27272a 11%);
   --sidebar-border: var(--border);
-  --sidebar-stage-fade: var(--sidebar);
-  --code-background: color-mix(in srgb, var(--card) 90%, var(--background));
+  --code-background: color-mix(in oklab, #ffffff, black 3%);
   --code-foreground: var(--foreground);
-  --terminal-background: var(--background);
+  --terminal-background: #ffffff;
   --terminal-foreground: var(--foreground);
   --terminal-cursor: rgb(38 56 78);
   --terminal-selection-background: rgb(37 63 99 / 20%);
 
   @variant dark {
     color-scheme: dark;
-    /* The canvas is true black, matching the sidebar. Raised surfaces keep the tone they had
-       over neutral-950, so cards, popovers, and the composer still lift. Borders and hover
-       states provide separation without milky gray fills. */
-    --background: #000;
-    --surface-raised: color-mix(in srgb, var(--color-neutral-950) 97%, var(--color-white));
-    --foreground: var(--color-neutral-100);
-    --card: color-mix(in srgb, var(--color-neutral-950) 97%, var(--color-white));
-    --card-foreground: var(--color-neutral-100);
-    --popover: color-mix(in srgb, var(--color-neutral-950) 97%, var(--color-white));
-    --popover-foreground: var(--color-neutral-100);
-    --primary: oklch(0.571 0.21 264);
-    --secondary: --alpha(var(--color-white) / 3%);
-    --secondary-foreground: var(--color-neutral-100);
-    --muted: --alpha(var(--color-white) / 3%);
-    --muted-foreground: var(--color-neutral-400);
-    --accent: --alpha(var(--color-white) / 4%);
-    --accent-foreground: var(--color-neutral-100);
-    /* A user turn sits above the composer tone, level with the selected sidebar row. */
-    --message-surface: color-mix(in srgb, var(--color-neutral-950) 92%, var(--color-white));
+    --background: #1f1d1b;
+    --surface-raised: #34312e;
+    --foreground: #d6d0c7;
+    --card: #2a2826;
+    --popover: #34312e;
+    --primary: #ffa646;
+    --primary-foreground: #1a1612;
+    --secondary: #403c38;
+    --muted: #34312e;
+    --muted-foreground: #b2aba1;
+    --placeholder: #878077;
+    --accent: #4c4741;
+    --message-surface: #34312e;
     --error: color-mix(in srgb, var(--color-red-500) 90%, var(--color-white));
     --error-foreground: var(--color-red-400);
     --tool-error-icon: #fca5a5;
     --error-surface: color-mix(in srgb, var(--error) 16%, transparent);
-    --border: --alpha(var(--color-white) / 8%);
-    --input: --alpha(var(--color-white) / 11%);
+    --border: #141312;
+    --input: #878077;
     --info-foreground: var(--color-blue-400);
     --guest-foreground: var(--color-fuchsia-300);
     --success-foreground: var(--color-emerald-400);
     --warning-foreground: var(--color-amber-400);
     --warning-surface: color-mix(in srgb, var(--warning) 16%, transparent);
-    --update-foreground: var(--color-blue-400);
-    --sidebar: var(--card);
-    --sidebar-control-surface: var(--muted);
+    --update: var(--color-blue-400);
+    --status-working: #7fd34e;
+    --status-needs-you: #ffcf3d;
+    --status-failed: #ff7a6c;
+    --sidebar: #2a2826;
+    --sidebar-control-surface: #34312e;
     --sidebar-row-hover: var(--accent);
     --sidebar-row-active: var(--accent);
-    --sidebar-row-selected: var(--muted);
-    --sidebar-stage-fade: var(--card);
+    --sidebar-row-selected: #4a3a28;
+    --nav-selected: #5a5a5a;
+    --code-background: #24221f;
+    --terminal-background: #141210;
     --terminal-cursor: rgb(180 203 255);
     --terminal-selection-background: rgb(180 203 255 / 25%);
-  }
-}
-
-/* Keep both sidebar implementations (default and legacy) on the same quiet
-   zinc hierarchy: zinc-50 navigation, zinc-25 hover, and white selected/raised
-   surfaces. */
-[data-app-sidebar] {
-  --background: var(--color-zinc-25);
-  --foreground: var(--color-zinc-900);
-  --card: var(--color-white);
-  --card-foreground: var(--color-zinc-900);
-  --accent: var(--color-zinc-100);
-  --accent-foreground: var(--color-zinc-900);
-  --muted: var(--color-zinc-50);
-  --muted-foreground: var(--color-zinc-500);
-  --border: var(--color-zinc-200);
-  --input: var(--color-zinc-300);
-  --sidebar: var(--color-zinc-50);
-  --sidebar-foreground: var(--color-zinc-900);
-  --sidebar-muted-foreground: var(--color-zinc-500);
-  --sidebar-control-surface: var(--color-zinc-100);
-  --sidebar-row-hover: var(--color-zinc-25);
-  --sidebar-row-active: var(--color-white);
-  --sidebar-row-selected: var(--color-white);
-  --sidebar-border: var(--color-zinc-200);
-  --sidebar-stage-fade: var(--sidebar);
-
-  @variant dark {
-    --background: #000;
-    --foreground: #f1f3f7;
-    --card: #000;
-    --card-foreground: var(--foreground);
-    --accent: #191a1d;
-    --accent-foreground: #f7f9ff;
-    --muted: #0a0a0a;
-    --muted-foreground: #a3a3a3;
-    --border: rgb(255 255 255 / 8%);
-    --input: rgb(255 255 255 / 18%);
-    --sidebar: var(--card);
-    --sidebar-foreground: var(--foreground);
-    --sidebar-muted-foreground: var(--muted-foreground);
-    --sidebar-control-surface: var(--muted);
-    --sidebar-row-hover: color-mix(in srgb, var(--contrast-foreground) 8%, transparent);
-    --sidebar-row-active: color-mix(in srgb, var(--contrast-foreground) 11%, transparent);
-    --sidebar-row-selected: color-mix(in srgb, var(--contrast-foreground) 7%, transparent);
-    --sidebar-border: var(--border);
-    --sidebar-stage-fade: var(--card);
-    /* Row metadata sits a step below read titles (75% white). */
-    --secondary-label: #8f8f8f;
   }
 }
 
@@ -1368,6 +1281,9 @@ html[data-theme-id]:not([data-theme-id=""]) {
   --warning-surface: var(--app-theme-warning-surface);
   --update: var(--app-theme-update);
   --update-foreground: var(--app-theme-update-foreground);
+  --status-working: color-mix(in oklab, #7fd34e, black 48%);
+  --status-needs-you: color-mix(in oklab, var(--app-theme-warning), black 48%);
+  --status-failed: color-mix(in oklab, var(--app-theme-error), black 22%);
   --border: var(--app-theme-border);
   --input: var(--app-theme-input);
   --ring: var(--app-theme-focus);
@@ -1378,14 +1294,20 @@ html[data-theme-id]:not([data-theme-id=""]) {
   --sidebar-row-hover: var(--app-theme-sidebar-row-hover);
   --sidebar-row-active: var(--app-theme-sidebar-row-active);
   --sidebar-row-selected: var(--app-theme-sidebar-row-selected);
+  --nav-selected: var(--app-theme-nav-selected);
   --sidebar-border: var(--app-theme-sidebar-border);
-  --sidebar-stage-fade: var(--app-theme-sidebar);
   --code-background: var(--app-theme-code-background);
   --code-foreground: var(--app-theme-code-foreground);
   --terminal-background: var(--app-theme-terminal-background);
   --terminal-foreground: var(--app-theme-terminal-foreground);
   --terminal-cursor: var(--app-theme-terminal-cursor);
   --terminal-selection-background: var(--app-theme-terminal-selection-background);
+
+  @variant dark {
+    --status-working: #7fd34e;
+    --status-needs-you: color-mix(in oklab, var(--app-theme-warning), white 10%);
+    --status-failed: color-mix(in oklab, var(--app-theme-error), white 38%);
+  }
 }
 
 /* Theme-token dependency probes are restored synchronously, before paint. Keep
@@ -1442,7 +1364,7 @@ html[data-theme-token-probe] *::after {
   overflow: hidden;
   padding: 0.2rem 0.45rem;
   border: 1px solid color-mix(in oklab, var(--ring) 48%, var(--contrast-border));
-  border-radius: 0.4rem;
+  border-radius: 0;
   background: var(--popover);
   box-shadow: 0 4px 16px rgb(0 0 0 / 24%);
   color: var(--contrast-popover-foreground);
@@ -1578,8 +1500,8 @@ html[data-theme-id] [data-app-sidebar] {
   --sidebar-row-hover: var(--app-theme-sidebar-row-hover);
   --sidebar-row-active: var(--app-theme-sidebar-row-active);
   --sidebar-row-selected: var(--app-theme-sidebar-row-selected);
+  --nav-selected: var(--app-theme-nav-selected);
   --sidebar-border: var(--app-theme-sidebar-border);
-  --sidebar-stage-fade: var(--app-theme-sidebar);
   border-color: color-mix(in srgb, var(--contrast-sidebar-foreground) 10%, transparent);
 
   @variant dark {
@@ -1853,7 +1775,7 @@ code {
 
 ::-webkit-scrollbar-thumb {
   background: var(--app-scrollbar-thumb);
-  border-radius: 3px;
+  border-radius: 0;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -1885,7 +1807,11 @@ code {
 }
 
 /* Message spacing reaches prose in the thread (and its settings preview) only;
-   code keeps its own rhythm. */
+   code keeps its own rhythm. The built-in values match the setting defaults. */
+:is([data-chat-column], [data-reading-preview]) .chat-markdown {
+  --chat-reading-leading: 1.55;
+  --chat-reading-gap: 0.4rem;
+}
 html[data-message-line-height] :is([data-chat-column], [data-reading-preview]) .chat-markdown {
   --chat-reading-leading: var(--message-line-height);
 }
@@ -1963,6 +1889,12 @@ html[data-focus-dimming]:has([data-chat-composer-form]:focus-within):not(
 
 :is(.chat-markdown, .composer-tiptap) h6 {
   color: var(--contrast-muted-foreground);
+}
+
+/* Same specificity as the base heading rule and later, so it wins over it but the
+   first/last-child margin resets still win over both. */
+:where([data-chat-column], [data-reading-preview]) .chat-markdown :is(h1, h2, h3, h4, h5, h6) {
+  margin: 0.75rem 0 0.25rem;
 }
 
 :is(.chat-markdown, .composer-tiptap) ul {
@@ -2118,8 +2050,7 @@ html[data-focus-dimming]:has([data-chat-composer-form]:focus-within):not(
 }
 
 /* Block spacing separates blocks, not the draft from the composer edge. A
-   leading list or quote would otherwise push the first line down, and the
-   one-line resting composer clips it. */
+   leading list or quote would otherwise push the first line down. */
 .composer-tiptap > :first-child {
   margin-top: 0;
 }
@@ -2155,7 +2086,7 @@ html[data-focus-dimming]:has([data-chat-composer-form]:focus-within):not(
   min-width: 1rem;
   align-items: center;
   justify-content: center;
-  border-radius: 0.25rem;
+  border-radius: 0;
   text-decoration: none;
   font-size: 0.6875rem;
   font-weight: 600;
@@ -2163,7 +2094,7 @@ html[data-focus-dimming]:has([data-chat-composer-form]:focus-within):not(
 
 .chat-markdown :not(pre) > code {
   border: 1px solid transparent;
-  border-radius: 0.25rem;
+  border-radius: 0;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
   background: color-mix(in srgb, var(--contrast-foreground) 10%, transparent);
@@ -2180,7 +2111,7 @@ html[data-focus-dimming]:has([data-chat-composer-form]:focus-within):not(
   max-width: 100%;
   overflow-x: auto;
   border: 1px solid var(--contrast-border);
-  border-radius: 0.5rem;
+  border-radius: 0;
   background: var(--muted);
   padding: 0.8rem 0.9rem;
   scrollbar-width: thin;
@@ -2198,7 +2129,7 @@ html[data-focus-dimming]:has([data-chat-composer-form]:focus-within):not(
 }
 
 .chat-markdown pre::-webkit-scrollbar-thumb {
-  border-radius: 999px;
+  border-radius: 0;
   background: color-mix(in srgb, var(--contrast-border) 78%, transparent);
 }
 
@@ -2429,21 +2360,6 @@ html[data-focus-dimming]:has([data-chat-composer-form]:focus-within):not(
   }
 }
 
-/* Let the sortable rows open label clearance before painting the dividers.
-   This runs once per pickup; rows retain dnd-kit's normal 200ms transitions. */
-.sidebar-drag-boundary-label {
-  animation: sidebar-drag-label-reveal 200ms step-end;
-}
-
-@keyframes sidebar-drag-label-reveal {
-  from {
-    visibility: hidden;
-  }
-  to {
-    visibility: visible;
-  }
-}
-
 /* Rich text composer (Tiptap). The stored prompt stays markdown; only the
    surface renders styled text. Markers (** * ` ~~) appear as non-editable
    widgets while the caret is on styled text. */
@@ -2464,7 +2380,7 @@ html[data-focus-dimming]:has([data-chat-composer-form]:focus-within):not(
   font-family: var(--font-mono);
   font-size: 0.92em;
   background: color-mix(in oklab, var(--muted-foreground) 12%, transparent);
-  border-radius: 0.3em;
+  border-radius: 0;
   padding: 0.05em 0.25em;
 }
 
@@ -2482,7 +2398,7 @@ html[data-focus-dimming]:has([data-chat-composer-form]:focus-within):not(
 .composer-tiptap .ProseMirror-selectednode {
   outline: 2px solid var(--ring);
   outline-offset: -2px;
-  border-radius: 6px;
+  border-radius: 0;
 }
 
 .composer-tiptap .composer-chip-range-selected {
@@ -2493,7 +2409,7 @@ html[data-focus-dimming]:has([data-chat-composer-form]:focus-within):not(
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: 6px;
+  border-radius: 0;
   background: Highlight;
   opacity: 0.3;
   pointer-events: none;

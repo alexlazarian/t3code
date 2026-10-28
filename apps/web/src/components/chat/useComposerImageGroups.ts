@@ -31,7 +31,6 @@ export function useComposerImageGroups(
   return {
     pendingSnapShotAnimations,
     pendingSnapShotIds,
-    pendingSnapShotIdSet: new Set(pendingSnapShotIds),
     uncommittedSnapShotIds: pendingSnapShotIds.filter(
       (id) => !composerImages.some((image) => image.id === id),
     ),

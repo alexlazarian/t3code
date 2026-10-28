@@ -10,6 +10,11 @@ and mode selections, unless the destination project has its own model default.
 Its branch and workspace mode come from your configured defaults. To continue in
 an existing worktree, use **New thread in this worktree** from the branch toolbar.
 
+On web and desktop, **New thread** in the top bar may ask you to choose a project, and is
+unavailable until you add one. To start in the current project directly, press `mod+shift+n`
+(`chat.newLocal`), choose **New thread in** your project from the command palette, or click the
+project name in the thread header.
+
 On mobile, **New thread** starts in the current thread's project, or else in the
 last project you opened or chose on that device. If neither is available, the
 project picker opens. Turn off **Settings → General → Use last project** to
@@ -65,6 +70,11 @@ the thread opens and the files are attached in its composer, ready for
 your next message. The same per-message file limits apply as when attaching
 files directly; see [Attach files](./composer.md#attach-files).
 
+On web and desktop, the thread list has **Pinned**, **Active**, and **Settled** sections, plus
+**Working** and **Snoozed** when they hold threads. Each header shows its thread count, and an
+empty section reads **None**. Click a header to collapse or expand its section. While a status or
+project filter is on, empty sections hide and every match shows, even in collapsed sections.
+
 On web and desktop, pinning or unpinning a thread keeps the sidebar at your current
 scroll position instead of following the thread to its new place in the list.
 
@@ -76,15 +86,12 @@ list to unpin it. Dragging a thread onto the **Settled** header settles it, and 
 thread into the active list un-settles it. A snoozed thread can be dragged out of the snoozed
 shelf, which wakes it, but threads cannot be dragged into the shelf because snoozing needs a wake
 time. Dragging a pinned thread out of the pinned section does not ask for unpin confirmation.
-Pinned and active boundary labels appear only while dragging, without moving the rows. The
-other rows slide aside to show where the thread will land. When you cross into another section,
+The other rows slide aside to show where the thread will land. When you cross into another section,
 the dragged thread shows the action the drop performs, with its icon: **Pin**, **Unpin**,
 **Settle**, **Un-settle**, or **Wake**. Its status and hover actions hide during the drag. A pinned
 thread keeps its pin only while it stays in the pinned section; once it leaves, the badge takes
-over. Reordering within the same section shows no badge. When there are no pins, drag to the top
-edge to pin a thread. Section labels stay readable for the whole drag, and the section the
-thread is over takes the accent color. Section labels also
-identify empty sections and a collapsed settled shelf.
+over. Reordering within the same section shows no badge. The header of the section the thread
+is over takes the accent color.
 
 Drag within the pinned or active section to change its order. Other rows slide aside to show the
 spot where the thread will land. Drops into either section keep the position you choose. On
@@ -204,6 +211,38 @@ On web and desktop, right-click a pull request link in a thread and choose
 **Link to thread** to select a different PR. Use **Unlink from thread** on the
 same link to return to the branch PR, if one exists.
 The linked pull request participates in automatic settlement.
+
+## Filter by status
+
+On web and desktop, the chips above the thread list narrow it to threads that
+**Need you** (Approval, Input, Request, or Plan ready) or are **Working**. Each chip
+shows how many threads match; **All** shows every thread again. The thread you have
+open stays listed even when it stops matching. **Show threads that need you** in the
+command palette applies the filter and opens the sidebar.
+
+## See every project at once
+
+On web and desktop, **Overview** lays out each project as a column of thread cards.
+A card's left edge shows its status: green while working, amber when it needs you,
+and red when it failed or hit a usage limit. Switch between List and Overview with
+the switch in the top bar, **Switch to Overview** or **Switch to List** in the command
+palette, or **Settings → General → Thread view**. T3 Code opens in the view you last
+chose. **Switch between List and Overview** has no default shortcut; assign one in
+**Settings → Keybindings**.
+
+Click a card, or focus it and press `Space`, to peek at it. A peek shows the latest
+reply and lets you approve, answer a question, implement a plan, stop, resume, or
+reply without leaving Overview. **Open in List view**, a double-click, or `Enter`
+opens the full thread. If the thread's machine is offline, the peek offers
+**Reconnect**.
+
+## Use the Library
+
+On web and desktop, the **Library** tab beside **Threads** gathers skills and
+commands, models, providers, access modes, your prompt stash, scheduled tasks,
+projects, and machines in one place. Skills, commands, and stashed prompts go into
+the open thread's composer. Models and access modes apply to the open thread, and
+projects start a new thread. Each category explains what its items do.
 
 ## Find and reference work
 

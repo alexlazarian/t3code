@@ -9,8 +9,11 @@ function RevealList(props: {
   readonly reveal: SidebarRouteReveal;
   readonly rowKeys: ReadonlyArray<string>;
   readonly activeKey: string | null;
+  readonly listMount?: number;
+  readonly hidden?: boolean;
 }) {
-  const revealActiveRow = useActiveRowReveal(props.reveal, props.activeKey);
+  const revealActiveRow = useActiveRowReveal(props.reveal, props.activeKey, props.listMount);
+  if (props.hidden) return null;
   return (
     <ul aria-label="Threads" style={{ height: ROW_HEIGHT_PX * 4, overflowY: "auto", margin: 0 }}>
       {props.rowKeys.map((key) => (
@@ -103,5 +106,26 @@ describe("useActiveRowReveal", () => {
       { router: false },
     );
     await expect.element(screen.getByText("thread-40", { exact: true })).toBeInViewport();
+  });
+
+  it("reveals the open thread when the list returns, without a route reveal", async () => {
+    const reveal = newReveal();
+    const keys = rowKeys(50);
+    await using screen = await render(
+      <RevealList reveal={reveal} rowKeys={keys} activeKey="thread-40" />,
+      // No router: the route arrives as the activeKey prop.
+      { router: false },
+    );
+    await expect.element(screen.getByText("thread-40", { exact: true })).toBeInViewport();
+
+    await screen.rerender(
+      <RevealList reveal={reveal} rowKeys={keys} activeKey="thread-40" hidden />,
+    );
+    await screen.rerender(
+      <RevealList reveal={reveal} rowKeys={keys} activeKey="thread-40" listMount={1} />,
+    );
+
+    await expect.element(screen.getByText("thread-40", { exact: true })).toBeInViewport();
+    expect(reveal.pendingKey).toBeNull();
   });
 });

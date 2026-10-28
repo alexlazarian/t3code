@@ -519,7 +519,7 @@ export function AddProviderInstanceDialog({
                                 setHasAttemptedSubmit(false);
                               }}
                               size="xs"
-                              variant="ghost"
+                              variant="outline"
                             >
                               Search registry
                             </Button>

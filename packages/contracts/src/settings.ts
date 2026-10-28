@@ -57,6 +57,9 @@ export const DiffLayout = Schema.Literals(["stacked", "split"]);
 export type DiffLayout = typeof DiffLayout.Type;
 const DEFAULT_DIFF_LAYOUT: DiffLayout = "stacked";
 
+export const ThreadView = Schema.Literals(["list", "overview"]);
+export type ThreadView = typeof ThreadView.Type;
+
 export const SidebarProjectSortOrder = Schema.Literals(["updated_at", "created_at", "manual"]);
 export type SidebarProjectSortOrder = typeof SidebarProjectSortOrder.Type;
 export const DEFAULT_SIDEBAR_PROJECT_SORT_ORDER: SidebarProjectSortOrder = "updated_at";
@@ -156,7 +159,7 @@ export const InterfaceFontSize = Schema.Int.check(
   Schema.isBetween({ minimum: MIN_INTERFACE_FONT_SIZE, maximum: MAX_INTERFACE_FONT_SIZE }),
 );
 export type InterfaceFontSize = typeof InterfaceFontSize.Type;
-export const DEFAULT_INTERFACE_FONT_SIZE: InterfaceFontSize = 16;
+export const DEFAULT_INTERFACE_FONT_SIZE: InterfaceFontSize = 13;
 
 export const MIN_PROMPT_FONT_SIZE = 12;
 export const MAX_PROMPT_FONT_SIZE = 20;
@@ -192,7 +195,7 @@ export const EnvironmentIdentificationMode = Schema.Literals([
   "none",
 ]);
 export type EnvironmentIdentificationMode = typeof EnvironmentIdentificationMode.Type;
-export const DEFAULT_ENVIRONMENT_IDENTIFICATION_MODE: EnvironmentIdentificationMode = "artwork";
+const DEFAULT_ENVIRONMENT_IDENTIFICATION_MODE: EnvironmentIdentificationMode = "artwork";
 
 export const SnapShotKeyChord = KeybindingShortcut.check(
   Schema.makeFilter(
@@ -332,7 +335,7 @@ export type EffortDisplay = typeof EffortDisplay.Type;
 /** Line height of agent messages in hundredths; the default leaves the built-in spacing alone. */
 export const MIN_MESSAGE_LINE_HEIGHT = 140;
 export const MAX_MESSAGE_LINE_HEIGHT = 240;
-export const DEFAULT_MESSAGE_LINE_HEIGHT = 163;
+export const DEFAULT_MESSAGE_LINE_HEIGHT = 155;
 export const MessageLineHeight = Schema.Int.check(
   Schema.isBetween({ minimum: MIN_MESSAGE_LINE_HEIGHT, maximum: MAX_MESSAGE_LINE_HEIGHT }),
 );
@@ -340,7 +343,7 @@ export type MessageLineHeight = typeof MessageLineHeight.Type;
 /** Space between paragraphs of agent messages in hundredths of a rem. */
 export const MIN_MESSAGE_PARAGRAPH_SPACING = 20;
 export const MAX_MESSAGE_PARAGRAPH_SPACING = 250;
-export const DEFAULT_MESSAGE_PARAGRAPH_SPACING = 65;
+export const DEFAULT_MESSAGE_PARAGRAPH_SPACING = 40;
 export const MessageParagraphSpacing = Schema.Int.check(
   Schema.isBetween({
     minimum: MIN_MESSAGE_PARAGRAPH_SPACING,
@@ -446,6 +449,7 @@ export const ClientSettingsSchema = Schema.Struct({
   diffFilesCollapsed: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   diffIgnoreWhitespace: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   diffLayout: DiffLayout.pipe(Schema.withDecodingDefault(Effect.succeed(DEFAULT_DIFF_LAYOUT))),
+  // No longer read by clients; kept so stored settings keep decoding.
   environmentIdentificationMode: EnvironmentIdentificationMode.pipe(
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_ENVIRONMENT_IDENTIFICATION_MODE)),
   ),
@@ -505,6 +509,8 @@ export const ClientSettingsSchema = Schema.Struct({
   // the boring sidebar; the boring sidebar toggle clears it.
   legacySidebarEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
   sidebarWorkingShelfEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
+  threadView: ThreadView.pipe(Schema.withDecodingDefault(Effect.succeed("list" as const))),
+  infoBarEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   sidebarProjectGroupingMode: SidebarProjectGroupingMode.pipe(
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_SIDEBAR_PROJECT_GROUPING_MODE)),
   ),
@@ -1740,6 +1746,8 @@ export const ClientSettingsPatch = Schema.Struct({
   boringSidebarEnabled: Schema.optionalKey(Schema.Boolean),
   legacySidebarEnabled: Schema.optionalKey(Schema.Boolean),
   sidebarWorkingShelfEnabled: Schema.optionalKey(Schema.Boolean),
+  threadView: Schema.optionalKey(ThreadView),
+  infoBarEnabled: Schema.optionalKey(Schema.Boolean),
   sidebarProjectGroupingMode: Schema.optionalKey(SidebarProjectGroupingMode),
   sidebarProjectGroupingOverrides: Schema.optionalKey(
     Schema.Record(TrimmedNonEmptyString, SidebarProjectGroupingMode),

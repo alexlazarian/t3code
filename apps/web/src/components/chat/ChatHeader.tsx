@@ -3,8 +3,12 @@ import {
   type EnvironmentId,
   type ThreadId,
 } from "@t3tools/contracts";
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
-import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
+import { scopedThreadKey, scopeThreadRef } from "@t3tools/client-runtime/environment";
+import type {
+  EnvironmentProject,
+  EnvironmentThreadShell,
+} from "@t3tools/client-runtime/state/shell";
+import { threadWokeAt } from "@t3tools/client-runtime/state/thread-settled";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
@@ -18,7 +22,19 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
 } from "react";
-import { isTrailingDoubleClick } from "../Sidebar.logic";
+import {
+  hasUnseenCompletion,
+  isTrailingDoubleClick,
+  resolveSidebarThreadStatus,
+  resolveThreadLastVisitedAt,
+} from "../Sidebar.logic";
+import {
+  isSidebarThreadCompleted,
+  isSidebarThreadWoke,
+  resolveSidebarStatusLabel,
+} from "../sidebar/threadStatusLabel";
+import { useNowAfter } from "../../hooks/useDeadline";
+import { useUiStateStore } from "../../uiStateStore";
 import { Badge } from "../ui/badge";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { toastManager } from "../ui/toast";
@@ -41,6 +57,7 @@ import { cn } from "~/lib/utils";
 import { textDirection } from "~/textDirection";
 import { useClientSettings } from "../../hooks/useSettings";
 import { GuestShareIndicator } from "./GuestShareControls";
+import { ThreadHeaderTools, type ThreadHeaderToolsProps } from "./PanelLayoutControls";
 
 interface ChatHeaderProps {
   activeThreadEnvironmentId: EnvironmentId;
@@ -48,12 +65,39 @@ interface ChatHeaderProps {
   activeThreadTitle: string;
   activeThreadLinkOrigin?: string | null | undefined;
   isServerThread: boolean;
+  threadShell: EnvironmentThreadShell | null;
   activeProject: EnvironmentProject | null;
   parentThreadLink: { threadId: ThreadId; title: string } | null;
   onOpenThread: (threadId: ThreadId) => void;
-  rightPanelOpen: boolean;
   onNewThreadInProject: () => void;
   onOpenProjectSettings?: (() => void) | undefined;
+}
+
+function ThreadHeaderStatus({ thread }: { thread: EnvironmentThreadShell }) {
+  const localLastVisitedAt = useUiStateStore(
+    (state) =>
+      state.threadLastVisitedAtById[
+        scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id))
+      ],
+  );
+  const lastVisitedAt = resolveThreadLastVisitedAt(thread.lastVisitedAt, localLastVisitedAt);
+  const now = new Date(useNowAfter(Date.parse(thread.snoozedUntil ?? "") || null)).toISOString();
+  const status = resolveSidebarStatusLabel({
+    status: resolveSidebarThreadStatus(thread),
+    goalActive: thread.goal?.status === "active",
+    hasActionableProposedPlan: thread.hasActionableProposedPlan,
+    isUnread: hasUnseenCompletion({ ...thread, lastVisitedAt }),
+    isCompleted: isSidebarThreadCompleted(thread),
+    isWoke: isSidebarThreadWoke({
+      wokeAt: threadWokeAt(thread, { now }),
+      lastVisitedAt,
+      settledOverride: thread.settledOverride,
+    }),
+  });
+  if (!status) return null;
+  return (
+    <span className={cn("shrink-0 text-xs font-semibold", status.className)}>{status.label}</span>
+  );
 }
 
 function resolveRenameCommit(input: {
@@ -74,13 +118,14 @@ export const ChatHeader = memo(function ChatHeader({
   activeThreadTitle,
   activeThreadLinkOrigin,
   isServerThread,
+  threadShell,
   activeProject,
   parentThreadLink,
   onOpenThread,
-  rightPanelOpen,
   onNewThreadInProject,
   onOpenProjectSettings,
-}: ChatHeaderProps) {
+  ...tools
+}: ChatHeaderProps & Omit<ThreadHeaderToolsProps, "isServerThread">) {
   const activeProjectName = activeProject?.isScratch ? "No project" : activeProject?.title;
   const activeProjectCwd = activeProject?.workspaceRoot ?? null;
   const interfaceFont = useClientSettings((settings) => settings.fontFamilySans);
@@ -275,10 +320,7 @@ export const ChatHeader = memo(function ChatHeader({
   return (
     <div
       ref={breadcrumbContainerRef}
-      className={cn(
-        "flex min-w-0 flex-1 items-center gap-2 sm:gap-3",
-        rightPanelOpen ? "pr-10" : "pr-24",
-      )}
+      className="@container/thread-header flex min-w-0 flex-1 items-center gap-2"
       onContextMenu={handleHeaderContextMenu}
     >
       <WorkspaceBreadcrumb
@@ -346,7 +388,7 @@ export const ChatHeader = memo(function ChatHeader({
             </WorkspaceBreadcrumbSeparator>
           </>
         ) : null}
-        <WorkspaceBreadcrumbItem current className="min-w-10 flex-1">
+        <WorkspaceBreadcrumbItem current className="min-w-10 flex-1 gap-2">
           {renamingTitle !== null ? (
             <input
               autoFocus
@@ -380,7 +422,7 @@ export const ChatHeader = memo(function ChatHeader({
                     onClick={openMenuFromTitle}
                     onDoubleClick={canOperateThread ? handleTitleDoubleClick : undefined}
                     onBlur={cancelPendingTitleMenu}
-                    className="group/thread-title inline-flex min-w-0 max-w-full cursor-pointer items-center gap-1 rounded-sm text-left focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                    className="inline-flex min-w-0 max-w-full cursor-pointer items-center gap-1 rounded-sm text-left focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                   />
                 }
               >
@@ -390,7 +432,7 @@ export const ChatHeader = memo(function ChatHeader({
                 <ChevronDownIcon
                   aria-hidden
                   data-thread-title-chevron
-                  className="size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/thread-title:opacity-100 group-focus-visible/thread-title:opacity-100"
+                  className="size-3.5 shrink-0 text-muted-foreground"
                 />
               </TooltipTrigger>
               <TooltipPopup side="top">{activeThreadTitle}</TooltipPopup>
@@ -411,6 +453,7 @@ export const ChatHeader = memo(function ChatHeader({
               <TooltipPopup side="top">{activeThreadTitle}</TooltipPopup>
             </Tooltip>
           )}
+          {threadShell ? <ThreadHeaderStatus thread={threadShell} /> : null}
           {renamingTitle === null && activeThreadLinkOrigin ? (
             <Tooltip>
               <TooltipTrigger render={<Badge variant="info" size="sm" />}>
@@ -424,6 +467,7 @@ export const ChatHeader = memo(function ChatHeader({
         </WorkspaceBreadcrumbItem>
       </WorkspaceBreadcrumb>
       {isServerThread ? <GuestShareIndicator threadRef={activeThreadRef} /> : null}
+      <ThreadHeaderTools {...tools} isServerThread={isServerThread} />
     </div>
   );
 });

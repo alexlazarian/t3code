@@ -12,20 +12,73 @@ import { createScratchProjectActions } from "../hooks/useScratchProject";
 import { getClientSettings } from "../hooks/useSettings";
 import { startNewThreadFromContext } from "../lib/chatThreadActions";
 import { selectProjectGroupingSettings } from "@t3tools/client-runtime/state/project-grouping";
-import { selectActiveRightPanel, useRightPanelStore } from "../rightPanelStore";
+import {
+  selectActiveRightPanel,
+  selectRightPanelTerminalOpen,
+  useRightPanelStore,
+} from "../rightPanelStore";
 import { appAtomRegistry } from "../rpc/atomRegistry";
 import { buildSidebarProjectSnapshots } from "../sidebarProjectGrouping";
 import { readProjects, readThreadShell } from "../state/entities";
 import { environmentPresentations } from "../state/presentation";
 import { primaryEnvironmentIdAtom } from "../state/primaryEnvironment";
 import { readEnvironmentScope } from "../state/session";
-import { selectThreadTerminalUiState, useTerminalUiStateStore } from "../terminalUiStateStore";
 import { useThreadSelectionStore } from "../threadSelectionStore";
 import { resolveThreadRouteTarget } from "../threadRoutes";
 import { useUiStateStore } from "../uiStateStore";
 import { type CommandHandler, registerCommands } from "./dispatcher";
 
 const CHAT_ROUTE_ID = "/_chat";
+
+function createThreadContextReader(
+  router: AnyRouter,
+  handleNewThread: ReturnType<typeof createNewThreadHandler>,
+) {
+  return () => {
+    const target = resolveThreadRouteTarget(router.state.matches.at(-1)?.params ?? {});
+    const drafts = useComposerDraftStore.getState();
+    const activeThread = target?.kind === "server" ? readThreadShell(target.threadRef) : null;
+    const activeDraftThread = target
+      ? target.kind === "server"
+        ? drafts.getDraftThread(target.threadRef)
+        : drafts.getDraftSession(target.draftId)
+      : null;
+    return {
+      activeDraftThread,
+      activeThread: activeThread ?? undefined,
+      defaultProjectRef: resolveDefaultProjectRef(
+        readProjects(),
+        useUiStateStore.getState().projectOrder,
+      ),
+      handleNewThread,
+    };
+  };
+}
+
+const readProjectGroupCount = () =>
+  buildSidebarProjectSnapshots({
+    projects: readProjects(),
+    settings: selectProjectGroupingSettings(getClientSettings()),
+    primaryEnvironmentId: appAtomRegistry.get(primaryEnvironmentIdAtom),
+    resolveEnvironmentLabel: () => null,
+  }).length;
+
+/** What `chat.new` does: pick a project in the palette when there are several, else start one here. */
+export function createStartNewThread(
+  router: AnyRouter,
+  handleNewThread = createNewThreadHandler(router),
+): () => void {
+  const readThreadContext = createThreadContextReader(router, handleNewThread);
+  return () => {
+    // The boring sidebar's folders already show the context, so it starts in the current project.
+    const { boringSidebarEnabled, legacySidebarEnabled } = getClientSettings();
+    if (!boringSidebarEnabled && !legacySidebarEnabled && readProjectGroupCount() > 1) {
+      openCommandPalette({ open: "new-thread-in" });
+      return;
+    }
+    void startNewThreadFromContext(readThreadContext());
+  };
+}
 
 /**
  * New-thread and preview commands, live while a chat route is showing and no
@@ -57,32 +110,7 @@ export function installChatRouteCommands(router: AnyRouter): () => void {
       ? selectActiveRightPanel(useRightPanelStore.getState().byThreadKey, threadRef) === "preview"
       : false;
   };
-  const readThreadContext = () => {
-    const target = readRouteTarget();
-    const drafts = useComposerDraftStore.getState();
-    const activeThread = target?.kind === "server" ? readThreadShell(target.threadRef) : null;
-    const activeDraftThread = target
-      ? target.kind === "server"
-        ? drafts.getDraftThread(target.threadRef)
-        : drafts.getDraftSession(target.draftId)
-      : null;
-    return {
-      activeDraftThread,
-      activeThread: activeThread ?? undefined,
-      defaultProjectRef: resolveDefaultProjectRef(
-        readProjects(),
-        useUiStateStore.getState().projectOrder,
-      ),
-      handleNewThread,
-    };
-  };
-  const readProjectGroupCount = () =>
-    buildSidebarProjectSnapshots({
-      projects: readProjects(),
-      settings: selectProjectGroupingSettings(getClientSettings()),
-      primaryEnvironmentId: appAtomRegistry.get(primaryEnvironmentIdAtom),
-      resolveEnvironmentLabel: () => null,
-    }).length;
+  const readThreadContext = createThreadContextReader(router, handleNewThread);
   const canOperatePreview = (environmentId: EnvironmentId) =>
     readEnvironmentScope(environmentId, AuthPreviewOperateScope);
 
@@ -95,6 +123,8 @@ export function installChatRouteCommands(router: AnyRouter): () => void {
     claim(event);
     void startNewThreadFromContext(readThreadContext());
   };
+
+  const startNewThread = createStartNewThread(router, handleNewThread);
 
   const previewCommand =
     (action: PreviewAction): CommandHandler =>
@@ -117,15 +147,8 @@ export function installChatRouteCommands(router: AnyRouter): () => void {
         void scratch.startScratchThread(environmentId);
       },
       "chat.new": (event) => {
-        // The boring sidebar's folders already show the context, so it starts in
-        // the current project like the legacy sidebar did.
-        const { boringSidebarEnabled, legacySidebarEnabled } = getClientSettings();
-        if (!boringSidebarEnabled && !legacySidebarEnabled && readProjectGroupCount() > 1) {
-          claim(event);
-          openCommandPalette({ open: "new-thread-in" });
-          return;
-        }
-        startNewLocal(event);
+        claim(event);
+        startNewThread();
       },
       "preview.toggle": (event) => {
         claim(event);
@@ -159,12 +182,10 @@ export function installChatRouteCommands(router: AnyRouter): () => void {
       context: () => {
         const threadRef = readRouteThreadRef();
         return {
-          terminalOpen: threadRef
-            ? selectThreadTerminalUiState(
-                useTerminalUiStateStore.getState().terminalUiStateByThreadKey,
-                threadRef,
-              ).terminalOpen
-            : false,
+          terminalOpen: selectRightPanelTerminalOpen(
+            useRightPanelStore.getState().byThreadKey,
+            threadRef,
+          ),
           previewOpen: readPreviewOpen(),
         };
       },

@@ -17,6 +17,13 @@ then copy. Cmd+A on macOS and Ctrl+Shift+A elsewhere select the same output.
 Ctrl+A still moves to the beginning of shell input on Windows and Linux.
 Jump to latest in the context menu returns to the current output.
 
+## Open a terminal
+
+Thread terminals open as tabs in the right panel. Select **Terminal** in the
+thread header or press `mod+j` to show the thread's terminal, and again to hide
+it. Running a project script shows it in a terminal tab, reusing an idle one
+when it can.
+
 ## fish
 
 T3 Code starts fish with `no-query-term`, avoiding startup waits for terminal

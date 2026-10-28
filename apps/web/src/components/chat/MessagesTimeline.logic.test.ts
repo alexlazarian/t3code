@@ -28,12 +28,36 @@ import {
   deriveMessagesTimelineRows,
   timelineTurnFoldRunIdsByEntryId,
   deriveMessagesTimelineRowsWithState,
+  joinsSubagentBlock,
   shouldCollapseUserMessage,
   resolveAssistantMessageCopyState,
+  resolveAssistantCaption,
   type MessagesTimelineRow,
   workEntryDisplayLabel,
 } from "./MessagesTimeline.logic";
 
+describe("resolveAssistantCaption", () => {
+  const run = (id: string, instanceId: string, model: string) => ({
+    id: RunId.make(id),
+    ordinal: 1,
+    providerInstanceId: ProviderInstanceId.make(instanceId),
+    modelSelection: { instanceId: ProviderInstanceId.make(instanceId), model },
+  });
+  const runs = [run("run-1", "codex", "gpt-5.5"), run("run-2", "codex_work", "gpt-5.4")];
+
+  it("names the provider and model of the message's run", () => {
+    expect(resolveAssistantCaption(RunId.make("run-1"), runs)).toBe("Codex · gpt-5.5");
+  });
+
+  it("falls back to the instance id for a custom provider instance", () => {
+    expect(resolveAssistantCaption(RunId.make("run-2"), runs)).toBe("codex_work · gpt-5.4");
+  });
+
+  it("has no caption when the run is unknown", () => {
+    expect(resolveAssistantCaption(null, runs)).toBeNull();
+    expect(resolveAssistantCaption(RunId.make("run-3"), runs)).toBeNull();
+  });
+});
 describe("resolveAssistantMessageCopyState", () => {
   it("copies the rendered representation of Codex directives", () => {
     expect(
@@ -3420,6 +3444,61 @@ describe("linked timeline resources", () => {
       "e",
     ]);
     expect(rows[1]).toMatchObject({ subagents: [{ item: { id: "a" } }, { item: { id: "b" } }] });
+  });
+
+  it("blocks consecutive subagents, keeps a lone one single, and splits at a tool row", () => {
+    const tool = (id: string): TimelineEntry => ({
+      id,
+      kind: "work",
+      createdAt: "2026-09-08T10:00:02Z",
+      entry: {
+        id,
+        runId,
+        createdAt: "2026-09-08T10:00:02Z",
+        label: "Ran command",
+        tone: "tool",
+        itemType: "command_execution",
+        toolLifecycleStatus: "completed",
+      },
+    });
+    const rows = deriveMessagesTimelineRows({
+      ...common,
+      timelineEntries: [
+        event("a", "subagent"),
+        event("b", "subagent"),
+        event("c", "subagent"),
+        tool("tool"),
+        event("d", "subagent"),
+      ],
+      expandedRunIds: new Set([runId]),
+    });
+    const blocks = rows.flatMap((row) =>
+      row.kind === "event"
+        ? [(row.subagents ?? [row.projectedItem]).map(({ item }) => item.id)]
+        : row.kind === "work"
+          ? [row.groupedEntries.map((entry) => entry.id)]
+          : [],
+    );
+    expect(blocks).toEqual([["a", "b", "c"], ["tool"], ["d"]]);
+  });
+
+  it("joins a subagent only onto a subagent row from the same turn", () => {
+    const row = (id: string, type: "subagent" | "thread_created"): MessagesTimelineRow => ({
+      ...event(id, type),
+    });
+    const next = event("next", "subagent").projectedItem;
+    expect(joinsSubagentBlock(row("prev", "subagent"), next)).toBe(true);
+    expect(joinsSubagentBlock(undefined, next)).toBe(false);
+    expect(joinsSubagentBlock(row("prev", "thread_created"), next)).toBe(false);
+    expect(
+      joinsSubagentBlock(row("prev", "subagent"), event("x", "thread_created").projectedItem),
+    ).toBe(false);
+    expect(
+      joinsSubagentBlock(
+        row("prev", "subagent"),
+        event("other", "subagent", RunId.make("other-run")).projectedItem,
+      ),
+    ).toBe(false);
   });
 
   it.each([

@@ -30,6 +30,7 @@ type ChangedFileContextMenuHandler = (filePath: string, event: MouseEvent) => vo
 
 export const ChangedFilesCard = memo(function ChangedFilesCard(props: {
   runId: RunId;
+  turnCount: number;
   files: ReadonlyArray<TurnDiffFileChange>;
   allDirectoriesExpanded: boolean;
   resolvedTheme: "light" | "dark";
@@ -39,6 +40,7 @@ export const ChangedFilesCard = memo(function ChangedFilesCard(props: {
 }) {
   const {
     runId,
+    turnCount,
     files,
     allDirectoriesExpanded,
     resolvedTheme,
@@ -51,16 +53,16 @@ export const ChangedFilesCard = memo(function ChangedFilesCard(props: {
 
   return (
     <div
-      className="@container/changed-files mt-4 rounded-lg bg-secondary dark:bg-input/20"
+      className="@container/changed-files mt-1 border border-border bg-code"
       data-changed-files-state="tree"
     >
       <div
         data-changed-files-header=""
-        className="sticky top-2 z-10 flex items-center justify-between gap-2 rounded-t-lg bg-secondary px-3 py-2 dark:bg-background dark:bg-linear-to-b dark:from-input/20 dark:to-input/20"
+        className="sticky top-2 z-10 flex items-center justify-between gap-2 border-b border-border bg-code ps-2 pe-1 py-0.5"
       >
-        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-foreground">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           <span>
-            {files.length} changed file{files.length === 1 ? "" : "s"}
+            Changed {files.length} file{files.length === 1 ? "" : "s"} in turn {turnCount}
           </span>
           {hasNonZeroStat(summaryStat) && (
             <DiffStatLabel
@@ -171,7 +173,7 @@ const ChangedFilesTree = memo(function ChangedFilesTree(props: {
   const virtualized = rows.length > VIRTUALIZE_AFTER_ROWS;
 
   const renderRow = ({ node, depth }: ChangedFileRow) => {
-    const leftPadding = 8 + depth * 14;
+    const leftPadding = 7 + depth * 14;
     if (node.kind === "directory") {
       const isExpanded = expandedDirectories[node.path] ?? allDirectoriesExpanded;
       return (
@@ -180,7 +182,7 @@ const ChangedFilesTree = memo(function ChangedFilesTree(props: {
           type="button"
           data-scroll-anchor-ignore
           aria-expanded={isExpanded}
-          className="group flex h-7 w-full cursor-pointer items-center gap-2 rounded-md py-1.5 pr-2 text-left transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+          className="group flex h-5 w-full cursor-pointer items-center gap-2 pr-2 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
           style={{ paddingLeft: `${leftPadding}px` }}
           onClick={() => toggleDirectory(node.path)}
         >
@@ -195,13 +197,16 @@ const ChangedFilesTree = memo(function ChangedFilesTree(props: {
             className="size-3.5 shrink-0 text-muted-foreground/75"
             icon={isExpanded ? Folder : FolderClosed}
           />
-          <span className="truncate font-mono text-2xs text-muted-foreground/90 group-hover:text-foreground/90">
+          <span className="truncate font-mono text-xs text-muted-foreground/90 group-hover:text-foreground/90">
             {node.name}
           </span>
           {hasNonZeroStat(node.stat) && (
-            <span className="ml-auto shrink-0 font-mono text-3xs tabular-nums">
-              <DiffStatLabel additions={node.stat.additions} deletions={node.stat.deletions} />
-            </span>
+            <DiffStatLabel
+              additions={node.stat.additions}
+              deletions={node.stat.deletions}
+              layout="inline"
+              className="shrink-0 text-xs"
+            />
           )}
         </button>
       );
@@ -211,7 +216,7 @@ const ChangedFilesTree = memo(function ChangedFilesTree(props: {
       <button
         key={`file:${node.path}`}
         type="button"
-        className="group flex h-7 w-full cursor-pointer items-center gap-2 rounded-md py-1.5 pr-2 text-left transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+        className="group flex h-5 w-full cursor-pointer items-center gap-2 pr-2 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         style={{ paddingLeft: `${leftPadding}px` }}
         onClick={() => onOpenTurnDiff(runId, node.path)}
         onContextMenu={
@@ -236,9 +241,12 @@ const ChangedFilesTree = memo(function ChangedFilesTree(props: {
           <MiddleTruncate value={node.name} />
         </span>
         {node.stat && (
-          <span className="ml-auto shrink-0 font-mono text-3xs tabular-nums">
-            <DiffStatLabel additions={node.stat.additions} deletions={node.stat.deletions} />
-          </span>
+          <DiffStatLabel
+            additions={node.stat.additions}
+            deletions={node.stat.deletions}
+            layout="inline"
+            className="shrink-0 text-xs"
+          />
         )}
       </button>
     );
@@ -258,7 +266,7 @@ function ChangedFilesRows({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rowSizeRef = useRef<HTMLDivElement>(null);
-  const [range, setRange] = useState({ start: 0, end: 40, rowHeight: 28 });
+  const [range, setRange] = useState({ start: 0, end: 40, rowHeight: 20 });
   const [focusedPath, setFocusedPath] = useState<string | null>(null);
 
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- observes scroll, window resize and ancestor resizes to compute the virtualized row range
@@ -334,7 +342,7 @@ function ChangedFilesRows({
   if (focusedIndex >= 0 && focusedIndex < start) indices.unshift(focusedIndex);
   if (focusedIndex >= end) indices.push(focusedIndex);
   return (
-    <div className="p-2">
+    <div className="py-0.5">
       <div
         ref={containerRef}
         className="relative"
@@ -351,7 +359,7 @@ function ChangedFilesRows({
           <div
             ref={rowSizeRef}
             aria-hidden="true"
-            className="pointer-events-none invisible absolute h-7"
+            className="pointer-events-none invisible absolute h-5"
           />
         )}
         {indices.map((index) => {

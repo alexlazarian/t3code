@@ -19,7 +19,6 @@ export interface ChatCanvasPreview {
 }
 
 const GAP = 12;
-export const DETAILS_CARD_CLEARANCE = 32;
 
 export function resolveChatCanvasLayout({
   container,
@@ -28,7 +27,6 @@ export function resolveChatCanvasLayout({
   maxChatWidth = 768,
   minChatWidth = 640,
   composerHeight = 0,
-  detailsCard = null,
   findBar = null,
 }: {
   container: PreviewMiniPlayerSize;
@@ -37,31 +35,10 @@ export function resolveChatCanvasLayout({
   maxChatWidth?: number;
   minChatWidth?: number;
   composerHeight?: number;
-  detailsCard?: PreviewMiniPlayerObstacles["detailsCard"];
   findBar?: PreviewMiniPlayerObstacles["detailsCard"];
 }) {
-  const centeredWidth = Math.max(0, Math.min(maxChatWidth, container.width - padding * 2));
-  const laneRight = detailsCard
-    ? detailsCard.left - DETAILS_CARD_CLEARANCE
-    : container.width - padding;
-  const normalWidth = Math.max(0, Math.min(centeredWidth, laneRight - padding));
-  const canvasCenterLeft = (container.width - normalWidth) / 2;
-  // Beside a card it would crowd, the chat centers between the card and the canvas edge. The shift
-  // eases to zero as clearance grows, so very wide windows keep the chat still and a resize
-  // never jumps it.
-  const besideShift = detailsCard
-    ? Math.min(
-        (container.width - detailsCard.left) / 2,
-        Math.max(
-          0,
-          (container.width - detailsCard.left) / 2 - (laneRight - canvasCenterLeft - normalWidth),
-        ),
-      )
-    : 0;
-  const normalLeft = Math.max(
-    padding,
-    Math.min(canvasCenterLeft - besideShift, laneRight - normalWidth),
-  );
+  const normalWidth = Math.max(0, Math.min(maxChatWidth, container.width - padding * 2));
+  const normalLeft = Math.max(padding, (container.width - normalWidth) / 2);
   let chat = {
     left: normalLeft,
     width: normalWidth,
@@ -98,27 +75,13 @@ export function resolveChatCanvasLayout({
         });
       }
     }
-    const findBarObstacles = findBar ? { detailsCard: findBar, composer: null } : undefined;
-    const preferredFrame = {
-      ...frame,
-      ...clampPreviewMiniPlayerPosition(frame, container, frame, findBarObstacles, minimumPreviewX),
-    };
-    const dragObstacle =
-      detailsCard && findBar
-        ? {
-            left: Math.min(detailsCard.left, findBar.left),
-            right: Math.max(detailsCard.right, findBar.right),
-            bottom: Math.max(detailsCard.bottom, findBar.bottom),
-          }
-        : (detailsCard ?? findBar);
-    const cardObstacle = preview.lastInteraction === "resize" ? findBar : dragObstacle;
     frame = {
       ...frame,
       ...clampPreviewMiniPlayerPosition(
         frame,
         container,
         frame,
-        { detailsCard: cardObstacle, composer: null },
+        { detailsCard: findBar, composer: null },
         minimumPreviewX,
       ),
     };
@@ -135,11 +98,7 @@ export function resolveChatCanvasLayout({
         insetEnd: Math.max(0, container.width - left * 2 - width),
       };
     };
-    let nextChat = chatBeside(frame);
-    if (!nextChat && detailsCard) {
-      nextChat = chatBeside(preferredFrame);
-      if (nextChat) frame = preferredFrame;
-    }
+    const nextChat = chatBeside(frame);
     if (nextChat) chat = nextChat;
     else overlapsChat = true;
     if (overlapsChat && preview.lastInteraction === "resize") {
@@ -152,7 +111,7 @@ export function resolveChatCanvasLayout({
       };
     } else if (overlapsChat) {
       const obstacles = {
-        detailsCard: cardObstacle,
+        detailsCard: findBar,
         composer: { left: chat.left, right: chat.left + chat.width, height: composerHeight },
       };
       frame = resolvePreviewMiniPlayerFrame({ ...preview, container, obstacles });
@@ -184,12 +143,5 @@ export function resolveChatCanvasLayout({
       }
     }
   }
-  const overlapsDetailsCard = Boolean(
-    frame &&
-    detailsCard &&
-    frame.x < detailsCard.right &&
-    frame.x + frame.width > detailsCard.left &&
-    frame.y < detailsCard.bottom,
-  );
-  return { chat, frame, overlapsChat, overlapsDetailsCard };
+  return { chat, frame, overlapsChat };
 }

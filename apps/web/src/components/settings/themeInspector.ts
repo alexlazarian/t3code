@@ -67,6 +67,7 @@ const THEME_UTILITY_ROLES: Readonly<Partial<Record<string, ThemeColorRole>>> = {
   "sidebar-row-hover": "sidebarRowHover",
   "sidebar-row-active": "sidebarRowActive",
   "sidebar-row-selected": "sidebarRowSelected",
+  "nav-selected": "navSelected",
   "sidebar-border": "sidebarBorder",
   border: "border",
   input: "input",

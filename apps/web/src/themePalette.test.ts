@@ -117,6 +117,47 @@ describe("theme files", () => {
     expect(restored.variants).toEqual(theme.variants);
   });
 
+  it("gives older theme files a selected-item colour from their own row hover", () => {
+    const legacy = parseThemeFile({
+      version: THEME_FILE_VERSION,
+      name: "Legacy rows",
+      appearance: "dark",
+      colors: { sidebarRowHover: "#223344" },
+    });
+    expect(legacy.colors.navSelected).toBe(legacy.colors.sidebarRowHover);
+
+    const explicit = parseThemeFile({
+      version: THEME_FILE_VERSION,
+      name: "Explicit rows",
+      appearance: "dark",
+      colors: { sidebarRowHover: "#223344", navSelected: "#556677" },
+    });
+    expect(explicit.colors.navSelected).toBe(canonical("#556677"));
+  });
+
+  it("gives every built-in and generated palette a neutral selected-item colour apart from hover and its backgrounds", () => {
+    const toOklch = converter("oklch");
+    const toOklab = converter("oklab");
+    const distance = (first: string, second: string) => {
+      const a = toOklab(first)!;
+      const b = toOklab(second)!;
+      return Math.hypot(a.l - b.l, a.a - b.a, a.b - b.b);
+    };
+    const palettes = [
+      getStandardThemeColors("light"),
+      getStandardThemeColors("dark"),
+      ...BUILT_IN_THEMES.flatMap((theme) => [theme.colors, ...Object.values(theme.variants ?? {})]),
+      createVividThemeColors("light", "#fdf6ec", "#c2571b"),
+      createVividThemeColors("dark", "#180f1b", "#a84370"),
+    ];
+    for (const colors of palettes) {
+      expect(toOklch(colors.navSelected)!.c ?? 0).toBeLessThan(0.005);
+      for (const other of [colors.sidebarRowHover, colors.sidebar, colors.surface]) {
+        expect(distance(colors.navSelected, other)).toBeGreaterThan(0.02);
+      }
+    }
+  });
+
   it.each(["searchMatchBackground", "searchMatchActiveBackground"] as const)(
     "editing %s derives readable text without changing the other match or warning colours",
     (role) => {

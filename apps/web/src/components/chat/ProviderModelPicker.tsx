@@ -191,6 +191,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
               props.triggerAriaLabel ?? props.triggerLabel ?? allModelNames ?? triggerLabel
             }
             size={size}
+            variant={props.isComposerOwned ? "boxed" : "ghost"}
             data-chat-provider-model-picker="true"
             className={cn(
               "min-w-0 shrink justify-between whitespace-nowrap",

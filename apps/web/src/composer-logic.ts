@@ -56,6 +56,34 @@ export function composerRequiresModifier(
   );
 }
 
+const FOLLOW_UP_VERB = { queue: "queues", steer: "steers" } as const;
+
+export function resolveComposerSendHint(input: {
+  sendShortcut: ClientSettings["sendShortcut"] | undefined;
+  prompt: string;
+  modEnterLabel: string;
+  isRunning: boolean;
+  isAnsweringQuestion: boolean;
+  isEditingQueuedMessage: boolean;
+  followUpBehavior: "queue" | "steer";
+  canSteer: boolean;
+  alternateShortcutLabel: string | null;
+}): string {
+  const key = composerRequiresModifier(input.sendShortcut, input.prompt)
+    ? input.modEnterLabel
+    : "Enter";
+  // A pending question's answer or a queued-message edit is submitted, not steered or queued.
+  if (!input.isRunning || input.isAnsweringQuestion || input.isEditingQueuedMessage) {
+    return `${key} sends`;
+  }
+  if (!input.canSteer) return `${key} queues`;
+  const alternate = input.followUpBehavior === "queue" ? "steer" : "queue";
+  const primary = `${key} ${FOLLOW_UP_VERB[input.followUpBehavior]}`;
+  return input.alternateShortcutLabel
+    ? `${primary}, ${input.alternateShortcutLabel} ${FOLLOW_UP_VERB[alternate]}`
+    : primary;
+}
+
 export function composerSubmissionIntentForKey(input: {
   event: ShortcutEventLike & { isComposing?: boolean; keyCode?: number; repeat?: boolean };
   keybindings: ResolvedKeybindingsConfig;

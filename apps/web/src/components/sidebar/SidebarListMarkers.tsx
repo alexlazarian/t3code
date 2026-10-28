@@ -1,4 +1,3 @@
-import { CollapsibleSectionHeader } from "../ui/collapsible-section-header";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { type ReactNode } from "react";
@@ -9,7 +8,6 @@ import {
   type SidebarListMarker,
 } from "../Sidebar.logic";
 import { SIDEBAR_SORTABLE_DRAG_DISABLED } from "./SidebarThreadRow";
-import { SidebarThreadUndoNotice } from "./SidebarThreadUndoNotice";
 
 function SortableSidebarMarker(props: {
   marker: SidebarListMarker;
@@ -39,9 +37,11 @@ function SortableSidebarMarker(props: {
   );
 }
 
+/** Zero height unless its expanded section is empty, where it reads "None" as in the prototype. */
 export function SidebarSectionPlaceholder(props: {
-  marker: "active-placeholder" | "settled-placeholder";
+  marker: "pinned-placeholder" | "active-placeholder" | "settled-placeholder";
   label: string;
+  showNone: boolean;
   showHint: boolean;
   isDropTarget: boolean;
 }) {
@@ -49,8 +49,13 @@ export function SidebarSectionPlaceholder(props: {
     <SortableSidebarMarker
       marker={props.marker}
       data-testid={`sidebar-${props.marker}`}
-      className="relative mx-0.5 -mb-px h-0"
+      className={cn("relative", !props.showNone && "mx-0.5 -mb-px h-0")}
     >
+      {props.showNone ? (
+        <div className="border-b border-sidebar-border px-3 py-1 text-xs text-placeholder">
+          None
+        </div>
+      ) : null}
       {props.showHint ? (
         <div
           className={cn(
@@ -65,80 +70,84 @@ export function SidebarSectionPlaceholder(props: {
   );
 }
 
-export function SidebarDragBoundary(props: {
-  marker: "pinned-header" | "pinned-divider";
+const SECTION_TESTID = {
+  "pinned-header": "sidebar-pinned-section-toggle",
+  "pinned-divider": "sidebar-active-section-toggle",
+  "working-header": "sidebar-working-shelf-toggle",
+  "snoozed-header": "sidebar-snoozed-shelf-toggle",
+  "settled-header": "sidebar-settled-shelf-toggle",
+} as const;
+
+/** The shelf id rows name as their keyboard-navigation parent. */
+const SECTION_SHELF = {
+  "pinned-header": "pinned",
+  "pinned-divider": "active",
+  "working-header": "working",
+  "snoozed-header": "snoozed",
+  "settled-header": "settled",
+} as const;
+
+export function SidebarSectionHeader(props: {
+  marker: keyof typeof SECTION_TESTID;
   label: string;
-  visible: boolean;
-  isDropTarget: boolean;
+  count: number;
+  dragging?: boolean;
+  isDropTarget?: boolean;
+  /** A narrowed list shows every match, so it hides empty sections and ignores collapse. */
+  narrowed: boolean;
+  toggle: { expanded: boolean; onToggle: () => void };
 }) {
+  if (props.narrowed && props.count === 0) {
+    return (
+      <SortableSidebarMarker
+        marker={props.marker}
+        data-testid={`sidebar-${props.marker}`}
+        className="-mb-px h-0"
+      />
+    );
+  }
   return (
-    <SortableSidebarMarker
-      marker={props.marker}
-      data-testid={`sidebar-${props.marker}`}
-      className="pointer-events-none relative mx-0.5 -mb-px h-0"
-    >
-      {props.visible ? (
-        <div className="sidebar-drag-boundary-label absolute inset-x-2 top-1 flex h-4 items-center gap-2">
-          <span
-            className={cn(
-              "shrink-0 text-xs font-medium",
-              props.isDropTarget ? "text-primary" : "text-sidebar-foreground/80",
-            )}
-          >
-            {props.label}
-          </span>
-          <span
-            aria-hidden
-            className={cn(
-              "h-px flex-1",
-              props.isDropTarget ? "bg-primary/50" : "bg-sidebar-foreground/25",
-            )}
-          />
-        </div>
-      ) : null}
+    <SortableSidebarMarker marker={props.marker} data-testid={`sidebar-${props.marker}`}>
+      <button
+        type="button"
+        role="treeitem"
+        tabIndex={-1}
+        data-sidebar-row={`shelf:${SECTION_SHELF[props.marker]}`}
+        aria-expanded={props.toggle.expanded}
+        disabled={props.narrowed}
+        onClick={props.toggle.onToggle}
+        data-testid={SECTION_TESTID[props.marker]}
+        className="flex h-6 w-full cursor-pointer items-center disabled:cursor-default gap-1.5 border-b border-sidebar-border bg-background px-2 text-left text-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70"
+      >
+        <span aria-hidden className="w-2 shrink-0 text-muted-foreground">
+          {props.toggle.expanded ? "\u25BE" : "\u25B8"}
+        </span>
+        <span
+          className={cn(
+            "uppercase tracking-wider",
+            props.isDropTarget
+              ? "text-primary"
+              : props.dragging
+                ? "text-sidebar-foreground"
+                : "text-muted-foreground",
+          )}
+        >
+          {props.label}
+        </span>
+        <span className="tabular-nums text-placeholder">{props.count}</span>
+      </button>
     </SortableSidebarMarker>
   );
 }
 
-export function SidebarSectionHeader(props: {
-  marker: "working-header" | "snoozed-header" | "settled-header";
-  label: string;
-  /** A muted trailing count. */
-  count: number;
-  className?: string;
-  dragging?: boolean;
-  isDropTarget?: boolean;
-  toggle: { expanded: boolean; onToggle: () => void };
-  /** The first shelf at the bottom of the list hosts the undo notice just above itself. */
-  hostsUndoNotice?: boolean;
-}) {
-  const shelf =
-    props.marker === "working-header"
-      ? "working"
-      : props.marker === "snoozed-header"
-        ? "snoozed"
-        : "settled";
+export function ClearFiltersButton(props: { readonly onClick: () => void }) {
   return (
-    <SortableSidebarMarker
-      marker={props.marker}
-      data-testid={`sidebar-${props.marker}`}
-      className={cn("relative mx-0.5 h-8", props.className)}
+    <button
+      type="button"
+      onClick={props.onClick}
+      className="mx-auto mt-2 flex cursor-pointer items-center rounded-md border border-sidebar-border px-2.5 py-1 text-2xs font-medium text-sidebar-muted-foreground transition-colors hover:bg-sidebar-row-hover hover:text-sidebar-foreground"
     >
-      {props.hostsUndoNotice ? (
-        <SidebarThreadUndoNotice className="absolute inset-x-0 bottom-full bg-sidebar surface-grain" />
-      ) : null}
-      <CollapsibleSectionHeader
-        role="treeitem"
-        tabIndex={-1}
-        data-sidebar-row={`shelf:${shelf}`}
-        onClick={props.toggle.onToggle}
-        expanded={props.toggle.expanded}
-        tone={props.isDropTarget ? "accent" : props.dragging ? "emphasized" : "muted"}
-        data-testid={`sidebar-${shelf}-shelf-toggle`}
-        accessory={<span className="font-normal tabular-nums">{props.count}</span>}
-      >
-        {props.label}
-      </CollapsibleSectionHeader>
-    </SortableSidebarMarker>
+      Clear filters
+    </button>
   );
 }

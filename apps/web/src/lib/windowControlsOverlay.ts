@@ -7,8 +7,8 @@ import { isMacPlatform, isWindowsPlatform } from "./utils";
 const WCO_CLASS_NAME = "wco";
 const ELECTRON_CLASS_NAME = "electron";
 const ELECTRON_WINDOWS_CLASS_NAME = "electron-windows";
-// macOS has no overlay API; traffic lights stay inside this topbar at every zoom level.
-const MACOS_TITLEBAR_HEIGHT = 52;
+// macOS has no overlay API; traffic lights stay inside this topbar at every zoom level. Keep in sync with MACOS_WORKSPACE_TOPBAR_HEIGHT in apps/desktop DesktopWindow.ts.
+const MACOS_TITLEBAR_HEIGHT = 32;
 
 interface WindowControlsOverlayLike {
   readonly visible: boolean;

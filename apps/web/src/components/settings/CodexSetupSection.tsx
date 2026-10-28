@@ -161,7 +161,7 @@ export function CodexSetupSection(props: CodexSetupSectionProps) {
         }
         secondaryControl={
           !existingAuthenticated && !existingReady && !existingChecking ? (
-            <Button size="sm" variant="ghost-muted" onClick={() => props.onModeChange("existing")}>
+            <Button size="sm" variant="outline" onClick={() => props.onModeChange("existing")}>
               Use existing CLI
             </Button>
           ) : null
@@ -878,7 +878,7 @@ function ManagedCodexSetup({
             ) : !authActive && !authenticated && hasSavedAccount ? (
               <Button
                 size="sm"
-                variant="ghost-muted"
+                variant="outline"
                 disabled={unavailable || busy}
                 onClick={() => void setup("chatgpt-change-account")}
               >
@@ -887,7 +887,7 @@ function ManagedCodexSetup({
             ) : !authActive && !authenticated && allowExistingCli ? (
               <Button
                 size="sm"
-                variant="ghost-muted"
+                variant="outline"
                 disabled={readOnly || busy}
                 onClick={() => onModeChange("existing")}
               >
@@ -964,7 +964,7 @@ function ManagedCodexSetup({
                 </Button>
                 <Button
                   size="sm"
-                  variant="ghost"
+                  variant="outline"
                   disabled={unavailable || busy}
                   onClick={() => void run(() => logoutAuth(target))}
                 >
@@ -994,7 +994,7 @@ function ManagedCodexSetup({
                 {hasSavedAccount ? (
                   <Button
                     size="sm"
-                    variant="ghost"
+                    variant="outline"
                     disabled={unavailable || busy}
                     onClick={() => void setup("chatgpt-change-account")}
                   >

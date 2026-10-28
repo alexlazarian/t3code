@@ -50,6 +50,8 @@ import {
 import {
   idleCompactionOf,
   isCompactionCommandMessage,
+  isProviderDriverKind,
+  PROVIDER_DISPLAY_NAMES,
   type MessageId,
   type OrchestrationV2IdleCompaction,
   type WorktreeSetupSnapshot,
@@ -634,6 +636,21 @@ type MessagesTimelineRowContent =
       mcpApp: McpAppReference;
     };
 
+/** A subagent joins the rendered row above it when that row is a subagent from the same run and provider turn. */
+export function joinsSubagentBlock(
+  previous: MessagesTimelineRow | undefined,
+  projectedItem: OrchestrationV2ProjectedTurnItem,
+): previous is Extract<MessagesTimelineRow, { kind: "event" }> {
+  const item = projectedItem.item;
+  if (item.type !== "subagent" || previous?.kind !== "event") return false;
+  const above = previous.projectedItem.item;
+  return (
+    above.type === "subagent" &&
+    above.runId === item.runId &&
+    above.providerTurnId === item.providerTurnId
+  );
+}
+
 export interface StableMessagesTimelineRowsState {
   byId: Map<string, MessagesTimelineRow>;
   result: MessagesTimelineRow[];
@@ -655,6 +672,21 @@ function expandedWorkGroupRow(
     groupedEntries,
     isExpandedToolGroup: true,
   };
+}
+
+/** "<Provider> · <model>" for the run that wrote a message, or null when the run is unknown. */
+export function resolveAssistantCaption(
+  runId: RunId | null,
+  runs: ReadonlyArray<HandoffTimelineRun>,
+): string | null {
+  const run = runId === null ? undefined : runs.find((candidate) => candidate.id === runId);
+  if (run === undefined) return null;
+  const instanceId = run.providerInstanceId;
+  const provider =
+    (isProviderDriverKind(instanceId) ? PROVIDER_DISPLAY_NAMES[instanceId] : undefined) ??
+    instanceId;
+  const model = run.modelSelection.model.trim();
+  return model ? `${provider} · ${model}` : provider;
 }
 
 export function resolveAssistantMessageCopyState({
@@ -1945,14 +1977,7 @@ export function deriveMessagesTimelineRows(input: {
 
     if (timelineEntry.kind === "event") {
       const previous = nextRows.at(-1);
-      if (
-        timelineEntry.projectedItem.item.type === "subagent" &&
-        previous?.kind === "event" &&
-        previous.projectedItem.item.type === "subagent" &&
-        previous.projectedItem.item.runId === timelineEntry.projectedItem.item.runId &&
-        previous.projectedItem.item.providerTurnId ===
-          timelineEntry.projectedItem.item.providerTurnId
-      ) {
+      if (joinsSubagentBlock(previous, timelineEntry.projectedItem)) {
         nextRows[nextRows.length - 1] = {
           ...previous,
           subagents: [

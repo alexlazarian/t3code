@@ -298,7 +298,7 @@ export function ProviderAuthenticationSection({
             {!active && signedIn && (provider.auth.canLogout ?? provider.setup?.canAuthenticate) ? (
               <Button
                 size="sm"
-                variant="ghost"
+                variant="outline"
                 disabled={disabled || !auth}
                 onClick={() => {
                   void ensureLocalApi()

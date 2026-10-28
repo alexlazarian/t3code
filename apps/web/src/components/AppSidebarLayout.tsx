@@ -1,4 +1,5 @@
 import { useAtomValue } from "@effect/atom-react";
+import { ChartNoAxesColumnIcon, SearchIcon } from "lucide-react";
 import * as Schema from "effect/Schema";
 import {
   useEffect,
@@ -7,10 +8,11 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
-import { useLocation, useRouter, type AnyRouter } from "@tanstack/react-router";
+import { useLocation, useParams, useRouter, type AnyRouter } from "@tanstack/react-router";
 
 import { moveWorkspaceFocus, workspaceAreaProps } from "../lib/workspaceFocus";
-import { isCommandPaletteOpen } from "../commandPaletteBus";
+import { isCommandPaletteOpen, openCommandPalette } from "../commandPaletteBus";
+import { onOpenSidebarRequest } from "../sidebarOpenRequest";
 import { isElectron } from "../env";
 import {
   releaseThreadUndoShortcut,
@@ -27,22 +29,25 @@ import { isEditableFocused } from "../lib/editableFocus";
 import { isPreviewFocused } from "../lib/previewFocus";
 import { isTerminalFocused } from "../lib/terminalFocus";
 import { isModelPickerOpen } from "../modelPickerVisibility";
-import { selectActiveRightPanel, useRightPanelStore } from "../rightPanelStore";
-import { selectThreadTerminalUiState, useTerminalUiStateStore } from "../terminalUiStateStore";
+import {
+  selectActiveRightPanel,
+  selectRightPanelTerminalOpen,
+  useRightPanelStore,
+} from "../rightPanelStore";
 import { cn, isMacPlatform } from "../lib/utils";
 import { primaryServerKeybindingsAtom } from "../state/server";
-import { useEnvironmentIdentificationMode } from "../hooks/useSettings";
+import { useClientSettings } from "../hooks/useSettings";
+import { useProjects } from "../state/entities";
 import {
   PanelAnimationSuppressionProvider,
   usePanelAnimationSettings,
   usePanelNavigationSuppression,
 } from "../panelAnimations";
+import { InfoBar } from "./InfoBar";
 import { BackgroundThreadAnnouncer } from "./BackgroundThreadAnnouncer";
 import ThreadSidebar from "./Sidebar";
-import { SidebarBrandWidthProbe } from "./sidebar/SidebarChrome";
 import { isAppModalPage } from "./sidebar/mainAppLocation";
 import type { SidebarRouteReveal } from "./sidebar/routeReveal";
-import { useSidebarStageBackdropVariant } from "./SidebarStageBackdrop";
 import { SidebarBackgroundLayer } from "./sidebar/SidebarBackgroundLayer";
 import {
   clampThreadSidebarWidth,
@@ -52,18 +57,16 @@ import {
   THREAD_MAIN_CONTENT_MIN_WIDTH,
   THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
 } from "./threadSidebarWidth";
-import {
-  Sidebar,
-  SidebarProvider,
-  SidebarRail,
-  SidebarTrigger,
-  useSidebar,
-  useSidebarVisibility,
-} from "./ui/sidebar";
+import { Sidebar, SidebarProvider, SidebarRail, SidebarTrigger, useSidebar } from "./ui/sidebar";
+import { Button } from "./ui/button";
+import { Kbd } from "./ui/kbd";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 import { appAtomRegistry } from "../rpc/atomRegistry";
+import { createStartNewThread } from "../shortcuts/chatRouteCommands";
 import { registerCommands, registerMenuAction } from "../shortcuts/dispatcher";
 import { resolveThreadRouteRef } from "../threadRoutes";
+import { isOverviewPathname, switchThreadView, useSwitchThreadView } from "../threadView";
+import { Toggle, ToggleGroup } from "./ui/toggle-group";
 
 const MACOS_TRAFFIC_LIGHTS_LEFT_INSET = "var(--desktop-window-controls-inset, 90px)";
 
@@ -137,10 +140,10 @@ function readRoutePanelsOpen(router: AnyRouter) {
   const routeThreadRef = resolveThreadRouteRef(router.state.matches.at(-1)?.params ?? {});
   if (!routeThreadRef) return { terminalOpen: false, previewOpen: false };
   return {
-    terminalOpen: selectThreadTerminalUiState(
-      useTerminalUiStateStore.getState().terminalUiStateByThreadKey,
+    terminalOpen: selectRightPanelTerminalOpen(
+      useRightPanelStore.getState().byThreadKey,
       routeThreadRef,
-    ).terminalOpen,
+    ),
     previewOpen:
       selectActiveRightPanel(useRightPanelStore.getState().byThreadKey, routeThreadRef) ===
       "preview",
@@ -196,6 +199,22 @@ function registerWorkspaceFocusCommands(router: AnyRouter): () => void {
   return () => {
     for (const dispose of disposers) dispose();
   };
+}
+
+function registerThreadViewCommand(router: AnyRouter): () => void {
+  return registerCommands(
+    {
+      "view.toggleOverview": (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        switchThreadView(
+          router,
+          isOverviewPathname(router.state.location.pathname) ? "list" : "overview",
+        );
+      },
+    },
+    { when: (event) => !isKeybindingCaptureTarget(event) },
+  );
 }
 
 // Escape leaves the pull requests page when no scope (a selection, a dialog,
@@ -290,6 +309,11 @@ function registerThreadUndoCommands(
   };
 }
 
+function openSettings(router: AnyRouter) {
+  if (!/^\/settings(\/|$)/.test(router.state.location.pathname))
+    void router.navigate({ to: "/settings" });
+}
+
 /** Keyboard and menu commands that live as long as the app shell. */
 function registerAppShellCommands(router: AnyRouter, shellElement: Element): () => void {
   // The provider mirrors the visibility it renders onto its wrapper, so the
@@ -302,27 +326,46 @@ function registerAppShellCommands(router: AnyRouter, shellElement: Element): () 
     registerNavigationHistoryCommands(router),
     registerWorkspaceFocusCommands(router),
     registerPullRequestsEscapeCommand(router),
-    registerMenuAction("open-settings", () => {
-      if (!/^\/settings(\/|$)/.test(router.state.location.pathname))
-        void router.navigate({ to: "/settings" });
-    }),
+    registerThreadViewCommand(router),
+    registerMenuAction("open-settings", () => openSettings(router)),
   ];
   return () => {
     for (const dispose of disposers) dispose();
   };
 }
 
-function SidebarControl() {
+/** The full-width bar above the sidebar and main area. On desktop it is the window's drag region. */
+function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSSProperties }) {
   const router = useRouter();
   const usagePageOpen = useLocation({ select: (location) => location.pathname === "/usage" });
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
-  const { toggleSidebar, isMobile, mobileSheetMounted } = useSidebar();
-  const isSidebarVisible = useSidebarVisibility();
-  const environmentIdentificationMode = useEnvironmentIdentificationMode();
-  const stageBackdropVariant = useSidebarStageBackdropVariant(environmentIdentificationMode);
+  const { toggleSidebar, setOpen, setOpenMobile, isMobile } = useSidebar();
   const shortcutLabel = shortcutLabelForCommand(keybindings, "sidebar.toggle", {
     context: { usagePageOpen },
   });
+  const overviewOpen = useLocation({ select: (location) => isOverviewPathname(location.pathname) });
+  const onThreadRoute = useParams({
+    strict: false,
+    select: (params) => "threadId" in params || "draftId" in params,
+  });
+  const setThreadView = useSwitchThreadView();
+  const viewShortcutLabel = shortcutLabelForCommand(keybindings, "view.toggleOverview");
+  const sidebarToggleLabel = `Toggle main sidebar${shortcutLabel ? ` (${shortcutLabel})` : ""}`;
+  const viewSwitchLabel = `Switch to ${overviewOpen ? "List" : "Overview"}${viewShortcutLabel ? ` (${viewShortcutLabel})` : ""}`;
+  const newThreadShortcutLabel = shortcutLabelForCommand(keybindings, "chat.new", {
+    context: { terminalFocus: false },
+  });
+  const paletteShortcutLabel = shortcutLabelForCommand(keybindings, "commandPalette.toggle", {
+    context: { terminalFocus: false },
+  });
+  const usageShortcutLabel = shortcutLabelForCommand(keybindings, "usage.open", {
+    context: { terminalFocus: false, usagePageOpen },
+  });
+  const [startNewThread] = useState(() => createStartNewThread(router));
+  const hasProjects = useProjects().length > 0;
+  const newThreadLabel = hasProjects
+    ? `New thread${newThreadShortcutLabel ? ` (${newThreadShortcutLabel})` : ""}`
+    : "Add a project first";
 
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- window keydown listener that toggles the sidebar on its shortcut
   useEffect(() => {
@@ -364,45 +407,128 @@ function SidebarControl() {
     };
   }, [keybindings, toggleSidebar, usagePageOpen]);
 
-  // The control lives as long as the shell, so it carries the shell's commands. Created
+  // oxlint-disable-next-line t3code/react-effect-budget -- subscribes to the palette's open-sidebar request on window
+  useEffect(
+    () => onOpenSidebarRequest(() => (isMobile ? setOpenMobile(true) : setOpen(true))),
+    [isMobile, setOpen, setOpenMobile],
+  );
+
+  // The bar lives as long as the shell, so it carries the shell's commands. Created
   // once so re-renders never re-register them.
   const [appShellCommandsRef] = useState(
-    () => (node: HTMLDivElement | null) =>
+    () => (node: HTMLElement | null) =>
       node === null ? undefined : registerAppShellCommands(router, node),
   );
 
   return (
-    <div
+    <header
       ref={appShellCommandsRef}
       className={cn(
-        "pointer-events-none fixed left-[var(--workspace-controls-left)] top-[var(--workspace-controls-top)] z-50 ml-px flex h-[var(--workspace-topbar-height)] items-center",
-        isMobile && mobileSheetMounted && "hidden",
+        "fixed inset-x-0 top-0 z-20 flex h-(--app-top-bar-bottom) items-center border-b border-border bg-surface-raised pt-safe pl-(--workspace-controls-left) pr-(--workspace-controls-right) text-xs wco:pr-(--workspace-native-controls-inset) [&>*]:flex [&>*]:h-full [&>*]:items-center [&>*]:gap-1 [&>*]:border-border [&>*]:px-2",
+        isElectron && "drag-region",
       )}
-      data-sidebar-control=""
+      style={windowControlsInsetStyle}
+      data-app-top-bar=""
     >
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <SidebarTrigger
-              variant={isSidebarVisible && stageBackdropVariant ? "media-navigation" : "ghost"}
-              className={cn(
-                "pointer-events-auto",
-                isSidebarVisible && stageBackdropVariant && "relative top-auto translate-y-0",
-              )}
-              aria-label="Toggle main sidebar"
-            />
-          }
-        />
-        <TooltipPopup side="bottom">
-          Toggle main sidebar{shortcutLabel ? ` (${shortcutLabel})` : ""}
-        </TooltipPopup>
-      </Tooltip>
-    </div>
+      <div className="border-r pl-0!">
+        <Tooltip>
+          <TooltipTrigger
+            info={sidebarToggleLabel}
+            render={<SidebarTrigger aria-label="Toggle main sidebar" />}
+          />
+          <TooltipPopup side="bottom">{sidebarToggleLabel}</TooltipPopup>
+        </Tooltip>
+      </div>
+      <div className="border-r max-md:hidden">
+        <Tooltip>
+          <TooltipTrigger
+            info={viewSwitchLabel}
+            render={<div className="[-webkit-app-region:no-drag]" />}
+          >
+            <ToggleGroup
+              aria-label="Thread view"
+              variant="mode"
+              value={[overviewOpen ? "overview" : "list"]}
+              onValueChange={(next) => {
+                const view = next[0];
+                if (view === "list" || view === "overview") setThreadView(view);
+              }}
+            >
+              <Toggle
+                value="list"
+                onClick={() => {
+                  if (!overviewOpen && !onThreadRoute) setThreadView("list");
+                }}
+              >
+                List
+              </Toggle>
+              <Toggle value="overview">Overview</Toggle>
+            </ToggleGroup>
+          </TooltipTrigger>
+          <TooltipPopup side="bottom">{viewSwitchLabel}</TooltipPopup>
+        </Tooltip>
+      </div>
+      <div className="border-r">
+        <Tooltip>
+          <TooltipTrigger
+            info={newThreadLabel}
+            render={<span className="inline-flex [-webkit-app-region:no-drag]" />}
+          >
+            <Button variant="outline" disabled={!hasProjects} onClick={startNewThread}>
+              + New thread
+              {newThreadShortcutLabel ? <TopBarShortcut label={newThreadShortcutLabel} /> : null}
+            </Button>
+          </TooltipTrigger>
+          <TooltipPopup side="bottom">{newThreadLabel}</TooltipPopup>
+        </Tooltip>
+      </div>
+      <div className="min-w-0 flex-1 px-0!" />
+      <div className="border-r">
+        <Button
+          variant="ghost"
+          aria-label="Search and commands"
+          onClick={() => openCommandPalette()}
+          data-info={`Search and commands${paletteShortcutLabel ? ` (${paletteShortcutLabel})` : ""}`}
+        >
+          <SearchIcon className="md:hidden" />
+          <span className="max-md:hidden">Search and commands</span>
+          {paletteShortcutLabel ? <TopBarShortcut label={paletteShortcutLabel} /> : null}
+        </Button>
+      </div>
+      <div className="pr-0!">
+        <Button
+          variant="ghost"
+          aria-label="Usage"
+          onClick={() => void router.navigate({ to: "/usage" })}
+          data-info={`Open usage${usageShortcutLabel ? ` (${usageShortcutLabel})` : ""}`}
+        >
+          <ChartNoAxesColumnIcon className="md:hidden" />
+          <span className="max-md:hidden">Usage</span>
+          {usageShortcutLabel ? <TopBarShortcut label={usageShortcutLabel} /> : null}
+        </Button>
+        <Button variant="ghost" onClick={() => openSettings(router)} data-info="Open settings">
+          Settings
+        </Button>
+      </div>
+    </header>
+  );
+}
+
+function TopBarShortcut({ label }: { label: string }) {
+  return (
+    <span className="max-md:hidden">
+      <Kbd>{label}</Kbd>
+    </span>
   );
 }
 
 export function AppSidebarLayout({ children }: { children: ReactNode }) {
   const sidebarArea = workspaceAreaProps("sidebar", 0, "Threads");
+  const infoBarEnabled = useClientSettings((s) => s.infoBarEnabled);
+  const infoBarHeightStyle = {
+    "--info-bar-height": infoBarEnabled ? "20px" : "0px",
+    "--app-height": "calc(100dvh - var(--info-bar-height) - var(--app-top-bar-bottom))",
+  } as CSSProperties;
   const [sidebarRouteReveal] = useState<SidebarRouteReveal>(() => ({
     observedKey: null,
     pendingKey: null,
@@ -416,8 +542,8 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
   const [sidebarWidth, setSidebarWidth] = useState(readInitialThreadSidebarWidth);
   // A clamped drag may not change width, so viewport changes need a separate subscription.
   const viewportWidth = useSyncExternalStore(subscribeToViewportWidth, readViewportWidth);
-  const [brandWidth, setBrandWidth] = useState(0);
-  const sidebarMinimumWidth = resolveThreadSidebarMinimumWidth(brandWidth);
+  // The brand sits in the top bar, so the sidebar header has no brand to fit.
+  const sidebarMinimumWidth = resolveThreadSidebarMinimumWidth(0);
   const sidebarMaximumWidth = resolveThreadSidebarMaximumWidth(viewportWidth, sidebarMinimumWidth);
   const resetSidebarWidth = () => {
     try {
@@ -439,46 +565,48 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
   const sidebarProviderStyle = {
     "--sidebar-width": `${clampThreadSidebarWidth(sidebarWidth, sidebarMinimumWidth, sidebarMaximumWidth)}px`,
     "--panel-animation-duration": `${panelAnimationDurationMs}ms`,
-    ...windowControlsInsetStyle,
+    "--sidebar-top": "var(--app-top-bar-bottom)",
   } as CSSProperties;
 
   return (
     <PanelAnimationSuppressionProvider value={panelAnimationsSuppressed}>
-      <SidebarProvider
-        className="h-dvh! min-h-0!"
-        data-panel-animations={routePanelAnimationsActive ? "true" : "false"}
-        defaultOpen
-        style={sidebarProviderStyle}
-      >
-        <SidebarBrandWidthProbe onWidthChange={setBrandWidth} />
-        <Sidebar
-          side="left"
-          collapsible="offcanvas"
-          data-app-sidebar=""
-          {...sidebarArea}
-          role="navigation"
-          aria-label="Threads"
-          resizable={{
-            maxWidth: sidebarMaximumWidth,
-            minWidth: sidebarMinimumWidth,
-            shouldAcceptWidth: ({ currentWidth, nextWidth, wrapper }) =>
-              nextWidth <= currentWidth ||
-              wrapper.clientWidth - nextWidth >= THREAD_MAIN_CONTENT_MIN_WIDTH,
-            storageKey: THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
-            onResize: setSidebarWidth,
-          }}
-          style={windowControlsInsetStyle}
+      <div style={infoBarHeightStyle}>
+        <SidebarProvider
+          className="mt-(--workspace-topbar-height) h-(--app-height)! min-h-0!"
+          data-panel-animations={routePanelAnimationsActive ? "true" : "false"}
+          defaultOpen
+          style={sidebarProviderStyle}
         >
-          <SidebarBackgroundLayer />
-          <div className="relative flex min-h-0 flex-1 flex-col">
-            <ThreadSidebar routeReveal={sidebarRouteReveal} />
-          </div>
-          <SidebarRail onDoubleClick={resetSidebarWidth} />
-        </Sidebar>
-        {children}
-        <BackgroundThreadAnnouncer />
-        <SidebarControl />
-      </SidebarProvider>
+          <Sidebar
+            side="left"
+            collapsible="offcanvas"
+            data-app-sidebar=""
+            {...sidebarArea}
+            role="navigation"
+            aria-label="Threads"
+            style={windowControlsInsetStyle}
+            resizable={{
+              maxWidth: sidebarMaximumWidth,
+              minWidth: sidebarMinimumWidth,
+              shouldAcceptWidth: ({ currentWidth, nextWidth, wrapper }) =>
+                nextWidth <= currentWidth ||
+                wrapper.clientWidth - nextWidth >= THREAD_MAIN_CONTENT_MIN_WIDTH,
+              storageKey: THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
+              onResize: setSidebarWidth,
+            }}
+          >
+            <SidebarBackgroundLayer />
+            <div className="relative flex min-h-0 flex-1 flex-col">
+              <ThreadSidebar routeReveal={sidebarRouteReveal} />
+            </div>
+            <SidebarRail onDoubleClick={resetSidebarWidth} />
+          </Sidebar>
+          {children}
+          <BackgroundThreadAnnouncer />
+          <AppTopBar windowControlsInsetStyle={windowControlsInsetStyle} />
+        </SidebarProvider>
+        {infoBarEnabled ? <InfoBar /> : null}
+      </div>
     </PanelAnimationSuppressionProvider>
   );
 }
