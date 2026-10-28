@@ -2020,6 +2020,53 @@ export const OrchestrationV2LatestVisibleMessageSummary = Schema.Struct({
 export type OrchestrationV2LatestVisibleMessageSummary =
   typeof OrchestrationV2LatestVisibleMessageSummary.Type;
 
+/** The lead agent's newest step in the presented run. `text` is one short line, never a body. */
+export const OrchestrationV2ShellStep = Schema.Struct({
+  kind: Schema.Literals([
+    "command",
+    "file_change",
+    "file_search",
+    "web_search",
+    "tool",
+    "question",
+    "approval",
+    "reply",
+    "subagent",
+  ]),
+  text: Schema.String,
+  status: OrchestrationV2TurnItemStatus,
+});
+export type OrchestrationV2ShellStep = typeof OrchestrationV2ShellStep.Type;
+
+export const OrchestrationV2ShellSubagent = Schema.Struct({
+  threadId: Schema.NullOr(ThreadId),
+  title: Schema.String,
+  status: OrchestrationV2Subagent.fields.status,
+  /** Progress while it runs, then its result or error, cut to one short line. */
+  step: Schema.NullOr(Schema.String),
+  startedAt: Schema.NullOr(Schema.DateTimeUtc),
+  completedAt: Schema.NullOr(Schema.DateTimeUtc),
+});
+export type OrchestrationV2ShellSubagent = typeof OrchestrationV2ShellSubagent.Type;
+
+/** What the presented run is doing, sized for a card. Absent from older servers. */
+export const OrchestrationV2ShellActivity = Schema.Struct({
+  step: Schema.NullOr(OrchestrationV2ShellStep),
+  stepCount: NonNegativeInt,
+  /** Absent until a checkpoint or the provider reports a changed file. */
+  files: Schema.optional(
+    Schema.Struct({
+      changed: NonNegativeInt,
+      additions: Schema.optional(NonNegativeInt),
+      deletions: Schema.optional(NonNegativeInt),
+    }),
+  ),
+  /** The newest direct subagents, capped; `subagentCount` counts them all. */
+  subagents: Schema.Array(OrchestrationV2ShellSubagent),
+  subagentCount: NonNegativeInt,
+});
+export type OrchestrationV2ShellActivity = typeof OrchestrationV2ShellActivity.Type;
+
 export const OrchestrationV2ThreadShell = Schema.Struct({
   ...OrchestrationV2CreationFields,
   id: ThreadId,
@@ -2060,6 +2107,7 @@ export const OrchestrationV2ThreadShell = Schema.Struct({
   /** Guest messages waiting for the owner to send or dismiss. Absent from older servers. */
   pendingGuestMessageCount: Schema.optional(NonNegativeInt),
   latestVisibleMessage: Schema.NullOr(OrchestrationV2LatestVisibleMessageSummary),
+  activity: Schema.optional(Schema.NullOr(OrchestrationV2ShellActivity)),
   latestUserMessageAt: Schema.NullOr(Schema.DateTimeUtc),
   /** Excludes wakes and agent messages that advance latestUserMessageAt through the user role. */
   latestUserAuthoredMessageAt: Schema.optional(Schema.NullOr(Schema.DateTimeUtc)),
@@ -2646,6 +2694,19 @@ export const OrchestrationV2LatestVisibleMessageSummaryJson =
 export type OrchestrationV2LatestVisibleMessageSummaryJson =
   typeof OrchestrationV2LatestVisibleMessageSummaryJson.Type;
 
+export const OrchestrationV2ShellActivityJson = OrchestrationV2ShellActivity.mapFields(
+  (fields) => ({
+    ...fields,
+    subagents: Schema.Array(
+      OrchestrationV2ShellSubagent.mapFields((subagent) => ({
+        ...subagent,
+        startedAt: Schema.NullOr(Schema.DateTimeUtcFromString),
+        completedAt: Schema.NullOr(Schema.DateTimeUtcFromString),
+      })),
+    ),
+  }),
+);
+
 export const OrchestrationV2ThreadShellJson = OrchestrationV2ThreadShell.mapFields((fields) => ({
   ...fields,
   latestRunRequestedAt: Schema.optional(Schema.NullOr(Schema.DateTimeUtcFromString)),
@@ -2654,6 +2715,7 @@ export const OrchestrationV2ThreadShellJson = OrchestrationV2ThreadShell.mapFiel
   activityRunStartedAt: Schema.optional(Schema.NullOr(Schema.DateTimeUtcFromString)),
   pendingRuntimeRequest: Schema.NullOr(OrchestrationV2PendingRuntimeRequestSummaryJson),
   latestVisibleMessage: Schema.NullOr(OrchestrationV2LatestVisibleMessageSummaryJson),
+  activity: Schema.optional(Schema.NullOr(OrchestrationV2ShellActivityJson)),
   latestUserMessageAt: Schema.NullOr(Schema.DateTimeUtcFromString),
   latestUserAuthoredMessageAt: Schema.optional(Schema.NullOr(Schema.DateTimeUtcFromString)),
   createdAt: Schema.DateTimeUtcFromString,

@@ -404,6 +404,196 @@ it.effect("SQL shells flag only an active turn blocked solely on T3 thread waits
   }).pipe(Effect.provide(layerTest)),
 );
 
+it.effect("SQL shells summarize the presented run's step, stats and subagents", () =>
+  Effect.gen(function* () {
+    const store = yield* ProjectionStore.ProjectionStoreV2;
+    const threadId = yield* addRolledBackRecoveryCandidate("card-activity");
+    const initial = yield* store.getThreadProjection(threadId);
+    const at = initial.updatedAt;
+    const previousCommand = initial.turnItems.find((item) => item.type === "command_execution")!;
+    yield* store.apply({
+      id: EventId.make("event:card-activity:previous-completed"),
+      type: "run.updated",
+      threadId,
+      occurredAt: at,
+      payload: { ...initial.runs[0]!, status: "completed", completedAt: at },
+    });
+    const run = {
+      ...initial.runs[0]!,
+      id: RunId.make("run:card-activity:active"),
+      ordinal: 2,
+      status: "running" as const,
+      completedAt: null,
+    };
+    yield* store.apply({
+      id: EventId.make("event:card-activity:active"),
+      type: "run.created",
+      threadId,
+      occurredAt: at,
+      payload: run,
+    });
+    let ordinal = 100;
+    const updateItem = (payload: OrchestrationV2TurnItem) =>
+      store.apply({
+        id: EventId.make(`event:card-activity:item:${ordinal}`),
+        type: "turn-item.updated",
+        threadId,
+        runId: payload.runId ?? undefined,
+        driver,
+        occurredAt: at,
+        payload,
+      });
+    const base = () => ({
+      ...previousCommand,
+      providerThreadId: previousCommand.providerThreadId ?? null,
+      providerTurnId: previousCommand.providerTurnId ?? null,
+      nativeItemRef: previousCommand.nativeItemRef ?? null,
+      parentItemId: previousCommand.parentItemId ?? null,
+      id: TurnItemId.make(`item:card-activity:${ordinal}`),
+      runId: run.id,
+      ordinal: ordinal++,
+      status: "completed" as const,
+    });
+    const activity = Effect.gen(function* () {
+      const listed = (yield* store.getShellSnapshot()).threads.find((row) => row.id === threadId);
+      const single = yield* store.getThreadShell(threadId);
+      assert.deepEqual(listed?.activity, single?.activity);
+      return single?.activity;
+    });
+
+    yield* updateItem({
+      ...base(),
+      type: "command_execution",
+      status: "running",
+      input: "\n  vp test run src/auth\necho done",
+    });
+    assert.deepEqual((yield* activity)?.step, {
+      kind: "command",
+      text: "vp test run src/auth",
+      status: "running",
+    });
+    assert.isUndefined((yield* activity)?.files);
+
+    yield* updateItem({
+      ...base(),
+      type: "file_change",
+      fileName: "a.ts",
+      additions: 3,
+      deletions: 1,
+    });
+    yield* updateItem({ ...base(), type: "file_change", fileName: "b.ts" });
+    const subagent = {
+      type: "subagent" as const,
+      origin: "provider_native" as const,
+      driver,
+      providerInstanceId,
+      prompt: "Check",
+    };
+    yield* updateItem({
+      ...base(),
+      ...subagent,
+      status: "running",
+      title: "Check web auth",
+      subagentId: NodeId.make("node:card-activity:web"),
+      childThreadId: ThreadId.make("child-web"),
+      progress: "Reading 6 files",
+      result: null,
+    });
+    yield* updateItem({
+      ...base(),
+      ...subagent,
+      status: "failed",
+      title: "Run auth tests",
+      subagentId: NodeId.make("node:card-activity:tests"),
+      childThreadId: null,
+      progress: "Running tests",
+      result: "3 failed in session.test.ts\nstack",
+    });
+    yield* updateItem({ ...base(), type: "reasoning", text: "Thinking", streaming: false });
+
+    const live = yield* activity;
+    assert.deepEqual(live?.step, { kind: "subagent", text: "Run auth tests", status: "failed" });
+    assert.equal(live?.stepCount, 5);
+    assert.deepEqual(live?.files, { changed: 2, additions: 3, deletions: 1 });
+    assert.equal(live?.subagentCount, 2);
+    assert.deepEqual(
+      live?.subagents.map(({ threadId, title, status, step }) => ({
+        threadId,
+        title,
+        status,
+        step,
+      })),
+      [
+        {
+          threadId: ThreadId.make("child-web"),
+          title: "Check web auth",
+          status: "running",
+          step: "Reading 6 files",
+        },
+        {
+          threadId: null,
+          title: "Run auth tests",
+          status: "failed",
+          step: "3 failed in session.test.ts",
+        },
+      ],
+    );
+
+    yield* store.apply({
+      id: EventId.make("event:card-activity:checkpoint"),
+      type: "checkpoint.captured",
+      threadId,
+      occurredAt: at,
+      payload: {
+        id: CheckpointId.make("checkpoint:card-activity"),
+        threadId,
+        scopeId: CheckpointScopeId.make("scope:card-activity"),
+        runId: run.id,
+        nodeId: NodeId.make("node:card-activity:root"),
+        parentCheckpointId: null,
+        ordinalWithinScope: 2,
+        appRunOrdinal: 2,
+        ref: CheckpointRef.make("refs/t3/card-activity/2"),
+        status: "ready",
+        files: [
+          { path: "a.ts", kind: "modified", additions: 4, deletions: 1 },
+          { path: "b.ts", kind: "added", additions: 10, deletions: 0 },
+          { path: "c.ts", kind: "deleted", additions: 0, deletions: 7 },
+        ],
+        capturedAt: at,
+      },
+    });
+    assert.deepEqual((yield* activity)?.files, { changed: 3, additions: 14, deletions: 8 });
+
+    yield* updateItem({
+      ...base(),
+      ...subagent,
+      id: TurnItemId.make("item:card-activity:103"),
+      ordinal: 103,
+      status: "cancelled",
+      title: "Check web auth",
+      subagentId: NodeId.make("node:card-activity:web"),
+      childThreadId: ThreadId.make("child-web"),
+      progress: "Reading 6 files",
+      result: null,
+    });
+    yield* updateItem({
+      ...base(),
+      type: "assistant_message",
+      messageId: MessageId.make("message:card-activity:reply"),
+      text: "## **Done**: fixed `session.ts`\n\nDetails",
+      streaming: false,
+    });
+    const ended = yield* activity;
+    assert.deepEqual(ended?.step, {
+      kind: "reply",
+      text: "Done: fixed session.ts",
+      status: "completed",
+    });
+    assert.equal(ended?.subagents[0]?.step, null);
+  }).pipe(Effect.provide(layerTest)),
+);
+
 it.effect("SQL shells use the latest subagent owner for duplicate provider-thread ids", () =>
   Effect.gen(function* () {
     const store = yield* ProjectionStore.ProjectionStoreV2;

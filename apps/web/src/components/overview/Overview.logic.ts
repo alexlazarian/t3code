@@ -1,4 +1,11 @@
 import type { EnvironmentConnectionPhase } from "@t3tools/client-runtime/connection";
+import { commandDisplayText } from "@t3tools/client-runtime/work-log/command-label";
+import {
+  isOrchestrationV2WorkActive,
+  type OrchestrationV2ShellActivity,
+  type OrchestrationV2ShellStep,
+  type OrchestrationV2ShellSubagent,
+} from "@t3tools/contracts";
 
 import type { SidebarThreadSummary } from "../../types";
 import type { SidebarProjectSnapshot } from "../../sidebarProjectGrouping";
@@ -170,26 +177,127 @@ export function overviewColumnMachines(
   }));
 }
 
-export type OverviewLaunchCell = {
-  readonly glyph: "play" | "!" | "?" | "P" | "x" | "hollow" | "stop";
-  /** Lit cells take the status color; unlit ones stay dark like an idle clip slot. */
-  readonly lit: "working" | "needs-you" | "failed" | null;
+export type OverviewLight = "working" | "needs-you" | "failed" | "waiting" | "done";
+
+const LIGHTS: Partial<Record<SidebarStatusLabel["icon"], OverviewLight>> = {
+  working: "working",
+  approval: "needs-you",
+  input: "needs-you",
+  request: "needs-you",
+  plan: "needs-you",
+  failed: "failed",
+  waiting: "waiting",
 };
 
-const STOPPED_CELL: OverviewLaunchCell = { glyph: "stop", lit: null };
-const LAUNCH_CELLS: Partial<Record<SidebarStatusLabel["icon"], OverviewLaunchCell>> = {
-  working: { glyph: "play", lit: "working" },
-  approval: { glyph: "!", lit: "needs-you" },
-  input: { glyph: "?", lit: "needs-you" },
-  request: { glyph: "?", lit: "needs-you" },
-  plan: { glyph: "P", lit: "needs-you" },
-  failed: { glyph: "x", lit: "failed" },
-  waiting: { glyph: "hollow", lit: null },
+/** The card's status light; Done, Woke and unlabeled threads show a hollow one. */
+export function overviewLight(icon: SidebarStatusLabel["icon"] | null): OverviewLight {
+  return (icon === null ? undefined : LIGHTS[icon]) ?? "done";
+}
+
+const STROBE_PERIOD_MS = 1200;
+
+/** A negative delay from the key, so each light strobes on its own beat and keeps it. */
+export function overviewStrobeDelay(key: string): string {
+  let hash = 0;
+  for (let index = 0; index < key.length; index += 1) {
+    hash = (hash * 31 + key.charCodeAt(index)) | 0;
+  }
+  return `-${Math.abs(hash) % STROBE_PERIOD_MS}ms`;
+}
+
+export type OverviewSubagentState = "running" | "failed" | "done";
+
+export function overviewSubagentState(
+  status: OrchestrationV2ShellSubagent["status"],
+): OverviewSubagentState {
+  if (isOrchestrationV2WorkActive(status)) return "running";
+  return status === "failed" ? "failed" : "done";
+}
+
+export type OverviewStepLine = {
+  readonly tone: "normal" | "needs-you" | "failed" | "dim";
+  readonly text: string;
+  /** Shown after `text` in monospace: a command, file or search pattern. */
+  readonly code?: string;
 };
 
-/** The clip-slot cell on a card's left edge; Done, Woke and unlabeled threads show a stop square. */
-export function overviewLaunchCell(icon: SidebarStatusLabel["icon"] | null): OverviewLaunchCell {
-  return (icon === null ? undefined : LAUNCH_CELLS[icon]) ?? STOPPED_CELL;
+/** Drops a leading `cd <dir> &&` so the line starts with the command that matters. */
+function overviewCommandText(command: string): string {
+  return commandDisplayText(command)
+    .replace(/^(?:cd\s+(?:"[^"]*"|'[^']*'|\S+)\s*(?:&&|;)\s*)+/u, "")
+    .trim();
+}
+
+function shortPath(path: string): string {
+  return path.split(/[\\/]/u).filter(Boolean).slice(-2).join("/") || path;
+}
+
+function describeStep(step: OrchestrationV2ShellStep): { text: string; code?: string } {
+  const live = isOrchestrationV2WorkActive(step.status);
+  switch (step.kind) {
+    case "command":
+      return { text: live ? "Running " : "Ran ", code: overviewCommandText(step.text) };
+    case "file_change":
+      return { text: live ? "Editing " : "Edited ", code: shortPath(step.text) };
+    case "file_search":
+      return { text: live ? "Searching for " : "Searched for ", code: step.text };
+    case "web_search":
+      return { text: `${live ? "Searching" : "Searched"} the web for ${step.text}` };
+    case "question":
+      return { text: `Asks: ${step.text}` };
+    case "approval":
+      return { text: `Wants approval: ${step.text}` };
+    case "subagent":
+      return { text: `Subagent: ${step.text}` };
+    case "tool":
+    case "reply":
+      return { text: step.text };
+  }
+}
+
+/**
+ * The card's step line: the error when failed, the lead's newest step otherwise, or "Waiting on N
+ * subagents" while the lead only waits on them. Null when there is nothing to say.
+ */
+export function overviewStepLine(input: {
+  readonly icon: SidebarStatusLabel["icon"] | null;
+  readonly activity: OrchestrationV2ShellActivity | null;
+  readonly lastError: string | null;
+  readonly blockedOnThreadWait: boolean;
+}): OverviewStepLine | null {
+  const light = overviewLight(input.icon);
+  if (light === "failed") {
+    return { tone: "failed", text: firstLine(input.lastError) ?? "Failed" };
+  }
+  const running = overviewRunningSubagents(input.activity);
+  const step = input.activity?.step ?? null;
+  if (
+    light === "working" &&
+    running > 0 &&
+    (step === null || step.kind === "subagent" || input.blockedOnThreadWait)
+  ) {
+    return { tone: "dim", text: `Waiting on ${running} subagent${running === 1 ? "" : "s"}` };
+  }
+  if (input.icon === "plan") return { tone: "needs-you", text: "Plan ready to review" };
+  if (step === null) return null;
+  const tone = light === "needs-you" ? "needs-you" : light === "done" ? "dim" : "normal";
+  return { tone, ...describeStep(step) };
+}
+
+export function overviewRunningSubagents(activity: OrchestrationV2ShellActivity | null): number {
+  return (
+    activity?.subagents.filter((subagent) => overviewSubagentState(subagent.status) === "running")
+      .length ?? 0
+  );
+}
+
+function firstLine(text: string | null): string | null {
+  return (
+    text
+      ?.split("\n")
+      .map((line) => line.trim())
+      .find((line) => line.length > 0) ?? null
+  );
 }
 
 const MIN_OVERVIEW_GRID_PX = 96;

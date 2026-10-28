@@ -1,8 +1,11 @@
-import { resolveThreadCurrentPullRequestLink } from "@t3tools/client-runtime/thread-pull-requests";
+import { scopedThreadKey, scopeThreadRef } from "@t3tools/client-runtime/environment";
 import { resolveSettledThreadTimestamp } from "@t3tools/client-runtime/state/thread-sort";
-import { Fragment, memo, type KeyboardEvent, type MouseEvent } from "react";
+import type { OrchestrationV2ShellSubagent } from "@t3tools/contracts";
+import * as DateTime from "effect/DateTime";
+import { memo, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
 
 import { readLocalApi } from "../../localApi";
+import { observeVisibleAnimation } from "~/lib/visibleAnimation";
 import { deriveActiveWorkStartedAt } from "../../session-logic";
 import { cn } from "~/lib/utils";
 import type { SidebarThreadSummary } from "../../types";
@@ -18,13 +21,66 @@ import {
   threadShellKey,
   type SidebarSection,
 } from "../Sidebar.logic";
+import type { SidebarProviderEntry } from "../sidebar/SidebarThreadRow";
 import { AgentElapsed } from "../chat/AgentElapsed";
-import { overviewLaunchCell, type OverviewLaunchCell } from "./Overview.logic";
+import { ProviderInstanceIcon } from "../chat/ProviderInstanceIcon";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
+import {
+  overviewLight,
+  overviewRunningSubagents,
+  overviewStepLine,
+  overviewStrobeDelay,
+  overviewSubagentState,
+  type OverviewLight,
+  type OverviewStepLine,
+  type OverviewSubagentState,
+} from "./Overview.logic";
 
-const LIT_CELL: Record<NonNullable<OverviewLaunchCell["lit"]>, string> = {
-  working: "bg-status-working text-background",
-  "needs-you": "bg-status-needs-you text-background",
-  failed: "bg-status-failed text-background",
+const LIGHT_CLASS: Record<OverviewLight, string> = {
+  working: "bg-status-working",
+  "needs-you": "bg-status-needs-you",
+  failed: "bg-status-failed",
+  waiting: "bg-muted-foreground/45",
+  done: "border border-muted-foreground/45",
+};
+
+// Like a clip's name bar: tinted while there is something to see, plain once it is quiet.
+const HEADER_CLASS: Record<OverviewLight, string> = {
+  working: "bg-[color-mix(in_oklab,var(--status-working)_16%,var(--muted))]",
+  "needs-you": "bg-[color-mix(in_oklab,var(--status-needs-you)_16%,var(--muted))]",
+  failed: "bg-[color-mix(in_oklab,var(--status-failed)_16%,var(--muted))]",
+  waiting: "bg-secondary",
+  done: "bg-secondary",
+};
+
+const STEP_TONE_CLASS: Record<OverviewStepLine["tone"], string> = {
+  normal: "text-foreground",
+  "needs-you": "text-status-needs-you",
+  failed: "text-status-failed",
+  dim: "text-muted-foreground",
+};
+
+const SUBAGENT_LIGHT: Record<OverviewSubagentState, OverviewLight> = {
+  running: "working",
+  failed: "failed",
+  done: "done",
+};
+
+const SUBAGENT_FALLBACK: Record<OrchestrationV2ShellSubagent["status"], string> = {
+  idle: "Done",
+  pending: "Starting",
+  running: "Working",
+  waiting: "Working",
+  completed: "Done",
+  failed: "Failed",
+  cancelled: "Stopped",
+  interrupted: "Stopped",
+};
+
+const SQUARE_CLASS: Record<OverviewSubagentState, string> = {
+  running: "bg-status-working",
+  failed: "bg-status-failed",
+  done: "bg-muted-foreground/45",
 };
 
 export const OverviewCard = memo(function OverviewCard(props: {
@@ -33,6 +89,7 @@ export const OverviewCard = memo(function OverviewCard(props: {
   readonly projectName: string;
   readonly machineLabel: string | null;
   readonly providerName: string;
+  readonly providerEntry: SidebarProviderEntry | undefined;
   readonly lastVisitedAt: string | undefined;
   readonly wokeAt: string | null;
   readonly offline: boolean;
@@ -42,6 +99,7 @@ export const OverviewCard = memo(function OverviewCard(props: {
   readonly onSelect: (threadKey: string) => void;
 }) {
   const { thread, lastVisitedAt } = props;
+  const [expanded, setExpanded] = useState(false);
   const threadKey = threadShellKey(thread);
   const isUnread = hasUnseenCompletion({ ...thread, lastVisitedAt });
   const status = resolveSidebarStatusLabel({
@@ -56,33 +114,24 @@ export const OverviewCard = memo(function OverviewCard(props: {
       settledOverride: thread.settledOverride,
     }),
   });
-  const cell = overviewLaunchCell(status?.icon ?? null);
-  const working = status?.icon === "working";
+  const icon = status?.icon ?? null;
+  const light = overviewLight(icon);
+  const working = light === "working";
+  const activity = thread.source.activity ?? null;
+  const subagents = activity?.subagents ?? [];
+  const subagentCount = activity?.subagentCount ?? 0;
+  const runningSubagents = overviewRunningSubagents(activity);
+  const step = overviewStepLine({
+    icon,
+    activity,
+    lastError: thread.runtime?.lastError ?? null,
+    blockedOnThreadWait: thread.blockedOnThreadWait ?? false,
+  });
+  const leadWaiting = step?.tone === "dim" && working && runningSubagents > 0;
   const workingSince = working
     ? deriveActiveWorkStartedAt(thread.latestRun, thread.runtime, null)
     : null;
-  const quiet = status === null || (status.icon === "done" && !isUnread);
-  const prNumber = (
-    resolveThreadCurrentPullRequestLink(thread.pullRequests) ??
-    thread.linkedPullRequest ??
-    thread.branchPullRequest
-  )?.number;
-  const meta = [
-    status ? (
-      <span key="status" className={cn("font-semibold", status.className)}>
-        {status.label}
-      </span>
-    ) : null,
-    <span key="provider" className="truncate">
-      {props.providerName}
-    </span>,
-    props.machineLabel ? (
-      <span key="machine" className="truncate">
-        {props.machineLabel}
-      </span>
-    ) : null,
-    prNumber === undefined ? null : <span key="pr">#{prNumber}</span>,
-  ].filter((part) => part !== null);
+  const files = activity?.files;
 
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.key === "Enter") {
@@ -106,6 +155,12 @@ export const OverviewCard = memo(function OverviewCard(props: {
         if (action === "open-in-list") props.onOpen(threadKey);
       });
   };
+  // The count and the rows act on their own, so the card's own handlers must not see them.
+  const isolate = (event: MouseEvent | KeyboardEvent) => event.stopPropagation();
+  const openSubagent = (subagent: OrchestrationV2ShellSubagent) => {
+    if (subagent.threadId === null) return;
+    props.onSelect(scopedThreadKey(scopeThreadRef(thread.environmentId, subagent.threadId)));
+  };
 
   return (
     <div
@@ -119,8 +174,9 @@ export const OverviewCard = memo(function OverviewCard(props: {
       onDoubleClick={() => props.onOpen(threadKey)}
       onKeyDown={handleKeyDown}
       onContextMenu={handleContextMenu}
+      style={{ "--strobe-delay": overviewStrobeDelay(threadKey) } as CSSProperties}
       className={cn(
-        "grid min-h-9 cursor-pointer grid-cols-[20px_minmax(0,1fr)] border border-border bg-muted text-foreground outline-0 -outline-offset-1 outline-ring select-none focus-visible:outline-2",
+        "min-w-0 cursor-pointer border border-border bg-muted text-foreground outline-0 -outline-offset-1 outline-ring select-none focus-visible:outline-2",
         props.selected && "outline-2 outline-primary",
         props.offline
           ? "opacity-50"
@@ -128,42 +184,91 @@ export const OverviewCard = memo(function OverviewCard(props: {
               "opacity-55 saturate-50",
       )}
     >
-      <span
-        aria-hidden
+      <div
         className={cn(
-          "flex items-center justify-center border-r border-border text-2xs font-bold",
-          cell.lit === null ? "bg-background text-muted-foreground" : LIT_CELL[cell.lit],
+          "flex min-w-0 items-center gap-1.5 border-b border-border px-1.75 py-0.75",
+          HEADER_CLASS[light],
         )}
       >
-        {cell.glyph === "play" || cell.glyph === "hollow" ? (
-          <span
-            className={cn(
-              "ms-px size-0 border-y-4 border-l-6 border-y-transparent border-l-current",
-              cell.glyph === "hollow" && "opacity-80",
-            )}
-          />
-        ) : cell.glyph === "stop" ? (
-          <span className="size-2.25 bg-muted-foreground/45" />
-        ) : (
-          cell.glyph
-        )}
-      </span>
-      <span className="min-w-0 px-1.5 py-0.75">
-        <span className="flex min-w-0 items-center gap-1.5">
-          <span
-            className={cn(
-              "min-w-0 flex-1 truncate text-xs",
-              quiet ? "text-muted-foreground" : "font-semibold",
-            )}
+        <StatusLight light={light} strobe={working || runningSubagents > 0} />
+        <span
+          className={cn(
+            "min-w-0 flex-1 truncate text-xs",
+            light === "done" ? "text-muted-foreground" : "font-semibold",
+          )}
+        >
+          {thread.title}
+        </span>
+        {subagentCount > 0 ? (
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-label={`${expanded ? "Hide" : "Show"} the lead and its ${subagentCount} subagent${subagentCount === 1 ? "" : "s"}`}
+            onClick={(event) => {
+              isolate(event);
+              setExpanded(!expanded);
+            }}
+            onDoubleClick={isolate}
+            onKeyDown={isolate}
+            className="flex shrink-0 cursor-pointer items-center gap-0.75 border border-transparent px-0.5 text-3xs text-muted-foreground outline-0 outline-ring hover:border-accent focus-visible:outline-2"
           >
-            {thread.title}
-          </span>
-          <span
-            className={cn(
-              "shrink-0 text-3xs tabular-nums",
-              working ? "text-status-working" : "text-muted-foreground",
+            <span aria-hidden className="flex items-center gap-0.5">
+              {subagents.map((subagent, index) => (
+                <span
+                  // oxlint-disable-next-line react/no-array-index-key -- subagents carry no id; order is stable
+                  key={index}
+                  className={cn("size-1.25", SQUARE_CLASS[overviewSubagentState(subagent.status)])}
+                />
+              ))}
+            </span>
+            {subagentCount} {subagentCount === 1 ? "agent" : "agents"}
+          </button>
+        ) : null}
+        <Tooltip>
+          <TooltipTrigger info={props.providerName} render={<span className="flex shrink-0" />}>
+            {props.providerEntry ? (
+              <ProviderInstanceIcon
+                driverKind={props.providerEntry.driverKind}
+                displayName={props.providerName}
+                accentColor={props.providerEntry.accentColor}
+                acpRegistryAgentId={props.providerEntry.acpRegistryAgentId}
+                acpRegistryIconUrl={props.providerEntry.acpRegistryIconUrl}
+                iconClassName="size-3"
+              />
+            ) : (
+              <span className="text-3xs text-muted-foreground">{props.providerName}</span>
             )}
-          >
+          </TooltipTrigger>
+          <TooltipPopup>{props.providerName}</TooltipPopup>
+        </Tooltip>
+      </div>
+      <div className="min-w-0 px-1.75 pt-0.75 pb-1 text-3xs leading-normal">
+        {step ? <StepText step={step} className="block" /> : null}
+        <span className="flex gap-1.75 overflow-hidden whitespace-nowrap text-muted-foreground/80">
+          {activity && activity.stepCount > 0 ? (
+            <span>
+              {activity.stepCount} step{activity.stepCount === 1 ? "" : "s"}
+            </span>
+          ) : null}
+          {files ? (
+            files.changed === 0 ? (
+              <span>no changes</span>
+            ) : (
+              <>
+                <span>
+                  {files.changed} file{files.changed === 1 ? "" : "s"}
+                </span>
+                {files.additions !== undefined ? (
+                  <span className="text-status-working">+{files.additions}</span>
+                ) : null}
+                {files.deletions !== undefined ? (
+                  <span className="text-status-failed">-{files.deletions}</span>
+                ) : null}
+              </>
+            )
+          ) : null}
+          {props.machineLabel ? <span className="truncate">{props.machineLabel}</span> : null}
+          <span className={cn("ml-auto shrink-0 tabular-nums", working && "text-status-working")}>
             {workingSince !== null ? (
               <AgentElapsed
                 agent={{ status: "running", startedAt: workingSince, completedAt: null }}
@@ -179,15 +284,115 @@ export const OverviewCard = memo(function OverviewCard(props: {
             )}
           </span>
         </span>
-        <span className="flex gap-1.5 overflow-hidden text-3xs whitespace-nowrap text-muted-foreground">
-          {meta.map((part, index) => (
-            <Fragment key={part.key}>
-              {index > 0 ? <span aria-hidden>&middot;</span> : null}
-              {part}
-            </Fragment>
-          ))}
-        </span>
-      </span>
+      </div>
+      {expanded && subagentCount > 0 ? (
+        <div className="border-t border-border bg-card px-1.75 pt-0.5 pb-0.75 text-3xs leading-relaxed">
+          <div
+            className="mb-px flex min-w-0 items-center gap-1.25 border-b border-border pb-px"
+            style={{ "--strobe-delay": overviewStrobeDelay(`${threadKey}:lead`) } as CSSProperties}
+          >
+            <StatusLight
+              size="small"
+              light={leadWaiting ? "done" : light}
+              strobe={working && !leadWaiting}
+            />
+            <span className="shrink-0 font-semibold">Lead</span>
+            {step ? (
+              <StepText step={step} className="min-w-0 flex-1" />
+            ) : (
+              <span className="min-w-0 flex-1" />
+            )}
+          </div>
+          {subagents.map((subagent, index) => {
+            const state = overviewSubagentState(subagent.status);
+            return (
+              <button
+                // oxlint-disable-next-line react/no-array-index-key -- subagents carry no id; order is stable
+                key={index}
+                type="button"
+                disabled={subagent.threadId === null}
+                onClick={(event) => {
+                  isolate(event);
+                  openSubagent(subagent);
+                }}
+                onDoubleClick={isolate}
+                onKeyDown={isolate}
+                data-info={subagent.threadId === null ? undefined : "Open this subagent's thread"}
+                style={
+                  {
+                    "--strobe-delay": overviewStrobeDelay(`${threadKey}:${index}`),
+                  } as CSSProperties
+                }
+                className="flex w-full min-w-0 cursor-pointer items-center gap-1.25 text-left outline-0 outline-ring hover:bg-accent focus-visible:outline-2 disabled:cursor-default disabled:hover:bg-transparent"
+              >
+                <StatusLight
+                  size="small"
+                  light={SUBAGENT_LIGHT[state]}
+                  strobe={state === "running"}
+                />
+                <span className="max-w-[48%] shrink-0 truncate text-foreground">
+                  {subagent.title}
+                </span>
+                <span
+                  className={cn(
+                    "min-w-0 flex-1 truncate",
+                    state === "failed" ? "text-status-failed" : "text-muted-foreground",
+                  )}
+                >
+                  {subagent.step ?? SUBAGENT_FALLBACK[subagent.status]}
+                </span>
+                <span className="shrink-0 text-muted-foreground/80 tabular-nums">
+                  <AgentElapsed
+                    agent={{
+                      status: subagent.status,
+                      startedAt: isoOrNull(subagent.startedAt),
+                      completedAt: isoOrNull(subagent.completedAt),
+                    }}
+                  />
+                </span>
+              </button>
+            );
+          })}
+          {subagentCount > subagents.length ? (
+            <div className="text-muted-foreground/80">
+              {subagentCount - subagents.length} earlier subagents
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 });
+
+function isoOrNull(value: DateTime.Utc | null): string | null {
+  return value === null ? null : DateTime.formatIso(value);
+}
+
+function StatusLight(props: {
+  readonly light: OverviewLight;
+  readonly strobe: boolean;
+  readonly size?: "small";
+}) {
+  return (
+    <span
+      aria-hidden
+      ref={props.strobe ? observeVisibleAnimation : undefined}
+      className={cn(
+        "relative shrink-0",
+        props.size === "small" ? "size-1.25" : "size-1.75",
+        LIGHT_CLASS[props.light],
+        props.light !== "done" && "ring-1 ring-black/50",
+        props.strobe && "overview-strobe",
+      )}
+    />
+  );
+}
+
+function StepText(props: { readonly step: OverviewStepLine; readonly className?: string }) {
+  return (
+    <span className={cn("truncate", STEP_TONE_CLASS[props.step.tone], props.className)}>
+      {props.step.text}
+      {props.step.code ? <code className="font-mono">{props.step.code}</code> : null}
+    </span>
+  );
+}

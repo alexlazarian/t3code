@@ -1,6 +1,14 @@
 import { pendingGuestMessageCount } from "@t3tools/contracts";
 import { applyThreadPullRequestLinkUpdate } from "../sourceControl/threadPullRequests.ts";
 import { projectTurnItemForWire } from "./WireProjection.ts";
+import {
+  SHELL_COUNTED_STEP_ITEM_TYPES,
+  SHELL_STEP_ITEM_TYPES,
+  shellActivityByRunId,
+  type ShellActivityFilesRow,
+  type ShellActivityStepRow,
+  type ShellActivitySubagentRow,
+} from "./ShellActivity.ts";
 import * as Stream from "effect/Stream";
 import * as NodeSqliteClient from "@t3tools/shared/nodeSqliteClient";
 import { makeThreadFind } from "./ThreadFind.ts";
@@ -34,6 +42,7 @@ import type {
   OrchestrationV2Run,
   OrchestrationV2Subagent,
   OrchestrationV2ThreadShellSnapshot,
+  OrchestrationV2ShellActivity,
   OrchestrationV2ShellThreadStatus,
   OrchestrationV2ThreadShell,
   OrchestrationV2ThreadProjection,
@@ -1725,6 +1734,7 @@ function visibleItemCountForShell(input: {
 function shellFromState(input: {
   readonly state: ShellThreadState;
   readonly visibleItemCount: number;
+  readonly activityByRunId: ReadonlyMap<RunId, OrchestrationV2ShellActivity>;
 }): OrchestrationV2ThreadShell {
   return {
     createdBy: input.state.thread.createdBy,
@@ -1777,6 +1787,10 @@ function shellFromState(input: {
     pendingRuntimeRequest: input.state.pendingRuntimeRequest,
     pendingGuestMessageCount: pendingGuestMessageCount(input.state.thread.guestShare),
     latestVisibleMessage: null,
+    activity:
+      input.state.latestRunId === null
+        ? null
+        : (input.activityByRunId.get(input.state.latestRunId) ?? null),
     latestUserMessageAt: input.state.latestUserMessageAt,
     latestUserAuthoredMessageAt: input.state.latestUserAuthoredMessageAt,
     hasActionableProposedPlan: input.state.hasActionableProposedPlan,
@@ -6024,6 +6038,107 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
       }
     `;
 
+    // Ranks item ids first so only each run's newest step reads its payload.
+    const selectShellActivityStepRows = (runIds: ReadonlyArray<string>) =>
+      sql<ShellActivityStepRow>`
+        WITH ranked AS (
+          SELECT i.run_id, i.turn_item_id,
+            ROW_NUMBER() OVER (
+              PARTITION BY i.run_id ORDER BY i.ordinal DESC, i.turn_item_id DESC
+            ) AS rank,
+            SUM(CASE WHEN i.type IN ${sql.in(SHELL_COUNTED_STEP_ITEM_TYPES)} THEN 1 ELSE 0 END)
+              OVER (PARTITION BY i.run_id) AS step_count
+          FROM orchestration_v2_projection_turn_items i
+          WHERE i.run_id IN ${sql.in(runIds)} AND i.type IN ${sql.in(SHELL_STEP_ITEM_TYPES)}
+        )
+        SELECT ranked.run_id, ranked.step_count, item.type, item.status,
+          substr(CASE item.type
+            WHEN 'command_execution' THEN json_extract(item.payload_json, '$.input')
+            WHEN 'file_change' THEN json_extract(item.payload_json, '$.fileName')
+            WHEN 'file_search' THEN json_extract(item.payload_json, '$.pattern')
+            WHEN 'web_search' THEN json_extract(item.payload_json, '$.patterns[0]')
+            WHEN 'dynamic_tool' THEN coalesce(
+              json_extract(item.payload_json, '$.title'),
+              json_extract(item.payload_json, '$.toolName')
+            )
+            WHEN 'approval_request' THEN coalesce(
+              json_extract(item.payload_json, '$.prompt'),
+              json_extract(item.payload_json, '$.reason'),
+              json_extract(item.payload_json, '$.title')
+            )
+            WHEN 'user_input_request'
+              THEN json_extract(item.payload_json, '$.questions[0].question')
+            WHEN 'assistant_message' THEN json_extract(item.payload_json, '$.text')
+            WHEN 'subagent' THEN json_extract(item.payload_json, '$.title')
+          END, 1, 2000) AS text
+        FROM ranked
+        INNER JOIN orchestration_v2_projection_turn_items item
+          ON item.turn_item_id = ranked.turn_item_id
+        WHERE ranked.rank = 1
+      `;
+
+    const selectShellActivitySubagentRows = (runIds: ReadonlyArray<string>) =>
+      sql<ShellActivitySubagentRow>`
+        SELECT run_id,
+          json_extract(payload_json, '$.childThreadId') AS child_thread_id,
+          substr(json_extract(payload_json, '$.title'), 1, 400) AS title,
+          status,
+          substr(json_extract(payload_json, '$.progress'), 1, 2000) AS progress,
+          substr(json_extract(payload_json, '$.result'), 1, 2000) AS result,
+          json_extract(payload_json, '$.startedAt') AS started_at,
+          json_extract(payload_json, '$.completedAt') AS completed_at
+        FROM orchestration_v2_projection_turn_items
+        WHERE run_id IN ${sql.in(runIds)} AND type = 'subagent'
+        ORDER BY run_id, ordinal
+      `;
+
+    const selectShellActivityFilesRows = (
+      threadIds: ReadonlyArray<string>,
+      runIds: ReadonlyArray<string>,
+    ) =>
+      sql<ShellActivityFilesRow>`
+        SELECT checkpoint.run_id, 'checkpoint' AS source,
+          json_array_length(checkpoint.payload_json, '$.files') AS changed,
+          (SELECT SUM(json_extract(file.value, '$.additions'))
+            FROM json_each(checkpoint.payload_json, '$.files') file) AS additions,
+          (SELECT SUM(json_extract(file.value, '$.deletions'))
+            FROM json_each(checkpoint.payload_json, '$.files') file) AS deletions
+        FROM orchestration_v2_projection_checkpoints checkpoint
+        WHERE checkpoint.thread_id IN ${sql.in(threadIds)}
+          AND checkpoint.run_id IN ${sql.in(runIds)}
+          AND checkpoint.status = 'ready'
+        UNION ALL
+        SELECT run_id, 'items' AS source,
+          COUNT(DISTINCT json_extract(payload_json, '$.fileName')) AS changed,
+          SUM(json_extract(payload_json, '$.additions')) AS additions,
+          SUM(json_extract(payload_json, '$.deletions')) AS deletions
+        FROM orchestration_v2_projection_turn_items
+        WHERE run_id IN ${sql.in(runIds)} AND type = 'file_change'
+        GROUP BY run_id
+      `;
+
+    const readShellActivity = Effect.fn("ProjectionStore.readShellActivity")(function* (
+      rows: ReadonlyArray<ShellThreadRow>,
+    ) {
+      const runIds = [
+        ...new Set(
+          rows.flatMap((row) =>
+            [row.latest_run_id, row.blocking_run_id].filter((id) => id !== null),
+          ),
+        ),
+      ];
+      if (runIds.length === 0) return new Map<RunId, OrchestrationV2ShellActivity>();
+      const [steps, subagents, files] = yield* Effect.all([
+        selectShellActivityStepRows(runIds),
+        selectShellActivitySubagentRows(runIds),
+        selectShellActivityFilesRows(
+          rows.map((row) => row.thread_id),
+          runIds,
+        ),
+      ]);
+      return shellActivityByRunId({ steps, subagents, files });
+    });
+
     const runMapsByThreadId = (input: {
       readonly runRows: ReadonlyArray<ShellRunRow>;
       readonly itemCountRows: ReadonlyArray<ShellRunItemCountRow>;
@@ -6506,6 +6621,7 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
         sequenceRows,
         providerThreadRows,
         pendingTurnItemRows,
+        activityByRunId,
       ] = yield* Effect.all([
         readForThreadIds(selectShellRunRows, forkSourceIds),
         readForThreadIds(selectShellRunItemCounts, forkSourceIds),
@@ -6527,6 +6643,7 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
             ),
           ),
         ),
+        readShellActivity(targetThreadRows),
       ]);
       return {
         targetThreadIds,
@@ -6537,6 +6654,7 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
         sequenceRows,
         providerThreadRows,
         pendingTurnItemRows,
+        activityByRunId,
       };
     });
 
@@ -6549,6 +6667,7 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
       sequenceRows,
       providerThreadRows,
       pendingTurnItemRows,
+      activityByRunId,
     }: Effect.Success<ReturnType<typeof readShellSnapshotRows>>) {
       const { runOrdinalsByThreadId, itemCountsByThreadId } = runMapsByThreadId({
         runRows,
@@ -6578,6 +6697,7 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
               threadId: state.thread.id,
               statesByThreadId,
             }),
+            activityByRunId,
           }),
         );
 
@@ -6708,6 +6828,7 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
               shellItemCountRows,
               providerThreadRows,
               pendingTurnItemRows,
+              activityByRunId,
             ] = yield* Effect.all([
               forkSourceIds.length === 0
                 ? Effect.succeed([] as ReadonlyArray<ShellRunRow>)
@@ -6725,6 +6846,7 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
                     : [],
                 ),
               ),
+              readShellActivity([rowsByThreadId.get(threadId)!]),
             ]);
             const { runOrdinalsByThreadId, itemCountsByThreadId } = runMapsByThreadId({
               runRows,
@@ -6752,6 +6874,7 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
             return shellFromState({
               state,
               visibleItemCount: visibleItemCountForShell({ threadId, statesByThreadId }),
+              activityByRunId,
             });
           }),
         )

@@ -2,7 +2,12 @@ import { useAtomValue } from "@effect/atom-react";
 import { threadWokeAt } from "@t3tools/client-runtime/state/thread-settled";
 import { useRouter } from "@tanstack/react-router";
 import * as Schema from "effect/Schema";
-import { parseScopedThreadKey, scopeProjectRef } from "@t3tools/client-runtime/environment";
+import {
+  parseScopedThreadKey,
+  scopedThreadKey,
+  scopeProjectRef,
+  scopeThreadRef,
+} from "@t3tools/client-runtime/environment";
 import { ChevronDownIcon, PlusIcon } from "lucide-react";
 import {
   Fragment,
@@ -94,7 +99,8 @@ const LEGEND = [
   { label: "Working", className: "bg-status-working" },
   { label: "Needs you", className: "bg-status-needs-you" },
   { label: "Failed", className: "bg-status-failed" },
-  { label: "Waiting or done", className: "border border-border bg-background" },
+  { label: "Waiting", className: "bg-muted-foreground/45" },
+  { label: "Done", className: "border border-muted-foreground/45" },
 ] as const;
 
 const ARROW_DIRECTIONS: Partial<Record<string, OverviewFocusDirection>> = {
@@ -246,8 +252,18 @@ export function OverviewView() {
   );
   const allKeys = focusGrid.flat(2);
   const tabbableKey = focusKey !== null && allKeys.includes(focusKey) ? focusKey : allKeys[0];
+  // A subagent row can open a child thread that has no card, and idle children have no shell.
   const openRef =
-    openKey !== null && threads.some((thread) => threadShellKey(thread) === openKey)
+    openKey !== null &&
+    threads.some(
+      (thread) =>
+        threadShellKey(thread) === openKey ||
+        thread.source.activity?.subagents.some(
+          (subagent) =>
+            subagent.threadId !== null &&
+            scopedThreadKey(scopeThreadRef(thread.environmentId, subagent.threadId)) === openKey,
+        ),
+    )
       ? parseScopedThreadKey(openKey)
       : null;
   if (openKey !== null && openRef === null) {
@@ -385,7 +401,7 @@ export function OverviewView() {
           <span className="ml-auto flex shrink-0 gap-2.25">
             {LEGEND.map((item) => (
               <span key={item.label} className="flex items-center gap-1">
-                <span aria-hidden className={cn("size-2.25", item.className)} />
+                <span aria-hidden className={cn("size-1.75", item.className)} />
                 {item.label}
               </span>
             ))}
@@ -486,6 +502,9 @@ export function OverviewView() {
                                   const instanceId =
                                     thread.runtime?.providerInstanceId ??
                                     thread.modelSelection.instanceId;
+                                  const providerEntry = providerEntriesByEnvironment
+                                    .get(thread.environmentId)
+                                    ?.get(instanceId);
                                   return (
                                     <OverviewCard
                                       key={key}
@@ -498,12 +517,11 @@ export function OverviewView() {
                                           ?.get(thread.environmentId) ?? null
                                       }
                                       providerName={
-                                        providerEntriesByEnvironment
-                                          .get(thread.environmentId)
-                                          ?.get(instanceId)?.displayName ??
+                                        providerEntry?.displayName ??
                                         thread.runtime?.providerName ??
                                         instanceId
                                       }
+                                      providerEntry={providerEntry}
                                       lastVisitedAt={resolveThreadLastVisitedAt(
                                         thread.lastVisitedAt,
                                         lastVisitedById[key],

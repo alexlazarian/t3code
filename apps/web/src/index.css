@@ -537,6 +537,44 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   }
 }
 
+/* An aircraft strobe: two white flashes, then dark. Stepped, so each cycle is four frames. */
+@keyframes overview-strobe {
+  0% {
+    opacity: 1;
+    animation-timing-function: steps(1, end);
+  }
+  5% {
+    opacity: 0;
+    animation-timing-function: steps(1, end);
+  }
+  11% {
+    opacity: 1;
+    animation-timing-function: steps(1, end);
+  }
+  16% {
+    opacity: 0;
+    animation-timing-function: steps(1, end);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@utility overview-strobe {
+  @media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
+    &::after {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      background: white;
+      opacity: 0;
+      animation: overview-strobe 1.2s infinite;
+      animation-delay: var(--strobe-delay, 0s);
+      animation-play-state: var(--visible-animation-state, paused);
+    }
+  }
+}
+
 @utility visible-animate-spin {
   animation: var(--animate-spin);
   animation-play-state: var(--visible-animation-state, paused);

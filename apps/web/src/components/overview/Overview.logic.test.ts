@@ -2,7 +2,14 @@ import type {
   EnvironmentConnectionPhase,
   EnvironmentServerConfig,
 } from "@t3tools/client-runtime/connection";
-import { EnvironmentId, ProjectId, ProviderInstanceId, ThreadId } from "@t3tools/contracts";
+import {
+  EnvironmentId,
+  ProjectId,
+  ProviderInstanceId,
+  ThreadId,
+  type OrchestrationV2ShellActivity,
+  type OrchestrationV2ShellSubagent,
+} from "@t3tools/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import { buildSidebarProjectSnapshots } from "../../sidebarProjectGrouping";
@@ -16,7 +23,8 @@ import {
   NO_PROJECT_KEY,
   overviewColumnMachines,
   overviewProjectKeyOf,
-  overviewLaunchCell,
+  overviewLight,
+  overviewStepLine,
   overviewSplitDragFraction,
   resolveOverviewSplitRelease,
 } from "./Overview.logic";
@@ -285,9 +293,9 @@ describe("overview offline machines", () => {
   });
 });
 
-describe("overviewLaunchCell", () => {
-  it("uses the prototype glyph for each status", () => {
-    const glyphs = (
+describe("overviewLight", () => {
+  it("maps each status to its light color", () => {
+    const lights = (
       [
         "working",
         "approval",
@@ -298,17 +306,104 @@ describe("overviewLaunchCell", () => {
         "waiting",
         "done",
         "woke",
+        null,
       ] as const
-    ).map((icon) => overviewLaunchCell(icon).glyph);
-    expect(glyphs).toEqual(["play", "!", "?", "?", "P", "x", "hollow", "stop", "stop"]);
+    ).map(overviewLight);
+    expect(lights).toEqual([
+      "working",
+      "needs-you",
+      "needs-you",
+      "needs-you",
+      "needs-you",
+      "failed",
+      "waiting",
+      "done",
+      "done",
+      "done",
+    ]);
+  });
+});
+
+describe("overviewStepLine", () => {
+  const subagent = (status: OrchestrationV2ShellSubagent["status"]) => ({
+    threadId: null,
+    title: "Check auth",
+    status,
+    step: null,
+    startedAt: null,
+    completedAt: null,
+  });
+  const activity = (
+    step: OrchestrationV2ShellActivity["step"],
+    subagents: OrchestrationV2ShellActivity["subagents"] = [],
+  ): OrchestrationV2ShellActivity => ({
+    step,
+    stepCount: 1,
+    subagents,
+    subagentCount: subagents.length,
+  });
+  const line = (
+    icon: Parameters<typeof overviewStepLine>[0]["icon"],
+    value: OrchestrationV2ShellActivity | null,
+    extra: { lastError?: string; blockedOnThreadWait?: boolean } = {},
+  ) =>
+    overviewStepLine({
+      icon,
+      activity: value,
+      lastError: extra.lastError ?? null,
+      blockedOnThreadWait: extra.blockedOnThreadWait ?? false,
+    });
+
+  it("describes the lead's step by kind and tense", () => {
+    expect(
+      line(
+        "working",
+        activity({ kind: "command", text: "cd /repo && vp test run src/auth", status: "running" }),
+      ),
+    ).toEqual({ tone: "normal", text: "Running ", code: "vp test run src/auth" });
+    expect(
+      line(
+        "working",
+        activity({ kind: "file_change", text: "/repo/src/auth/session.ts", status: "running" }),
+      ),
+    ).toEqual({ tone: "normal", text: "Editing ", code: "auth/session.ts" });
+    expect(
+      line("done", activity({ kind: "reply", text: "Added 6 shortcuts", status: "completed" })),
+    ).toEqual({ tone: "dim", text: "Added 6 shortcuts" });
+    expect(
+      line("input", activity({ kind: "question", text: "Keep the toggle?", status: "waiting" })),
+    ).toEqual({ tone: "needs-you", text: "Asks: Keep the toggle?" });
   });
 
-  it("lights the cell by status group and leaves waiting and done threads unlit", () => {
-    expect(overviewLaunchCell("working").lit).toBe("working");
-    expect(overviewLaunchCell("plan").lit).toBe(overviewLaunchCell("approval").lit);
-    expect(overviewLaunchCell("failed").lit).toBe("failed");
-    expect(overviewLaunchCell("waiting").lit).toBeNull();
-    expect(overviewLaunchCell(null)).toEqual(overviewLaunchCell("done"));
+  it("says the lead is waiting only when it has nothing of its own running", () => {
+    const running = [subagent("running"), subagent("running"), subagent("completed")];
+    expect(line("working", activity(null, running))).toEqual({
+      tone: "dim",
+      text: "Waiting on 2 subagents",
+    });
+    expect(
+      line("working", activity({ kind: "subagent", text: "Check", status: "running" }, running)),
+    ).toEqual({ tone: "dim", text: "Waiting on 2 subagents" });
+    expect(
+      line("working", activity({ kind: "command", text: "ls", status: "completed" }, running), {
+        blockedOnThreadWait: true,
+      })?.text,
+    ).toBe("Waiting on 2 subagents");
+    expect(
+      line("working", activity({ kind: "command", text: "ls", status: "running" }, running))?.text,
+    ).toBe("Running ");
+  });
+
+  it("shows the error when failed, the plan when one is ready, and nothing without a step", () => {
+    expect(line("failed", null, { lastError: "\nxcodebuild exited 65\nmore" })).toEqual({
+      tone: "failed",
+      text: "xcodebuild exited 65",
+    });
+    expect(line("plan", activity(null))).toEqual({
+      tone: "needs-you",
+      text: "Plan ready to review",
+    });
+    expect(line("working", null)).toBeNull();
   });
 });
 
