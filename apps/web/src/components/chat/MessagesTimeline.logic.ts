@@ -648,6 +648,21 @@ type MessagesTimelineRowContent =
       mcpApp: McpAppReference;
     };
 
+/** A subagent joins the rendered row above it when that row is a subagent from the same run and provider turn. */
+export function joinsSubagentBlock(
+  previous: MessagesTimelineRow | undefined,
+  projectedItem: OrchestrationV2ProjectedTurnItem,
+): previous is Extract<MessagesTimelineRow, { kind: "event" }> {
+  const item = projectedItem.item;
+  if (item.type !== "subagent" || previous?.kind !== "event") return false;
+  const above = previous.projectedItem.item;
+  return (
+    above.type === "subagent" &&
+    above.runId === item.runId &&
+    above.providerTurnId === item.providerTurnId
+  );
+}
+
 export interface StableMessagesTimelineRowsState {
   byId: Map<string, MessagesTimelineRow>;
   result: MessagesTimelineRow[];
@@ -1956,14 +1971,7 @@ export function deriveMessagesTimelineRows(input: {
 
     if (timelineEntry.kind === "event") {
       const previous = nextRows.at(-1);
-      if (
-        timelineEntry.projectedItem.item.type === "subagent" &&
-        previous?.kind === "event" &&
-        previous.projectedItem.item.type === "subagent" &&
-        previous.projectedItem.item.runId === timelineEntry.projectedItem.item.runId &&
-        previous.projectedItem.item.providerTurnId ===
-          timelineEntry.projectedItem.item.providerTurnId
-      ) {
+      if (joinsSubagentBlock(previous, timelineEntry.projectedItem)) {
         nextRows[nextRows.length - 1] = {
           ...previous,
           subagents: [

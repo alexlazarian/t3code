@@ -54,6 +54,7 @@ import { ProviderInstanceIcon, providerTextColor } from "./ProviderInstanceIcon"
 import { cn } from "~/lib/utils";
 import { TimelineSystemDivider } from "./TimelineSystemDivider";
 import { subagentResumedSince } from "./V2LifecycleRow.logic";
+import { subagentDetailLine } from "./SubagentBlock.logic";
 import { Button, InlineButton } from "../ui/button";
 import { T3Wordmark } from "../T3Wordmark";
 
@@ -63,7 +64,6 @@ const LIFECYCLE_TYPES = new Set<OrchestrationV2TurnItem["type"]>([
   "compaction",
   "handoff",
   "fork",
-  "subagent",
   "thread_created",
 ]);
 
@@ -184,25 +184,6 @@ export function V2LifecycleRow(props: {
       />
     );
   }
-  if (item.type === "subagent") {
-    return (
-      <SubagentTimelineLink
-        parentRef={scopeThreadRef(props.environmentId, item.threadId)}
-        subagentId={item.subagentId}
-        providerInstanceId={item.providerInstanceId}
-        origin={item.origin}
-        status={item.status}
-        driver={item.driver}
-        title={formatSubagentDisplayTitle(item.title ?? "Subagent")}
-        result={item.result}
-        progress={item.progress}
-        startedAt={item.startedAt}
-        completedAt={item.completedAt}
-        threadId={item.childThreadId}
-        onOpenThread={props.onOpenThread}
-      />
-    );
-  }
   return null;
 }
 
@@ -231,18 +212,7 @@ const SETTLED_SUBAGENT_STATUSES = new Set<OrchestrationV2TurnItem["status"]>([
   "interrupted",
 ]);
 
-const GENERIC_CHILD_END = /^Child task ended with status\b/i;
-
-function plainDetail(text: string): string {
-  return text
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-    .replace(/`/g, "")
-    .replace(/^[ \t]*[-*][ \t]+/gm, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function isoOrNull(value: DateTime.Utc | null | undefined): string | null {
+export function isoOrNull(value: DateTime.Utc | null | undefined): string | null {
   return value ? DateTime.formatIso(value) : null;
 }
 
@@ -416,9 +386,7 @@ function SubagentTimelineLink(props: {
   const result = (agent?.result ?? props.result)?.trim();
   const progress = (agent?.progress ?? props.progress)?.trim();
   const settled = SETTLED_SUBAGENT_STATUSES.has(status ?? liveStatus);
-  const rawDetail = settled ? result || progress : progress || result;
-  const detail =
-    rawDetail && !GENERIC_CHILD_END.test(rawDetail) ? plainDetail(rawDetail) || null : null;
+  const detail = subagentDetailLine({ settled, result, progress });
   const failed = status === "failed";
   const timing = {
     status: liveStatus,
@@ -511,8 +479,14 @@ function SubagentTimelineLink(props: {
   );
 }
 
-function SubagentTimelineTooltip(
-  props: Parameters<typeof SubagentTimelineLink>[0] & {
+export function SubagentTimelineTooltip(
+  props: Pick<
+    Parameters<typeof SubagentTimelineLink>[0],
+    "parentRef" | "providerInstanceId" | "origin" | "driver" | "title" | "threadId"
+  > & {
+    status: OrchestrationV2TurnItem["status"];
+    result: string | null;
+    progress: string | undefined;
     model: string | null;
     modelSelection: OrchestrationV2Subagent["modelSelection"];
     elapsed: ReactNode;
