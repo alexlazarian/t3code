@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import { useUiStateStore } from "../../uiStateStore";
-import { moveSettingsIntoLibrary, moveSettingsOutOfLibrary } from "./settingsPlacement";
+import {
+  moveSettingsIntoLibrary,
+  moveSettingsOutOfLibrary,
+  moveSettingsToLibraryList,
+} from "./settingsPlacement";
 
 const sidebar = () => {
   const { sidebarPanel, libraryCategory } = useUiStateStore.getState();
@@ -22,6 +26,13 @@ describe("Settings placement", () => {
     moveSettingsIntoLibrary();
     moveSettingsOutOfLibrary();
     expect(sidebar()).toEqual(["library", "machines"]);
+  });
+
+  it("stays in Library when the breadcrumb's Library is chosen, even if Settings came from Threads", () => {
+    useUiStateStore.setState({ sidebarPanel: "threads", libraryCategory: "providers" });
+    moveSettingsIntoLibrary();
+    moveSettingsToLibraryList();
+    expect(sidebar()).toEqual(["library", "providers"]);
   });
 
   it("leaves the sidebar alone when Settings is not in Library", () => {

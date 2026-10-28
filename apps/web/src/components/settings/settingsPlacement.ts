@@ -42,6 +42,14 @@ export function moveSettingsOutOfLibrary() {
   store.setSidebarPanel(returnPanel);
 }
 
+/** Leaves Settings for the Library list it sits in, whichever panel Settings was opened from. */
+export function moveSettingsToLibraryList() {
+  const store = useUiStateStore.getState();
+  if (store.libraryCategory !== "settings") return;
+  store.setLibraryCategory(returnCategory);
+  store.setSidebarPanel("library");
+}
+
 // The Library panel provides the element Settings content portals into.
 let libraryHost: HTMLElement | null = null;
 const hostListeners = new Set<() => void>();

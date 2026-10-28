@@ -8,6 +8,7 @@ import { SETTINGS_SECTION_LABELS, type SettingsPath } from "../settings/settings
 import {
   isSettingsPath,
   moveSettingsOutOfLibrary,
+  moveSettingsToLibraryList,
   setLibrarySettingsHost,
 } from "../settings/settingsPlacement";
 import { Button } from "../ui/button";
@@ -21,14 +22,18 @@ function ownsEscape(target: EventTarget | null) {
   );
 }
 
-/** Leaves Library Settings: off the Settings route first, then the sidebar goes back. */
-export function useCloseLibrarySettings() {
+/**
+ * Leaves Library Settings: off the Settings route first, then the sidebar goes back,
+ * or, for the breadcrumb, to the Library list.
+ */
+export function useCloseLibrarySettings(to: "previous" | "library" = "previous") {
   const pathname = useLocation({ select: (location) => location.pathname });
   const closeAppModal = useCloseAppModal();
+  const leave = to === "library" ? moveSettingsToLibraryList : moveSettingsOutOfLibrary;
   return () => {
-    if (!isSettingsPath(pathname)) return moveSettingsOutOfLibrary();
+    if (!isSettingsPath(pathname)) return leave();
     // In this order the sidebar change cannot turn Settings into the page on the way out.
-    void closeAppModal().then(moveSettingsOutOfLibrary);
+    void closeAppModal().then(leave);
   };
 }
 
@@ -40,6 +45,7 @@ export function LibrarySettings() {
   const pathname = useLocation({ select: (location) => location.pathname });
   const onSettings = isSettingsPath(pathname);
   const close = useCloseLibrarySettings();
+  const showLibrary = useCloseLibrarySettings("library");
   const [listRequested, setListRequested] = useState(false);
   const showList = !onSettings || listRequested;
   const sectionLabel = onSettings
@@ -59,7 +65,7 @@ export function LibrarySettings() {
         <nav aria-label="Settings location" className="flex min-w-0 flex-1 items-center gap-1.5">
           <button
             type="button"
-            onClick={close}
+            onClick={showLibrary}
             className="cursor-pointer text-sidebar-muted-foreground outline-none hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
           >
             Library
