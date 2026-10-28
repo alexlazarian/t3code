@@ -11,7 +11,7 @@ import { HostedEmptyState } from "../components/HostedEmptyState";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "../components/ui/empty";
 import { SidebarInset } from "../components/ui/sidebar";
 import { WorkspacePageHeader } from "../components/WorkspacePageHeader";
-import { useClientSettings } from "../hooks/useSettings";
+import { useClientSettings, useClientSettingsHydrationStatus } from "../hooks/useSettings";
 import { useNewThreadHandler } from "../hooks/useHandleNewThread";
 import {
   readProject,
@@ -25,12 +25,15 @@ function ChatIndexRouteView() {
   const { authGateState } = Route.useRouteContext();
   const { environments, isReady } = useEnvironments();
   const threadView = useClientSettings((s) => s.threadView);
+  const settingsStatus = useClientSettingsHydrationStatus();
 
   if (authGateState.status === "hosted-static") {
     if (!isReady) return null;
     if (environments.length === 0) return <HostedEmptyState />;
   }
 
+  // A draft started before the saved view loads would replace the Overview redirect.
+  if (settingsStatus === "pending" || settingsStatus === "retrying") return null;
   if (threadView === "overview") return <Navigate to="/overview" replace />;
   return <IndexDraftLanding />;
 }

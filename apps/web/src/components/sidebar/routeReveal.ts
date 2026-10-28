@@ -23,28 +23,26 @@ export function pendingSidebarRouteReveal(
   return reveal.pendingKey;
 }
 
-export function requestSidebarRouteReveal(
-  reveal: SidebarRouteReveal,
-  routeKey: string | null,
-): void {
-  reveal.pendingKey = routeKey;
-}
-
 export function completeSidebarRouteReveal(reveal: SidebarRouteReveal): void {
   reveal.pendingKey = null;
 }
 
-// Each route change and each mount scroll to the open thread once. Render records
+// Each route change and each list mount scroll to the open thread once. Render records
 // the route, so a thread left before its row mounted still counts as a change.
 // The row can mount after the route, once its shells arrive, so its ref scrolls.
-export function useActiveRowReveal(reveal: SidebarRouteReveal, routeKey: string | null) {
-  const mountRevealOwed = useRef(true);
+// A new `listMount` (the list remounted in a live sidebar) only scrolls, never widens.
+export function useActiveRowReveal(
+  reveal: SidebarRouteReveal,
+  routeKey: string | null,
+  listMount = 0,
+) {
+  const revealedListMount = useRef<number | null>(null);
   pendingSidebarRouteReveal(reveal, routeKey);
   return (row: HTMLElement | null, rowKey: string) => {
     if (row === null) return;
-    if (reveal.pendingKey !== rowKey && !mountRevealOwed.current) return;
+    if (reveal.pendingKey !== rowKey && revealedListMount.current === listMount) return;
     completeSidebarRouteReveal(reveal);
-    mountRevealOwed.current = false;
+    revealedListMount.current = listMount;
     row.scrollIntoView({ block: "nearest" });
   };
 }

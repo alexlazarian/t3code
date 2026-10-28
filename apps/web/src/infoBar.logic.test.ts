@@ -36,7 +36,7 @@ describe("resolveInfoBarText", () => {
         access: null,
         pullRequest: null,
       })),
-    ).toBe("Fix login: Done. api on Studio (offline). Claude Opus.");
+    ).toBe("Fix login. api on Studio (offline). Claude Opus.");
     expect(
       resolveInfoBarText({ threadKey: "k" }, () => ({
         ...thread,
@@ -56,12 +56,26 @@ describe("resolveInfoBarText", () => {
       "grid",
       "rowgroup",
       "list",
+      "group",
+      "tablist",
+      "toolbar",
+      "section",
     ]) {
       expect(resolveInfoBarText({ ariaLabel: "Threads", role }, () => null)).toBeNull();
     }
     expect(resolveInfoBarText({ ariaLabel: "Archive", role: "button" }, () => null)).toBe(
       "Archive",
     );
+  });
+
+  it("prefers data-info over a thread line, and a thread line over aria-label", () => {
+    expect(resolveInfoBarText({ info: "Open", threadKey: "k" }, () => thread)).toBe("Open");
+    expect(
+      resolveInfoBarText(
+        { ariaLabel: "Fix login, api", threadKey: "k", role: "button" },
+        () => thread,
+      ),
+    ).toBe("Fix login: Working. api on Studio, fix/login. Claude Opus, Full access. PR #42.");
   });
 
   it("returns null for an unknown target", () => {

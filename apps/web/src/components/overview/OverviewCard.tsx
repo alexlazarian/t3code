@@ -88,6 +88,7 @@ export const OverviewCard = memo(function OverviewCard(props: {
       role="button"
       tabIndex={props.tabbable ? 0 : -1}
       data-thread-key={threadKey}
+      data-info-thread={threadKey}
       aria-label={[thread.title, props.projectName, status?.label].filter(Boolean).join(", ")}
       aria-pressed={props.selected}
       onClick={() => props.onPeek(threadKey)}

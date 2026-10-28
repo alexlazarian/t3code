@@ -954,12 +954,6 @@ export function applySidebarStatusFilter<T extends SidebarThreadSummary>(
   return { visible, counts };
 }
 
-export function countSidebarStatusFilters(
-  threads: ReadonlyArray<SidebarThreadSummary>,
-): Record<"needs-you" | "working", number> {
-  return applySidebarStatusFilter(threads, "all", null, () => "").counts;
-}
-
 export type SidebarV2TopStatusKind =
   | "approval"
   | "done"

@@ -28,6 +28,10 @@ const CONTAINER_ROLES = new Set([
   "grid",
   "rowgroup",
   "list",
+  "group",
+  "tablist",
+  "toolbar",
+  "section",
 ]);
 
 function formatInfoBarThread(thread: InfoBarThread): string {
@@ -41,7 +45,7 @@ function formatInfoBarThread(thread: InfoBarThread): string {
   const model = [thread.provider, thread.model].filter((part) => part !== null).join(" ");
   const agent = [model || null, thread.access].filter((part) => part !== null).join(", ");
   const sentences = [
-    `${thread.title}: ${thread.status ?? "Done"}.`,
+    thread.status === null ? `${thread.title}.` : `${thread.title}: ${thread.status}.`,
     where ? `${where}.` : null,
     agent ? `${agent}.` : null,
     thread.pullRequest === null ? null : `PR #${thread.pullRequest.number}.`,

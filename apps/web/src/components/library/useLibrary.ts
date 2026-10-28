@@ -1,7 +1,7 @@
 import type { ServerProvider } from "@t3tools/contracts";
 
 import { type ComposerThreadTarget, useComposerDraftStore } from "../../composerDraftStore";
-import { useComposerHandleContext } from "../../composerHandleContext";
+import { COMPOSER_BUSY_TOAST, useComposerHandleContext } from "../../composerHandleContext";
 import { useThreadRouteTarget } from "../../hooks/useThreadRouteTarget";
 import { deriveProviderInstanceEntries } from "../../providerInstances";
 import { useQuietThreadShell } from "../../state/entities";
@@ -57,11 +57,7 @@ export function useInsertInComposer(target: ComposerThreadTarget | null) {
     const composer = composerRef?.current;
     if (composer) {
       if (!composer.insertTextAtEnd(text, { ensureLeadingBoundary: true })) {
-        toastManager.add({
-          type: "error",
-          title: "Unable to add to chat",
-          description: "The composer is busy; try again once it is ready.",
-        });
+        toastManager.add(COMPOSER_BUSY_TOAST);
       }
       return;
     }

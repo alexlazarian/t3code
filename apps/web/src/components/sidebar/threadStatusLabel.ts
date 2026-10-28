@@ -43,27 +43,23 @@ export function resolveSidebarStatusLabel(input: {
       return {
         label: input.goalActive ? "Goal" : "Working",
         icon: "working",
-        className: "text-info-foreground",
+        className: "text-status-working",
       };
     case "waiting":
       return { label: "Waiting", icon: "waiting", className: "text-muted-foreground" };
     case "approval":
-      return { label: "Approval", icon: "approval", className: "text-warning-foreground" };
+      return { label: "Approval", icon: "approval", className: "text-status-needs-you" };
     case "input":
-      return {
-        label: "Input",
-        icon: "input",
-        className: "text-indigo-600 dark:text-indigo-300",
-      };
+      return { label: "Input", icon: "input", className: "text-status-needs-you" };
     case "request":
-      return { label: "Request", icon: "request", className: "text-guest-foreground" };
+      return { label: "Request", icon: "request", className: "text-status-needs-you" };
     case "limited":
-      return { label: "Limited", icon: "failed", className: "text-warning-foreground" };
+      return { label: "Limited", icon: "failed", className: "text-status-failed" };
     case "failed":
-      return { label: "Failed", icon: "failed", className: "text-error-foreground" };
+      return { label: "Failed", icon: "failed", className: "text-status-failed" };
   }
   if (input.status === "ready" && input.hasActionableProposedPlan) {
-    return { label: "Plan ready", icon: "plan", className: "text-warning-foreground" };
+    return { label: "Plan ready", icon: "plan", className: "text-status-needs-you" };
   }
   if (input.isWoke) return { label: "Woke", icon: "woke", className: "text-warning-foreground" };
   if (input.isUnread) return { label: "Done", icon: "done", className: "text-success-foreground" };

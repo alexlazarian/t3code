@@ -233,6 +233,7 @@ const isEnvironmentRequestInvalidError = Schema.is(EnvironmentRequestInvalidErro
 const COMPOSER_SCROLL_COLLAPSE_THRESHOLD_PX = 24;
 const COMPOSER_SCROLL_GESTURE_RESET_MS = 120;
 import { toastManager } from "../ui/toast";
+import { COMPOSER_BUSY_TOAST } from "../../composerHandleContext";
 import { PlayIcon, ShieldIcon } from "lucide-react";
 import { proposedPlanTitle } from "@t3tools/shared/proposedPlanText";
 import { hasProviderSetup } from "./ProviderStatusBanner";
@@ -2769,11 +2770,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     },
     setDragActive: setIsDragOverComposer,
     onInsertRejected: () => {
-      toastManager.add({
-        type: "error",
-        title: "Unable to add to chat",
-        description: "The composer is busy; try again once it is ready.",
-      });
+      toastManager.add(COMPOSER_BUSY_TOAST);
     },
   });
 

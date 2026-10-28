@@ -1051,6 +1051,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
                 aria-label={accessibility.label}
                 aria-current={accessibility.current}
                 data-testid="sidebar-row-slim"
+                data-info-thread={threadKey}
                 aria-busy={isRegeneratingTitle || undefined}
                 className={cn(rowSurfaceClassName, "flex h-9 sm:h-6 items-center gap-2.5 px-2.5")}
                 onClick={handleClick}
@@ -1239,6 +1240,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
               aria-label={accessibility.label}
               aria-current={accessibility.current}
               data-testid="sidebar-row-card"
+              data-info-thread={threadKey}
               aria-busy={isRegeneratingTitle || undefined}
               className={rowSurfaceClassName}
               onClick={handleClick}
@@ -1252,13 +1254,14 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
           {projectEdge}
           <div
             className={cn(
-              "relative z-10 h-[4.875rem] px-(--sidebar-row-content-inset) py-(--sidebar-content-inset) sm:grid sm:h-9 sm:grid-cols-[minmax(0,1fr)_auto] sm:content-center sm:px-1.75 sm:py-0 sm:leading-4",
+              "relative z-10 grid h-[4.875rem] grid-cols-[minmax(0,1fr)_auto] content-start px-(--sidebar-row-content-inset) py-(--sidebar-content-inset) sm:h-9 sm:grid-cols-[fit-content(40%)_minmax(0,1fr)_auto] sm:content-center sm:px-1.75 sm:py-0 sm:leading-4",
               metaLineEmpty && "h-auto sm:h-9",
             )}
           >
-            <div className="flex h-5 min-w-0 items-center gap-1.5 sm:col-start-2 sm:row-start-1 sm:h-4 sm:justify-end">
-              <span className="contents sm:hidden">{cardLeading}</span>
-              <span className="flex-1 sm:hidden" />
+            <div className="col-start-1 row-start-1 flex h-5 min-w-0 items-center gap-1.5 text-xs text-secondary-label sm:row-start-2 sm:h-auto">
+              {cardLeading}
+            </div>
+            <div className="col-start-2 row-start-1 flex h-5 min-w-0 items-center justify-end gap-1.5 sm:col-start-3 sm:h-4">
               {sortable?.isDragging ? (
                 dragDestination
               ) : (
@@ -1400,7 +1403,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
               )}
               {props.sweepAction !== null ? dragDestination : null}
             </div>
-            <div className="mt-1 flex min-w-0 items-center gap-1.5 sm:col-start-1 sm:row-start-1 sm:mt-0">
+            <div className="col-span-2 col-start-1 row-start-2 mt-1 flex min-w-0 items-center gap-1.5 sm:row-start-1 sm:mt-0">
               {title}
               {isRegeneratingTitle ? (
                 <span role="status" className="sr-only">
@@ -1418,13 +1421,10 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
             </div>
             <div
               className={cn(
-                "mt-0.5 flex min-w-0 items-center gap-1.5 text-secondary-label text-xs sm:col-span-2 sm:row-start-2 sm:mt-0",
+                "col-span-2 col-start-1 row-start-3 mt-0.5 flex min-w-0 items-center gap-1.5 text-secondary-label text-xs sm:col-start-2 sm:row-start-2 sm:mt-0 sm:ml-1.5",
                 metaLineEmpty && "hidden sm:flex",
               )}
             >
-              <span className="hidden items-center gap-1.5 sm:flex sm:min-w-0 sm:max-w-[40%] sm:shrink-0">
-                {cardLeading}
-              </span>
               {metaLineEmpty ? null : (
                 <>
                   {thread.branch ? (

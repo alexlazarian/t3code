@@ -55,7 +55,7 @@ describe("resolveSidebarStatusLabel", () => {
         isWoke: true,
         isUnread: true,
       }),
-    ).toEqual({ label: "Plan ready", icon: "plan", className: "text-warning-foreground" });
+    ).toEqual({ label: "Plan ready", icon: "plan", className: "text-status-needs-you" });
     expect(
       resolveSidebarStatusLabel({ ...quiet, status: "waiting", hasActionableProposedPlan: true })
         ?.label,
@@ -64,6 +64,25 @@ describe("resolveSidebarStatusLabel", () => {
 
   it("files limited under the failed icon", () => {
     expect(resolveSidebarStatusLabel({ ...quiet, status: "limited" })?.icon).toBe("failed");
+  });
+
+  it("colors labels with the shared status inks", () => {
+    expect(
+      (["working", "approval", "input", "request", "limited", "failed", "waiting"] as const).map(
+        (status) => resolveSidebarStatusLabel({ ...quiet, status })?.className,
+      ),
+    ).toEqual([
+      "text-status-working",
+      "text-status-needs-you",
+      "text-status-needs-you",
+      "text-status-needs-you",
+      "text-status-failed",
+      "text-status-failed",
+      "text-muted-foreground",
+    ]);
+    expect(
+      resolveSidebarStatusLabel({ ...quiet, status: "working", goalActive: true })?.className,
+    ).toBe("text-status-working");
   });
 });
 

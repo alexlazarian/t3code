@@ -1,3 +1,4 @@
+import { useReconnectEnvironment } from "../../hooks/useReconnectEnvironment";
 import { useStableCallback } from "../../hooks/useStableCallback";
 import { type EnvironmentId } from "@t3tools/contracts";
 import { type EnvironmentConnectionPresentation } from "@t3tools/client-runtime/connection";
@@ -68,7 +69,7 @@ export function useSystemComposerBanners(input: SystemComposerBannersInput) {
     autoUpdateEnvironments,
   } = input;
   const navigate = useNavigate();
-  const retryEnvironment = useAtomCommand(environmentCatalog.retryNow, { reportFailure: false });
+  const { reconnect } = useReconnectEnvironment();
   const setEnvironmentEnabled = useAtomCommand(environmentCatalog.setEnabled, {
     reportFailure: false,
   });
@@ -84,22 +85,7 @@ export function useSystemComposerBanners(input: SystemComposerBannersInput) {
     activeReconnectingEnvironmentId,
     ENVIRONMENT_RECONNECT_WARNING_GRACE_MS,
   );
-  const handleReconnectActiveEnvironment = async (environmentId: EnvironmentId) => {
-    const result = await retryEnvironment(environmentId);
-    if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
-      const error = squashAtomCommandFailure(result);
-      toastManager.add(
-        stackedThreadToast({
-          type: "error",
-          title: "Could not reconnect environment",
-          description: error instanceof Error ? error.message : "Failed to reconnect.",
-        }),
-      );
-    }
-  };
-  const handleReconnectActiveEnvironmentStable = useStableCallback(
-    handleReconnectActiveEnvironment,
-  );
+  const handleReconnectActiveEnvironmentStable = useStableCallback(reconnect);
   const disconnectDelayElapsed = useEnvironmentDisconnectDelay(
     activeEnvironmentUnavailable && activeEnvironment ? activeEnvironment.environmentId : null,
   );

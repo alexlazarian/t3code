@@ -190,7 +190,6 @@ import { useStableCallback } from "../hooks/useStableCallback";
 import {
   resolveSidebarRouteReveal,
   type SidebarRouteReveal,
-  requestSidebarRouteReveal,
   useActiveRowReveal,
 } from "./sidebar/routeReveal";
 import { stackedThreadToast, toastManager } from "./ui/toast";
@@ -842,11 +841,12 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   }, [clearSelection, revealWidensScope, setPersistedProjectScopeKey]);
   // The thread list unmounts under Library; its rows reveal the open thread again on return.
   const [lastPanel, setLastPanel] = useState(sidebarPanel);
+  const [threadListMount, setThreadListMount] = useState(0);
   if (lastPanel !== sidebarPanel) {
-    if (sidebarPanel === "threads") requestSidebarRouteReveal(routeReveal, routeRowThreadKey);
     setLastPanel(sidebarPanel);
+    if (sidebarPanel === "threads") setThreadListMount((mount) => mount + 1);
   }
-  const revealActiveRow = useActiveRowReveal(routeReveal, routeRowThreadKey);
+  const revealActiveRow = useActiveRowReveal(routeReveal, routeRowThreadKey, threadListMount);
   const showProjectEnvironments = projectGroupsSpanEnvironments(projectGroups);
   const scratchMachineLabelFor = (
     thread: Pick<SidebarThreadSummary, "environmentId" | "projectId">,

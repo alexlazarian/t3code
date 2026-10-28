@@ -80,9 +80,13 @@ export const SidebarChromeHeader = memo(function SidebarChromeHeader({
   );
 });
 
-const PANEL_TABS: ReadonlyArray<{ id: SidebarPanel; label: string }> = [
-  { id: "threads", label: "Threads" },
-  { id: "library", label: "Library" },
+const PANEL_TABS: ReadonlyArray<{ id: SidebarPanel; label: string; info: string }> = [
+  { id: "threads", label: "Threads", info: "Threads: your threads by section" },
+  {
+    id: "library",
+    label: "Library",
+    info: "Library: skills, models, providers, access modes, stash, scheduled tasks, projects and machines",
+  },
 ];
 
 export const sidebarPanelTabId = (panel: SidebarPanel) => `sidebar-tab-${panel}`;
@@ -118,6 +122,7 @@ function SidebarPanelTabs() {
             role="tab"
             aria-selected={on}
             aria-controls={sidebarPanelId(tab.id)}
+            data-info={tab.info}
             tabIndex={on ? 0 : -1}
             onClick={() => setPanel(tab.id)}
             className={cn(

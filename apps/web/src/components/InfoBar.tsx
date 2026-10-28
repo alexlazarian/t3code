@@ -1,4 +1,4 @@
-import { parseScopedThreadKey, scopeProjectRef } from "@t3tools/client-runtime/environment";
+import { parseScopedThreadKey } from "@t3tools/client-runtime/environment";
 import { resolveThreadCurrentPullRequestLink } from "@t3tools/client-runtime/thread-pull-requests";
 import { threadWokeAt } from "@t3tools/client-runtime/state/thread-settled";
 import { useEffect } from "react";
@@ -6,7 +6,11 @@ import { useEffect } from "react";
 import { resolveInfoBarText, type InfoBarTarget, type InfoBarThread } from "../infoBar.logic";
 import { useInfoBarStore } from "../infoBarStore";
 import { appAtomRegistry } from "../rpc/atomRegistry";
-import { readProject, readThreadShell } from "../state/entities";
+import { selectProjectGroupingSettings } from "../logicalProject";
+import { buildSidebarProjectSnapshots } from "../sidebarProjectGrouping";
+import { useEnvironmentIdentities, usePrimaryEnvironmentId } from "../state/environments";
+import { readThreadShell, useProjects } from "../state/entities";
+import { useClientSettings } from "../hooks/useSettings";
 import { environmentPresentations } from "../state/presentation";
 import { useUiStateStore } from "../uiStateStore";
 import {
@@ -18,10 +22,13 @@ import { runtimeModeConfig } from "./chat/runtimeModeConfig";
 import { sidebarProviderEntriesAtom } from "./sidebar/sidebarProviderEntries";
 import { isSidebarThreadWoke, resolveSidebarStatusLabel } from "./sidebar/threadStatusLabel";
 
-const TARGET_SELECTOR = "[data-info],[aria-label],[data-thread-key]";
+const TARGET_SELECTOR = "[data-info],[aria-label],[data-info-thread]";
 const TRIGGER_SELECTOR = '[data-slot="tooltip-trigger"][data-info]';
 
-function lookupThread(threadKey: string): InfoBarThread | null {
+function lookupThread(
+  threadKey: string,
+  projectNameByKey: ReadonlyMap<string, string>,
+): InfoBarThread | null {
   const ref = parseScopedThreadKey(threadKey);
   const thread = ref ? readThreadShell(ref) : null;
   if (!thread) return null;
@@ -57,7 +64,7 @@ function lookupThread(threadKey: string): InfoBarThread | null {
   return {
     title: thread.title,
     status: status?.label ?? null,
-    project: readProject(scopeProjectRef(environmentId, thread.projectId))?.title ?? null,
+    project: projectNameByKey.get(`${environmentId}:${thread.projectId}`) ?? null,
     machine: presentation?.entry.target.label ?? null,
     offline: presentation !== null && presentation.connection.phase !== "connected",
     branch: thread.branch ?? null,
@@ -74,13 +81,38 @@ function targetOf(element: Element): InfoBarTarget {
   return {
     info: source.getAttribute("data-info") ?? undefined,
     ariaLabel: element.getAttribute("aria-label") ?? undefined,
-    threadKey: element.getAttribute("data-thread-key") ?? undefined,
+    threadKey: element.getAttribute("data-info-thread") ?? undefined,
     role: element.getAttribute("role") ?? element.tagName.toLowerCase(),
   };
 }
 
+function useProjectNameByKey(): ReadonlyMap<string, string> {
+  const projects = useProjects();
+  const groupingSettings = useClientSettings(selectProjectGroupingSettings);
+  const environments = useEnvironmentIdentities();
+  const primaryEnvironmentId = usePrimaryEnvironmentId();
+  const labels = new Map(
+    environments.map((environment) => [environment.environmentId, environment.label] as const),
+  );
+  const groups = buildSidebarProjectSnapshots({
+    projects,
+    groupScratchProjects: true,
+    settings: groupingSettings,
+    primaryEnvironmentId,
+    resolveEnvironmentLabel: (environmentId) => labels.get(environmentId) ?? null,
+  });
+  return new Map(
+    groups.flatMap((group) =>
+      group.memberProjects.map(
+        (project) => [`${project.environmentId}:${project.id}`, group.displayName] as const,
+      ),
+    ),
+  );
+}
+
 export function InfoBar() {
   const text = useInfoBarStore((store) => store.text);
+  const projectNameByKey = useProjectNameByKey();
 
   // oxlint-disable-next-line t3code/react-effect-budget -- document-level pointer listener
   useEffect(() => {
@@ -91,7 +123,13 @@ export function InfoBar() {
         event.target instanceof Element ? event.target.closest(TARGET_SELECTOR) : null;
       if (element === lastElement) return;
       lastElement = element;
-      set(element ? resolveInfoBarText(targetOf(element), lookupThread) : null);
+      set(
+        element
+          ? resolveInfoBarText(targetOf(element), (threadKey) =>
+              lookupThread(threadKey, projectNameByKey),
+            )
+          : null,
+      );
     };
     const onLeave = () => {
       lastElement = null;
@@ -104,11 +142,11 @@ export function InfoBar() {
       document.documentElement.removeEventListener("pointerleave", onLeave);
       set(null);
     };
-  }, []);
+  }, [projectNameByKey]);
 
   return (
     <div
-      role="status"
+      aria-hidden="true"
       className="h-(--info-bar-height) truncate border-t border-border bg-background px-2 text-3xs leading-5 text-muted-foreground select-none"
     >
       {text}

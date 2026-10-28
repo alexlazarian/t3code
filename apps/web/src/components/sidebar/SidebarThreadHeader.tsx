@@ -147,6 +147,7 @@ export function SidebarThreadHeader({
           return (
             <Tooltip key={chip.id}>
               <TooltipTrigger
+                info={chip.tooltip}
                 render={
                   <button
                     type="button"
@@ -175,7 +176,7 @@ export function SidebarThreadHeader({
 
 const STATUS_CHIPS = [
   { id: "all", label: "All", tooltip: "Every thread" },
-  { id: "needs-you", label: "Need you", tooltip: "Approval, Input, or Plan ready" },
+  { id: "needs-you", label: "Need you", tooltip: "Approval, Input, Request, or Plan ready" },
   { id: "working", label: "Working", tooltip: "A turn is in progress" },
 ] as const;
 

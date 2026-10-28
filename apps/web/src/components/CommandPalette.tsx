@@ -99,7 +99,7 @@ import {
   copyPromptLink,
   promptLinkRepositoryOf,
 } from "./promptLinks/copyPromptLink";
-import { useClientSettings } from "../hooks/useSettings";
+import { useClientSettings, useLegacySidebarEnabled } from "../hooks/useSettings";
 import { useStableCallback } from "../hooks/useStableCallback";
 import { readLocalApi } from "../localApi";
 import { desktopLocalBackendId } from "../connection/desktopLocal";
@@ -428,6 +428,7 @@ function OpenCommandPaletteDialog(props: {
     useHandleNewThread();
   const paletteRouteTarget = useThreadRouteTarget();
   const projects = useProjects();
+  const legacySidebarEnabled = useLegacySidebarEnabled();
   const referenceThreadRef =
     pathname === "/pull-requests"
       ? environments.some(
@@ -1151,11 +1152,13 @@ function OpenCommandPaletteDialog(props: {
     if (firstOption) startNewProject(firstOption.environmentId, null);
   };
 
-  const actionItems: Array<CommandPaletteActionItem | CommandPaletteSubmenuItem> = [
-    {
+  const actionItems: Array<CommandPaletteActionItem | CommandPaletteSubmenuItem> = [];
+  // The legacy sidebar has no status filter to apply.
+  if (!legacySidebarEnabled) {
+    actionItems.push({
       kind: "action",
       value: "action:show-threads-that-need-you",
-      searchTerms: ["need", "attention", "approval", "input", "plan", "filter", "inbox"],
+      searchTerms: ["need", "attention", "approval", "input", "request", "plan", "filter", "inbox"],
       title: "Show threads that need you",
       icon: <BellIcon className={ITEM_ICON_CLASS} />,
       run: async () => {
@@ -1163,8 +1166,8 @@ function OpenCommandPaletteDialog(props: {
         useUiStateStore.getState().setSidebarPanel("threads");
         requestOpenSidebar();
       },
-    },
-  ];
+    });
+  }
 
   if (projects.length > 0) {
     const activeProjectTitle =

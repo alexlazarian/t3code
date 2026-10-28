@@ -12,7 +12,6 @@ import {
   resolveSidebarRowThreadId,
   isSidebarThreadWorking,
   applySidebarStatusFilter,
-  countSidebarStatusFilters,
   matchesSidebarStatusFilter,
   orderItemsByPreferredIds,
   pinOrderKeyBetween,
@@ -1390,7 +1389,12 @@ describe("status filter", () => {
   });
   it("counts both chips", () => {
     expect(
-      countSidebarStatusFilters([approvalThread, workingThread, planReadyThread, doneThread]),
+      applySidebarStatusFilter(
+        [approvalThread, workingThread, planReadyThread, doneThread],
+        "all",
+        null,
+        (thread) => thread.id,
+      ).counts,
     ).toEqual({ "needs-you": 2, working: 1 });
   });
   it("keeps the route thread listed under a filter it no longer matches", () => {
