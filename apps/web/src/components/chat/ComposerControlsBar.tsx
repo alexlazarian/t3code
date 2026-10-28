@@ -34,7 +34,6 @@ import { resolveComposerControlsOwnership } from "./composerControlsOwnership";
  * The composer footer controls: model picker, traits, mode controls and the overflow menu for
  * blocks that do not fit. Rendered in the expanded footer or the resting controls host.
  */
-// Model and effort sit a word space apart, so hover and open states brighten text, not a box.
 // Boxed pickers keep their hover fill; only the open state brightens the text.
 const TEXT_CONTROL_STATES = "data-pressed:text-foreground data-popup-open:text-foreground";
 
@@ -271,7 +270,6 @@ export function ComposerControlsBar(props: {
       modelOptionsByInstance={modelOptionsByInstance}
       size={composerControlsCollapsed ? "xs" : "sm"}
       triggerClassName={cn(
-        "pe-1",
         TEXT_CONTROL_STATES,
         composerControlsCollapsed ? "min-w-13 shrink text-xs!" : "min-w-13",
       )}
