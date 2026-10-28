@@ -15,7 +15,7 @@ import {
 } from "../ui/sidebar";
 import { isSidebarUtilityPage, useNavigateToMainApp } from "./mainAppLocation";
 import { SidebarThreadUndoNotice } from "./SidebarThreadUndoNotice";
-import { SidebarUpdateArchitectureWarning, SidebarUpdatePill } from "./SidebarUpdatePill";
+import { SidebarUpdateArchitectureWarning } from "./SidebarUpdatePill";
 import { PanelTab } from "../PanelTab";
 import { ProviderUpdateIndicator } from "../ProviderUpdateIndicator";
 import { useUiStateStore, type SidebarPanel } from "../../uiStateStore";
@@ -160,7 +160,6 @@ const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
           </SidebarMenuButton>
         </SidebarMenuItem>
       ) : null}
-      <SidebarUpdatePill />
     </SidebarMenu>
   );
 });

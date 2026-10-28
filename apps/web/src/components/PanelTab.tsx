@@ -10,7 +10,7 @@ export function PanelTab({ on, className, ...props }: ComponentProps<"button"> &
       className={cn(
         "flex h-full cursor-pointer items-center justify-center gap-1 whitespace-nowrap border-r border-sidebar-border px-3 text-control outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
         on
-          ? "bg-primary font-medium text-primary-foreground"
+          ? "bg-sidebar-foreground font-medium text-sidebar"
           : "bg-sidebar-control-surface text-sidebar-muted-foreground hover:bg-sidebar-row-hover hover:text-sidebar-foreground",
         className,
       )}

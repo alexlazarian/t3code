@@ -25,7 +25,6 @@ import {
 import { showDesktopUpdateDownloadedToast } from "../desktopUpdate.toast";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Popover, PopoverCreateHandle, PopoverPopup, PopoverTrigger } from "../ui/popover";
-import { SidebarMenuItem } from "../ui/sidebar";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import {
   DesktopUpdateStatusIcon,
@@ -412,7 +411,7 @@ function SidebarUpdateControl() {
           ? { status: "downloading", percent: state.downloadPercent }
           : { status: "waiting" };
     return (
-      <SidebarMenuItem className="ml-auto flex min-w-0 flex-1">
+      <div className="flex min-w-0 max-w-72">
         <SidebarUpdateCapsule
           run={run}
           local={local}
@@ -435,7 +434,7 @@ function SidebarUpdateControl() {
             : {})}
         />
         {confirmDialog}
-      </SidebarMenuItem>
+      </div>
     );
   }
 
@@ -487,7 +486,7 @@ function SidebarUpdateControl() {
   );
 
   return (
-    <SidebarMenuItem className="ml-auto shrink-0">
+    <div className="flex shrink-0 items-center">
       <Popover
         handle={releaseNotesPopoverHandle}
         open={releaseNotesOpen && showReleaseNotesPopover}
@@ -524,7 +523,7 @@ function SidebarUpdateControl() {
           {!showReleaseNotesPopover ? (
             <TooltipPopup
               align="center"
-              side="top"
+              side="bottom"
               variant={showUpdateDetails ? "glass" : "default"}
             >
               {idleTooltip?.detail ? (
@@ -552,7 +551,7 @@ function SidebarUpdateControl() {
               }
             }}
             ref={releaseNotesPopupRef}
-            side="top"
+            side="bottom"
             tooltipStyle
           >
             <SidebarUpdateReleaseNotes
@@ -564,6 +563,6 @@ function SidebarUpdateControl() {
         ) : null}
       </Popover>
       {confirmDialog}
-    </SidebarMenuItem>
+    </div>
   );
 }

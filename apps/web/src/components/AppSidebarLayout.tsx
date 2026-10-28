@@ -1,5 +1,5 @@
 import { useAtomValue } from "@effect/atom-react";
-import { SearchIcon, SettingsIcon } from "lucide-react";
+import { SearchIcon } from "lucide-react";
 import * as Schema from "effect/Schema";
 import {
   useEffect,
@@ -46,6 +46,7 @@ import {
   usePanelNavigationSuppression,
 } from "../panelAnimations";
 import { InfoBar } from "./InfoBar";
+import { SidebarUpdatePill } from "./sidebar/SidebarUpdatePill";
 import { PanelTab } from "./PanelTab";
 import { BackgroundThreadAnnouncer } from "./BackgroundThreadAnnouncer";
 import ThreadSidebar from "./Sidebar";
@@ -465,7 +466,7 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
             info={newThreadLabel}
             render={<span className="inline-flex [-webkit-app-region:no-drag]" />}
           >
-            <Button variant="outline" disabled={!hasProjects} onClick={startNewThread}>
+            <Button variant="ghost" disabled={!hasProjects} onClick={startNewThread}>
               + New thread
               {newThreadShortcutLabel ? <TopBarShortcut label={newThreadShortcutLabel} /> : null}
             </Button>
@@ -473,7 +474,7 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
           <TooltipPopup side="bottom">{newThreadLabel}</TooltipPopup>
         </Tooltip>
       </div>
-      <div className="border-l max-md:border-r md:pr-0!">
+      <div className="border-x">
         <Button
           variant="ghost"
           aria-label="Search and commands"
@@ -485,16 +486,8 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
           {paletteShortcutLabel ? <TopBarShortcut label={paletteShortcutLabel} /> : null}
         </Button>
       </div>
-      {/* Wide windows open Settings from the main view switch, which narrow ones hide. */}
-      <div className="pr-0! md:hidden">
-        <Button
-          variant="ghost"
-          aria-label="Settings"
-          onClick={() => openSettings(router)}
-          data-info="Open settings"
-        >
-          <SettingsIcon />
-        </Button>
+      <div className="pr-0! [-webkit-app-region:no-drag]">
+        <SidebarUpdatePill />
       </div>
     </header>
   );
@@ -538,7 +531,7 @@ function MainViewHeader() {
   const viewSwitchLabel = `Switch to ${shownView === "overview" ? "List" : "Overview"}${viewShortcutLabel ? ` (${viewShortcutLabel})` : ""}`;
 
   return (
-    <div className="flex h-(--main-header-height) shrink-0 items-stretch border-b border-sidebar-border bg-sidebar max-md:hidden">
+    <div className="flex h-(--main-header-height) shrink-0 items-stretch overflow-x-auto border-b border-sidebar-border bg-sidebar">
       <div className="flex h-full">
         <Tooltip>
           <TooltipTrigger
@@ -684,7 +677,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
             <SidebarRail onDoubleClick={resetSidebarWidth} />
           </Sidebar>
           <div
-            className="flex min-h-0 min-w-0 flex-1 flex-col [--main-header-height:0px] md:[--main-header-height:1.875rem]"
+            className="flex min-h-0 min-w-0 flex-1 flex-col [--main-header-height:1.875rem]"
             style={mainHeightStyle}
           >
             <MainViewHeader />
