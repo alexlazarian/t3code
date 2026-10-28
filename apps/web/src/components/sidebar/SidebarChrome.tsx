@@ -102,10 +102,11 @@ function SidebarPanelTabs() {
             tabIndex={on ? 0 : -1}
             onClick={() => setPanel(tab.id)}
             className={cn(
-              "h-7 cursor-pointer whitespace-nowrap border-r border-sidebar-border px-1.5 text-2xs outline-none last:border-r-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+              "h-7.5 cursor-pointer whitespace-nowrap border-r border-sidebar-border px-1.5 text-control outline-none last:border-r-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+              // The open tab is the panel itself; the closed one sits on the raised strip.
               on
-                ? "bg-sidebar-row-hover text-sidebar-foreground"
-                : "text-sidebar-muted-foreground hover:text-sidebar-foreground",
+                ? "text-sidebar-foreground"
+                : "bg-sidebar-control-surface text-sidebar-muted-foreground hover:bg-sidebar-row-hover hover:text-sidebar-foreground",
             )}
           >
             {tab.label}

@@ -170,6 +170,9 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
 }
 
 @theme inline {
+  /* Default-size button, switch and tab labels: 15/26 of the control, the prototype's ratio. */
+  --text-control: 0.9375rem;
+  --text-control--line-height: calc(1.25 / 0.9375);
   /* Two steps below Tailwind's text-xs (12px) for dense UI: metadata rows,
      badges, counters, keyboard hints and diagnostics tables. 2xs is 11px,
      3xs is 10px. Provider icon overlays use 4xs (8px) and 5xs (7px) to fit
@@ -242,6 +245,8 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  /* A solid primary control's edge: a darker step of its fill. */
+  --color-primary-edge: color-mix(in srgb, var(--primary) 69%, black);
   --color-popover-foreground: var(--contrast-popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--contrast-card-foreground);
