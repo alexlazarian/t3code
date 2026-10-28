@@ -195,6 +195,38 @@ On web and desktop, right-click a pull request link in a thread and choose
 same link to return to the branch PR, if one exists.
 The linked pull request participates in automatic settlement.
 
+## Filter by status
+
+On web and desktop, the chips above the thread list narrow it to threads that
+**Need you** (Approval, Input, Request, or Plan ready) or are **Working**. Each chip
+shows how many threads match; **All** shows every thread again. The thread you have
+open stays listed even when it stops matching. **Show threads that need you** in the
+command palette applies the filter and opens the sidebar.
+
+## See every project at once
+
+On web and desktop, **Overview** lays out each project as a column of thread cards.
+A card's left edge shows its status: green while working, amber when it needs you,
+and red when it failed or hit a usage limit. Switch between List and Overview with
+the switch in the top bar, **Switch to Overview** or **Switch to List** in the command
+palette, or **Settings → General → Thread view**. T3 Code opens in the view you last
+chose. **Switch between List and Overview** has no default shortcut; assign one in
+**Settings → Keybindings**.
+
+Click a card, or focus it and press `Space`, to peek at it. A peek shows the latest
+reply and lets you approve, answer a question, implement a plan, stop, resume, or
+reply without leaving Overview. **Open in List view**, a double-click, or `Enter`
+opens the full thread. If the thread's machine is offline, the peek offers
+**Reconnect**.
+
+## Use the Library
+
+On web and desktop, the **Library** tab beside **Threads** gathers skills and
+commands, models, providers, access modes, your prompt stash, scheduled tasks,
+projects, and machines in one place. Skills, commands, and stashed prompts go into
+the open thread's composer. Models and access modes apply to the open thread, and
+projects start a new thread. Each category explains what its items do.
+
 ## Find and reference work
 
 On web and desktop, open the command palette with `Cmd/Ctrl+K` to search threads

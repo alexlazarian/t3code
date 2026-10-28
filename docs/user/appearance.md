@@ -48,6 +48,13 @@ The main sidebar, right panel, and terminal drawer open and close immediately by
 in your operating system. Moving between threads always snaps to the selected thread's panel state
 without replaying its transitions.
 
+## Info bar
+
+On web and desktop, a bar along the bottom of the window describes whatever you point
+at: a control's tooltip and shortcut, or a thread's status, project, machine, branch,
+model, access mode, and pull request. Turn it off with **Info bar** in
+**Settings → Appearance**.
+
 ## Custom themes
 
 On web and desktop, choose **Create theme** to adjust a palette, or import a T3 Code or VS Code
