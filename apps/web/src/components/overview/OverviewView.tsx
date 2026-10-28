@@ -4,7 +4,15 @@ import { useRouter } from "@tanstack/react-router";
 import * as Schema from "effect/Schema";
 import { parseScopedThreadKey, scopeProjectRef } from "@t3tools/client-runtime/environment";
 import { ChevronDownIcon, PlusIcon } from "lucide-react";
-import { Fragment, useEffect, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
+import {
+  Fragment,
+  useRef,
+  useState,
+  type FocusEvent,
+  type KeyboardEvent,
+  type MouseEvent,
+  type PointerEvent,
+} from "react";
 
 import { openCommandPalette } from "../../commandPaletteBus";
 import { isElectron } from "../../env";
@@ -37,6 +45,7 @@ import { sidebarProviderEntriesAtom } from "../sidebar/sidebarProviderEntries";
 import {
   ACTIVE_SECTION_EXPANDED_KEY,
   PINNED_SECTION_EXPANDED_KEY,
+  SECTION_NOTES,
   SETTLED_SHELF_EXPANDED_KEY,
   SETTLED_TAIL_INITIAL_COUNT,
   SETTLED_TAIL_PAGE_COUNT,
@@ -46,6 +55,7 @@ import {
   useSidebarPartitionClockKey,
 } from "../sidebar/sidebarShelves";
 import { ClearFiltersButton } from "../sidebar/SidebarListMarkers";
+import ChatView from "../ChatView";
 import { Button } from "../ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "../ui/empty";
 import { SidebarInset } from "../ui/sidebar";
@@ -56,20 +66,29 @@ import {
   moveOverviewFocus,
   overviewColumnMachines,
   overviewProjectKeyOf,
+  overviewSplitDragFraction,
+  resolveOverviewSplitRelease,
   type OverviewColumn,
   type OverviewFocusDirection,
 } from "./Overview.logic";
 import { OverviewCard } from "./OverviewCard";
 import { OverviewColumnHeader } from "./OverviewColumnHeader";
-import { OverviewPeek } from "./OverviewPeek";
 
-const SECTION_LABELS: Record<SidebarSection, { readonly name: string; readonly why: string }> = {
-  pinned: { name: "Pinned", why: "kept above everything else" },
-  working: { name: "Working", why: "running on their own: subagents, PR watches, monitors" },
-  active: { name: "Active", why: "your current work" },
-  snoozed: { name: "Snoozed", why: "hidden until their wake time" },
-  settled: { name: "Settled", why: "finished, kept for reference" },
+const SECTION_NAMES: Record<SidebarSection, string> = {
+  pinned: "Pinned",
+  working: "Working",
+  active: "Active",
+  snoozed: "Snoozed",
+  settled: "Settled",
 };
+
+const SPLIT_FRACTION_KEY = "t3code:overview:split-fraction";
+const SPLIT_FRACTION_STEP = 0.05;
+// Overshoots past closed, which the zero height clamps into a quick snap.
+const SNAP_SHUT_EASING = "cubic-bezier(0.3, 1.4, 0.6, 1)";
+const SNAP_SHUT_MS = 220;
+// Clicks on these act on their own; any other click in the grid closes the thread pane.
+const GRID_CONTROL_SELECTOR = "[data-thread-key],button,a,input";
 
 const LEGEND = [
   { label: "Working", className: "bg-status-working" },
@@ -130,10 +149,12 @@ export function OverviewView() {
   const clockKey = useSidebarPartitionClockKey(threads);
   const expansion = useOverviewRowExpansion();
   const [focusKey, setFocusKey] = useState<string | null>(null);
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
-  const [lostPeekCount, setLostPeekCount] = useState(0);
-  const handledLostPeekCount = useRef(0);
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const [splitFraction, setSplitFraction] = useLocalStorage(SPLIT_FRACTION_KEY, 0.5, Schema.Number);
   const gridRef = useRef<HTMLDivElement>(null);
+  const splitRef = useRef<HTMLDivElement>(null);
+  const paneRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ readonly top: number; readonly height: number } | null>(null);
 
   const scopeKeys = resolveSidebarProjectScopeKeys({
     groups: projectGroups,
@@ -225,25 +246,16 @@ export function OverviewView() {
   );
   const allKeys = focusGrid.flat(2);
   const tabbableKey = focusKey !== null && allKeys.includes(focusKey) ? focusKey : allKeys[0];
-  const peekColumn =
-    selectedKey === null
-      ? undefined
-      : columns[focusGrid.findIndex((cells) => cells.some((keys) => keys.includes(selectedKey)))];
-  const peekRef = selectedKey === null ? null : parseScopedThreadKey(selectedKey);
-  if (selectedKey !== null && (peekColumn === undefined || peekRef === null)) {
-    setSelectedKey(null);
-    setLostPeekCount((count) => count + 1);
+  const openRef =
+    openKey !== null && threads.some((thread) => threadShellKey(thread) === openKey)
+      ? parseScopedThreadKey(openKey)
+      : null;
+  if (openKey !== null && openRef === null) {
+    setOpenKey(null);
   }
   const findCard = (threadKey: string) =>
     gridRef.current?.querySelector<HTMLElement>(`[data-thread-key="${CSS.escape(threadKey)}"]`) ??
     null;
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- a peek whose card vanished unmounts without closing, so focus must be moved in the DOM after commit
-  useEffect(() => {
-    if (lostPeekCount === handledLostPeekCount.current) return;
-    handledLostPeekCount.current = lostPeekCount;
-    if (tabbableKey === undefined || document.activeElement !== document.body) return;
-    findCard(tabbableKey)?.focus();
-  });
 
   const openThread = useStableCallback((threadKey: string) => {
     const ref = parseScopedThreadKey(threadKey);
@@ -251,9 +263,9 @@ export function OverviewView() {
     void updateClientSettings({ threadView: "list" });
     void router.navigate({ to: "/$environmentId/$threadId", params: buildThreadRouteParams(ref) });
   });
-  const peekThread = useStableCallback((threadKey: string) => {
+  const showThread = useStableCallback((threadKey: string) => {
     setFocusKey(threadKey);
-    setSelectedKey((current) => (current === threadKey ? null : threadKey));
+    setOpenKey(threadKey);
   });
   const startThreadIn = (project: NonNullable<OverviewColumn["project"]>) => {
     void updateClientSettings({ threadView: "list" });
@@ -269,7 +281,17 @@ export function OverviewView() {
     const key = (event.target as HTMLElement).dataset.threadKey;
     if (key !== undefined) setFocusKey(key);
   };
+  const handleGridClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (openKey === null) return;
+    if (event.target instanceof Element && event.target.closest(GRID_CONTROL_SELECTOR)) return;
+    setOpenKey(null);
+  };
   const handleGridKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Escape" && openKey !== null) {
+      event.preventDefault();
+      setOpenKey(null);
+      return;
+    }
     const direction = ARROW_DIRECTIONS[event.key];
     const key = (event.target as HTMLElement).dataset.threadKey;
     if (direction === undefined || key === undefined) return;
@@ -278,6 +300,70 @@ export function OverviewView() {
     if (next === null) return;
     setFocusKey(next);
     findCard(next)?.focus();
+  };
+
+  const setPaneHeight = (fraction: number) => {
+    if (paneRef.current) paneRef.current.style.height = `${fraction * 100}%`;
+  };
+  const snapPaneShut = () => {
+    const pane = paneRef.current;
+    if (!pane) return;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    void pane
+      .animate([{ height: `${pane.offsetHeight}px` }, { height: "0px" }], {
+        duration: reduceMotion ? 0 : SNAP_SHUT_MS,
+        easing: SNAP_SHUT_EASING,
+        fill: "forwards",
+      })
+      .finished.then(
+        () => setOpenKey(null),
+        () => undefined,
+      );
+  };
+  const handleDividerPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    const split = splitRef.current;
+    if (event.button !== 0 || !split) return;
+    event.preventDefault();
+    const rect = split.getBoundingClientRect();
+    dragRef.current = { top: rect.top, height: rect.height };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const handleDividerPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    // Sized in the DOM so a drag never re-renders the grid.
+    if (dragRef.current) setPaneHeight(overviewSplitDragFraction(event.clientY, dragRef.current));
+  };
+  const handleDividerPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    dragRef.current = null;
+    if (!drag) return;
+    const release = resolveOverviewSplitRelease(
+      overviewSplitDragFraction(event.clientY, drag),
+      drag.height,
+    );
+    if (release === null) {
+      snapPaneShut();
+      return;
+    }
+    setPaneHeight(release);
+    setSplitFraction(release);
+  };
+  const handleDividerPointerCancel = () => {
+    dragRef.current = null;
+    setPaneHeight(splitFraction);
+  };
+  const handleDividerKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const step = { ArrowUp: SPLIT_FRACTION_STEP, ArrowDown: -SPLIT_FRACTION_STEP }[event.key];
+    const height = splitRef.current?.offsetHeight ?? 0;
+    if (step === undefined || height === 0) return;
+    event.preventDefault();
+    const largest = overviewSplitDragFraction(0, { top: 0, height });
+    const next = resolveOverviewSplitRelease(Math.min(splitFraction + step, largest), height);
+    if (next === null) {
+      snapPaneShut();
+      return;
+    }
+    setPaneHeight(next);
+    setSplitFraction(next);
   };
 
   return (
@@ -289,9 +375,10 @@ export function OverviewView() {
         >
           <span className="min-w-0 truncate">
             {columns.length} project{columns.length === 1 ? "" : "s"}, {cardCount} thread
-            {cardCount === 1 ? "" : "s"}. Click a card to peek, double-click to open.
+            {cardCount === 1 ? "" : "s"}. Click a card to open it below. Double-click to open it
+            full size.
             {columns.length === 1 && scopedGroups.length === 0
-              ? " With one project, List has more room."
+              ? " With one project, List view gives you more room."
               : null}
           </span>
           <span className="ml-auto flex shrink-0 gap-2.25">
@@ -326,156 +413,185 @@ export function OverviewView() {
             </EmptyHeader>
           </Empty>
         ) : (
-          <div
-            ref={gridRef}
-            role="grid"
-            aria-label="Overview"
-            className="min-h-0 flex-1 overflow-auto"
-            onFocus={handleGridFocus}
-            onKeyDown={handleGridKeyDown}
-          >
+          <div ref={splitRef} className="flex min-h-0 flex-1 flex-col">
             <div
-              className="grid min-w-full bg-card"
-              style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(180px, 1fr))` }}
+              ref={gridRef}
+              role="grid"
+              aria-label="Overview"
+              className="min-h-0 flex-1 overflow-auto"
+              onFocus={handleGridFocus}
+              onClick={handleGridClick}
+              onKeyDown={handleGridKeyDown}
             >
-              <div role="row" className="contents">
-                {columns.map((column, index) => (
-                  <OverviewColumnHeader
-                    key={column.projectKey}
-                    column={column}
-                    fill={fills[index]!}
-                    machines={machinesByColumn.get(column.projectKey) ?? []}
-                  />
-                ))}
-              </div>
-              {rows.map((row) => {
-                const [expanded, setExpanded] = expansion[row.section];
-                const label = SECTION_LABELS[row.section];
-                const showMore = expanded && row.section === "settled" && hiddenSettledCount > 0;
-                return (
-                  <Fragment key={row.section}>
-                    <div role="row" className="contents">
-                      <div
-                        role="rowheader"
-                        className="col-span-full border-b border-border bg-background"
-                      >
-                        <button
-                          type="button"
-                          aria-expanded={expanded}
-                          onClick={() => setExpanded(!expanded)}
-                          className="sticky left-0 flex h-5 cursor-pointer items-center gap-1.5 px-2 text-3xs whitespace-nowrap"
-                        >
-                          <ChevronDownIcon
-                            aria-hidden
-                            className={cn(
-                              "size-3 text-muted-foreground",
-                              !expanded && "-rotate-90",
-                            )}
-                          />
-                          <span className="font-semibold tracking-wide text-foreground uppercase">
-                            {label.name}
-                          </span>
-                          <span className="text-muted-foreground tabular-nums">
-                            {row.section === "settled" ? settledTotal : row.total}
-                          </span>
-                          <span className="text-muted-foreground/70">{label.why}</span>
-                        </button>
-                      </div>
-                      {expanded
-                        ? columns.map((column) => (
-                            <div
-                              key={column.projectKey}
-                              role="gridcell"
-                              className="flex min-h-2.5 min-w-0 flex-col gap-0.75 border-r border-b border-border p-0.75"
-                            >
-                              {(row.cells.get(column.projectKey) ?? []).map((thread) => {
-                                const key = threadShellKey(thread);
-                                const instanceId =
-                                  thread.runtime?.providerInstanceId ??
-                                  thread.modelSelection.instanceId;
-                                return (
-                                  <OverviewCard
-                                    key={key}
-                                    thread={thread}
-                                    section={row.section}
-                                    projectName={column.displayName}
-                                    machineLabel={
-                                      machineLabelsByColumn
-                                        .get(column.projectKey)
-                                        ?.get(thread.environmentId) ?? null
-                                    }
-                                    providerName={
-                                      providerEntriesByEnvironment
-                                        .get(thread.environmentId)
-                                        ?.get(instanceId)?.displayName ??
-                                      thread.runtime?.providerName ??
-                                      instanceId
-                                    }
-                                    lastVisitedAt={resolveThreadLastVisitedAt(
-                                      thread.lastVisitedAt,
-                                      lastVisitedById[key],
-                                    )}
-                                    wokeAt={threadWokeAt(thread, { now: partition.snoozeNow })}
-                                    offline={isOverviewThreadOffline(thread.environmentId, phases)}
-                                    selected={key === selectedKey}
-                                    tabbable={key === tabbableKey}
-                                    onOpen={openThread}
-                                    onPeek={peekThread}
-                                  />
-                                );
-                              })}
-                            </div>
-                          ))
-                        : null}
-                    </div>
-                    {showMore ? (
+              <div
+                className="grid min-w-full bg-card"
+                style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(180px, 1fr))` }}
+              >
+                <div role="row" className="contents">
+                  {columns.map((column, index) => (
+                    <OverviewColumnHeader
+                      key={column.projectKey}
+                      column={column}
+                      fill={fills[index]!}
+                      machines={machinesByColumn.get(column.projectKey) ?? []}
+                    />
+                  ))}
+                </div>
+                {rows.map((row) => {
+                  const [expanded, setExpanded] = expansion[row.section];
+
+                  const showMore = expanded && row.section === "settled" && hiddenSettledCount > 0;
+                  return (
+                    <Fragment key={row.section}>
                       <div role="row" className="contents">
-                        <div role="gridcell" className="col-span-full border-b border-border">
+                        <div
+                          role="rowheader"
+                          className="col-span-full border-b border-border bg-background"
+                        >
                           <button
                             type="button"
-                            onClick={() =>
-                              setSettledTail((current) => ({
-                                scopeKey: current.scopeKey,
-                                count: current.count + SETTLED_TAIL_PAGE_COUNT,
-                              }))
-                            }
-                            className="sticky left-0 flex h-6 cursor-pointer items-center gap-1.5 px-2 text-2xs text-muted-foreground hover:text-foreground"
+                            aria-expanded={expanded}
+                            onClick={() => setExpanded(!expanded)}
+                            className="sticky left-0 flex h-5 cursor-pointer items-center gap-1.5 px-2 text-3xs whitespace-nowrap"
                           >
-                            <ChevronDownIcon aria-hidden className="size-3" />
-                            Show {Math.min(hiddenSettledCount, SETTLED_TAIL_PAGE_COUNT)} more
+                            <ChevronDownIcon
+                              aria-hidden
+                              className={cn(
+                                "size-3 text-muted-foreground",
+                                !expanded && "-rotate-90",
+                              )}
+                            />
+                            <span className="font-semibold tracking-wide text-foreground uppercase">
+                              {SECTION_NAMES[row.section]}
+                            </span>
+                            <span className="text-muted-foreground tabular-nums">
+                              {row.section === "settled" ? settledTotal : row.total}
+                            </span>
+                            <span className="text-muted-foreground/70">
+                              {SECTION_NOTES[row.section]}
+                            </span>
                           </button>
                         </div>
+                        {expanded
+                          ? columns.map((column) => (
+                              <div
+                                key={column.projectKey}
+                                role="gridcell"
+                                className="flex min-h-2.5 min-w-0 flex-col gap-0.75 border-r border-b border-border p-0.75"
+                              >
+                                {(row.cells.get(column.projectKey) ?? []).map((thread) => {
+                                  const key = threadShellKey(thread);
+                                  const instanceId =
+                                    thread.runtime?.providerInstanceId ??
+                                    thread.modelSelection.instanceId;
+                                  return (
+                                    <OverviewCard
+                                      key={key}
+                                      thread={thread}
+                                      section={row.section}
+                                      projectName={column.displayName}
+                                      machineLabel={
+                                        machineLabelsByColumn
+                                          .get(column.projectKey)
+                                          ?.get(thread.environmentId) ?? null
+                                      }
+                                      providerName={
+                                        providerEntriesByEnvironment
+                                          .get(thread.environmentId)
+                                          ?.get(instanceId)?.displayName ??
+                                        thread.runtime?.providerName ??
+                                        instanceId
+                                      }
+                                      lastVisitedAt={resolveThreadLastVisitedAt(
+                                        thread.lastVisitedAt,
+                                        lastVisitedById[key],
+                                      )}
+                                      wokeAt={threadWokeAt(thread, { now: partition.snoozeNow })}
+                                      offline={isOverviewThreadOffline(
+                                        thread.environmentId,
+                                        phases,
+                                      )}
+                                      selected={key === openKey}
+                                      tabbable={key === tabbableKey}
+                                      onOpen={openThread}
+                                      onSelect={showThread}
+                                    />
+                                  );
+                                })}
+                              </div>
+                            ))
+                          : null}
                       </div>
-                    ) : null}
-                  </Fragment>
-                );
-              })}
-              <div role="row" className="contents">
-                {columns.map(({ projectKey, project, displayName }) => (
-                  <div key={projectKey} role="gridcell" className="border-r border-border p-0.75">
-                    {project === null ? null : (
-                      <NewThreadInColumnButton
-                        projectName={displayName}
-                        onClick={() => startThreadIn(project)}
-                      />
-                    )}
-                  </div>
-                ))}
+                      {showMore ? (
+                        <div role="row" className="contents">
+                          <div role="gridcell" className="col-span-full border-b border-border">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSettledTail((current) => ({
+                                  scopeKey: current.scopeKey,
+                                  count: current.count + SETTLED_TAIL_PAGE_COUNT,
+                                }))
+                              }
+                              className="sticky left-0 flex h-6 cursor-pointer items-center gap-1.5 px-2 text-2xs text-muted-foreground hover:text-foreground"
+                            >
+                              <ChevronDownIcon aria-hidden className="size-3" />
+                              Show {Math.min(hiddenSettledCount, SETTLED_TAIL_PAGE_COUNT)} more
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
+                    </Fragment>
+                  );
+                })}
+                <div role="row" className="contents">
+                  {columns.map(({ projectKey, project, displayName }) => (
+                    <div key={projectKey} role="gridcell" className="border-r border-border p-0.75">
+                      {project === null ? null : (
+                        <NewThreadInColumnButton
+                          projectName={displayName}
+                          onClick={() => startThreadIn(project)}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
+            {openRef === null ? null : (
+              <>
+                <div
+                  role="separator"
+                  aria-orientation="horizontal"
+                  aria-label="Resize thread pane"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(splitFraction * 100)}
+                  tabIndex={0}
+                  onPointerDown={handleDividerPointerDown}
+                  onPointerMove={handleDividerPointerMove}
+                  onPointerUp={handleDividerPointerUp}
+                  onPointerCancel={handleDividerPointerCancel}
+                  onKeyDown={handleDividerKeyDown}
+                  data-info="Drag to resize. Drag all the way down to close."
+                  className="h-1.5 shrink-0 cursor-row-resize touch-none border-y border-border bg-muted outline-0 outline-ring hover:bg-accent focus-visible:outline-2"
+                />
+                <div
+                  ref={paneRef}
+                  className="flex min-h-0 shrink-0 flex-col overflow-hidden"
+                  style={{ height: `${splitFraction * 100}%` }}
+                >
+                  <ChatView
+                    environmentId={openRef.environmentId}
+                    threadId={openRef.threadId}
+                    routeKind="server"
+                  />
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
-      {selectedKey !== null && peekColumn !== undefined && peekRef !== null ? (
-        <OverviewPeek
-          key={selectedKey}
-          threadRef={peekRef}
-          projectName={peekColumn.displayName}
-          getCard={() => findCard(selectedKey)}
-          onOpenThread={() => openThread(selectedKey)}
-          onClose={() => setSelectedKey(null)}
-        />
-      ) : null}
     </SidebarInset>
   );
 }

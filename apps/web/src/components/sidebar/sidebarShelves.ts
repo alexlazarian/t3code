@@ -13,6 +13,14 @@ export const SIDEBAR_SHELF_EXPANDED_DEFAULT = false;
 export const SETTLED_TAIL_INITIAL_COUNT = 10;
 export const SETTLED_TAIL_PAGE_COUNT = 25;
 
+export const SECTION_NOTES = {
+  pinned: "Always at the top",
+  working: "Running on their own, like subagents, PR watches and monitors",
+  active: "What you're working on now",
+  snoozed: "Hidden until they wake up",
+  settled: "Done, kept for reference",
+} as const;
+
 export function useSidebarPartitionClockKey(
   threads: ReadonlyArray<{ readonly snoozedUntil?: string | null | undefined }>,
 ): string {

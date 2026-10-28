@@ -17,6 +17,8 @@ import {
   overviewColumnMachines,
   overviewProjectKeyOf,
   overviewLaunchCell,
+  overviewSplitDragFraction,
+  resolveOverviewSplitRelease,
 } from "./Overview.logic";
 
 const envA = EnvironmentId.make("env-a");
@@ -307,5 +309,22 @@ describe("overviewLaunchCell", () => {
     expect(overviewLaunchCell("failed").lit).toBe("failed");
     expect(overviewLaunchCell("waiting").lit).toBeNull();
     expect(overviewLaunchCell(null)).toEqual(overviewLaunchCell("done"));
+  });
+});
+
+describe("overview split", () => {
+  const split = { top: 100, height: 600 };
+
+  it("sizes the pane from the pointer and keeps room for the grid", () => {
+    expect(overviewSplitDragFraction(400, split)).toBe(0.5);
+    expect(overviewSplitDragFraction(800, split)).toBe(0);
+    expect(overviewSplitDragFraction(0, split)).toBe(1 - 96 / 600);
+  });
+
+  it("snaps shut when released near the bottom and holds a minimum size otherwise", () => {
+    expect(resolveOverviewSplitRelease(0, 600)).toBeNull();
+    expect(resolveOverviewSplitRelease(100 / 600, 600)).toBeNull();
+    expect(resolveOverviewSplitRelease(130 / 600, 600)).toBe(160 / 600);
+    expect(resolveOverviewSplitRelease(0.5, 600)).toBe(0.5);
   });
 });

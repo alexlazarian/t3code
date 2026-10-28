@@ -39,7 +39,7 @@ export const OverviewCard = memo(function OverviewCard(props: {
   readonly selected: boolean;
   readonly tabbable: boolean;
   readonly onOpen: (threadKey: string) => void;
-  readonly onPeek: (threadKey: string) => void;
+  readonly onSelect: (threadKey: string) => void;
 }) {
   const { thread, lastVisitedAt } = props;
   const threadKey = threadShellKey(thread);
@@ -90,7 +90,7 @@ export const OverviewCard = memo(function OverviewCard(props: {
       props.onOpen(threadKey);
     } else if (event.key === " ") {
       event.preventDefault();
-      props.onPeek(threadKey);
+      props.onSelect(threadKey);
     }
   };
   const handleContextMenu = (event: MouseEvent) => {
@@ -115,7 +115,7 @@ export const OverviewCard = memo(function OverviewCard(props: {
       data-info-thread={threadKey}
       aria-label={[thread.title, props.projectName, status?.label].filter(Boolean).join(", ")}
       aria-pressed={props.selected}
-      onClick={() => props.onPeek(threadKey)}
+      onClick={() => props.onSelect(threadKey)}
       onDoubleClick={() => props.onOpen(threadKey)}
       onKeyDown={handleKeyDown}
       onContextMenu={handleContextMenu}

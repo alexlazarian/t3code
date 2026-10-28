@@ -234,11 +234,11 @@ palette, or **Settings → General → Thread view**. T3 Code opens in the view 
 chose. **Switch between List and Overview** has no default shortcut; assign one in
 **Settings → Keybindings**.
 
-Click a card, or focus it and press `Space`, to peek at it. A peek shows the latest
-reply and lets you approve, answer a question, implement a plan, stop, resume, or
-reply without leaving Overview. **Open in List view**, a double-click, or `Enter`
-opens the full thread. If the thread's machine is offline, the peek offers
-**Reconnect**.
+Click a card, or focus it and press `Space`, to open the thread below the grid. Click
+another card to switch threads. Drag the divider to resize the split. To close the thread
+and get the full grid back, click an empty spot in the grid, press `Esc`, or drag the
+divider all the way down. A double-click or `Enter` opens the thread in List view at
+full size.
 
 ## Use the Library
 

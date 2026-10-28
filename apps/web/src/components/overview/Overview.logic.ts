@@ -191,3 +191,23 @@ const LAUNCH_CELLS: Partial<Record<SidebarStatusLabel["icon"], OverviewLaunchCel
 export function overviewLaunchCell(icon: SidebarStatusLabel["icon"] | null): OverviewLaunchCell {
   return (icon === null ? undefined : LAUNCH_CELLS[icon]) ?? STOPPED_CELL;
 }
+
+const MIN_OVERVIEW_GRID_PX = 96;
+const MIN_OVERVIEW_PANE_PX = 160;
+const OVERVIEW_PANE_SNAP_CLOSED_PX = 120;
+
+/** The thread pane's share of the split for a pointer at `clientY`, leaving the grid room. */
+export function overviewSplitDragFraction(
+  clientY: number,
+  split: { readonly top: number; readonly height: number },
+): number {
+  if (split.height <= 0) return 0;
+  const max = Math.max(0, 1 - MIN_OVERVIEW_GRID_PX / split.height);
+  return Math.min(max, Math.max(0, (split.top + split.height - clientY) / split.height));
+}
+
+/** Where a released drag settles: `null` snaps the pane shut, otherwise the fraction to keep. */
+export function resolveOverviewSplitRelease(fraction: number, height: number): number | null {
+  if (fraction * height < OVERVIEW_PANE_SNAP_CLOSED_PX) return null;
+  return Math.max(fraction, Math.min(MIN_OVERVIEW_PANE_PX / height, 1));
+}

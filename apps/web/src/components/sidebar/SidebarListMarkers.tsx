@@ -7,6 +7,7 @@ import {
   sidebarMarkerId,
   type SidebarListMarker,
 } from "../Sidebar.logic";
+import { SECTION_NOTES } from "./sidebarShelves";
 import { SIDEBAR_SORTABLE_DRAG_DISABLED } from "./SidebarThreadRow";
 
 function SortableSidebarMarker(props: {
@@ -121,6 +122,7 @@ export function SidebarSectionHeader(props: {
         role="treeitem"
         tabIndex={-1}
         data-sidebar-row={`shelf:${SECTION_SHELF[props.marker]}`}
+        data-info={`${props.label}: ${SECTION_NOTES[SECTION_SHELF[props.marker]]}`}
         aria-expanded={props.toggle.expanded}
         disabled={props.narrowed}
         onClick={props.toggle.onToggle}
