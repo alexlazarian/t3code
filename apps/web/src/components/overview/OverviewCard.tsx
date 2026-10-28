@@ -1,7 +1,6 @@
 import { scopedThreadKey, scopeThreadRef } from "@t3tools/client-runtime/environment";
 import { resolveSettledThreadTimestamp } from "@t3tools/client-runtime/state/thread-sort";
 import type { OrchestrationV2ShellSubagent } from "@t3tools/contracts";
-import * as DateTime from "effect/DateTime";
 import { BotIcon, EyeIcon, ListIcon, RowsIcon, SquareTerminalIcon } from "lucide-react";
 import { memo, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
 
@@ -35,12 +34,10 @@ import {
   overviewStepLine,
   overviewWaitStrip,
   overviewStrobeDelay,
-  overviewSubagentState,
   type OverviewLight,
-  type OverviewStepLine,
-  type OverviewSubagentState,
   type OverviewWaitStrip,
 } from "./Overview.logic";
+import { StepText, SubagentRows, SubagentToggle } from "./OverviewSubagents";
 
 // Like a clip's name bar: tinted while there is something to see, plain once it is quiet.
 const HEADER_CLASS: Record<OverviewLight, string> = {
@@ -50,31 +47,6 @@ const HEADER_CLASS: Record<OverviewLight, string> = {
   waiting: "bg-[color-mix(in_oklab,var(--status-waiting)_16%,var(--muted))]",
   done: "bg-secondary",
   idle: "bg-secondary",
-};
-
-const STEP_TONE_CLASS: Record<OverviewStepLine["tone"], string> = {
-  normal: "text-foreground",
-  "needs-you": "text-status-needs-you",
-  failed: "text-status-failed",
-  dim: "text-muted-foreground",
-};
-
-const SUBAGENT_LIGHT: Record<OverviewSubagentState, OverviewLight> = {
-  running: "working",
-  failed: "failed",
-  stopped: "idle",
-  done: "done",
-};
-
-const SUBAGENT_FALLBACK: Record<OrchestrationV2ShellSubagent["status"], string> = {
-  idle: "Done",
-  pending: "Starting",
-  running: "Working",
-  waiting: "Working",
-  completed: "Done",
-  failed: "Failed",
-  cancelled: "Stopped",
-  interrupted: "Stopped",
 };
 
 const WAIT_ICON: Record<
@@ -87,14 +59,6 @@ const WAIT_ICON: Record<
   subagent: BotIcon,
   task: ListIcon,
   many: RowsIcon,
-};
-
-// A check is unreadable at 5px, so finished and stopped subagents both stay plain gray squares.
-const SQUARE_CLASS: Record<OverviewSubagentState, string> = {
-  running: "bg-status-working",
-  failed: "bg-status-failed",
-  stopped: "bg-muted-foreground/45",
-  done: "bg-muted-foreground/45",
 };
 
 export const OverviewCard = memo(function OverviewCard(props: {
@@ -174,8 +138,6 @@ export const OverviewCard = memo(function OverviewCard(props: {
         if (action === "open-in-list") props.onOpen(threadKey);
       });
   };
-  // The count and the rows act on their own, so the card's own handlers must not see them.
-  const isolate = (event: MouseEvent | KeyboardEvent) => event.stopPropagation();
   const openSubagent = (subagent: OrchestrationV2ShellSubagent) => {
     if (subagent.threadId === null) return;
     props.onSelect(scopedThreadKey(scopeThreadRef(thread.environmentId, subagent.threadId)));
@@ -219,29 +181,13 @@ export const OverviewCard = memo(function OverviewCard(props: {
           {thread.title}
         </span>
         {subagentCount > 0 ? (
-          <button
-            type="button"
-            aria-expanded={expanded}
-            aria-label={`${expanded ? "Hide" : "Show"} the lead and its ${subagentCount} subagent${subagentCount === 1 ? "" : "s"}`}
-            onClick={(event) => {
-              isolate(event);
-              setExpanded(!expanded);
-            }}
-            onDoubleClick={isolate}
-            onKeyDown={isolate}
-            className="flex shrink-0 cursor-pointer items-center gap-0.75 border border-transparent px-0.5 text-3xs text-muted-foreground outline-0 outline-ring hover:border-accent focus-visible:outline-2"
-          >
-            <span aria-hidden className="flex items-center gap-0.5">
-              {subagents.map((subagent, index) => (
-                <span
-                  // oxlint-disable-next-line react/no-array-index-key -- subagents carry no id; order is stable
-                  key={index}
-                  className={cn("size-1.25", SQUARE_CLASS[overviewSubagentState(subagent.status)])}
-                />
-              ))}
-            </span>
-            {subagentCount} {subagentCount === 1 ? "agent" : "agents"}
-          </button>
+          <SubagentToggle
+            subagents={subagents}
+            subagentCount={subagentCount}
+            expanded={expanded}
+            onToggle={() => setExpanded(!expanded)}
+            showCount
+          />
         ) : null}
         <Tooltip>
           <TooltipTrigger info={props.providerName} render={<span className="flex shrink-0" />}>
@@ -314,96 +260,20 @@ export const OverviewCard = memo(function OverviewCard(props: {
         </span>
       </div>
       {expanded && subagentCount > 0 ? (
-        <div className="border-t border-border bg-card px-1.75 pt-0.5 pb-0.75 text-3xs leading-relaxed">
-          <div
-            className="mb-px flex min-w-0 items-center gap-1.25 border-b border-border pb-px"
-            style={{ "--strobe-delay": overviewStrobeDelay(threadKey, 1) } as CSSProperties}
-          >
-            <StatusLight
-              size="small"
-              tone={leadWaiting ? "idle" : light}
-              strobe={working && !leadWaiting}
-            />
-            <span className="shrink-0 font-semibold">Lead</span>
-            {step ? (
-              <StepText step={step} className="min-w-0 flex-1" />
-            ) : (
-              <span className="min-w-0 flex-1" />
-            )}
-          </div>
-          {subagents.map((subagent, index) => {
-            const state = overviewSubagentState(subagent.status);
-            return (
-              <button
-                // oxlint-disable-next-line react/no-array-index-key -- subagents carry no id; order is stable
-                key={index}
-                type="button"
-                disabled={subagent.threadId === null}
-                onClick={(event) => {
-                  isolate(event);
-                  openSubagent(subagent);
-                }}
-                onDoubleClick={isolate}
-                onKeyDown={isolate}
-                data-info={subagent.threadId === null ? undefined : "Open this subagent's thread"}
-                style={
-                  {
-                    "--strobe-delay": overviewStrobeDelay(threadKey, index + 2),
-                  } as CSSProperties
-                }
-                className="flex w-full min-w-0 cursor-pointer items-center gap-1.25 text-left outline-0 outline-ring hover:bg-accent focus-visible:outline-2 disabled:cursor-default disabled:hover:bg-transparent"
-              >
-                <StatusLight
-                  size="small"
-                  tone={SUBAGENT_LIGHT[state]}
-                  strobe={state === "running"}
-                />
-                <span className="max-w-[48%] shrink-0 truncate text-foreground">
-                  {subagent.title}
-                </span>
-                <span
-                  className={cn(
-                    "min-w-0 flex-1 truncate",
-                    state === "failed" ? "text-status-failed" : "text-muted-foreground",
-                  )}
-                >
-                  {subagent.step ?? SUBAGENT_FALLBACK[subagent.status]}
-                </span>
-                <span className="shrink-0 text-muted-foreground/80 tabular-nums">
-                  <AgentElapsed
-                    agent={{
-                      status: subagent.status,
-                      startedAt: isoOrNull(subagent.startedAt),
-                      completedAt: isoOrNull(subagent.completedAt),
-                    }}
-                  />
-                </span>
-              </button>
-            );
-          })}
-          {subagentCount > subagents.length ? (
-            <div className="text-muted-foreground/80">
-              {subagentCount - subagents.length} earlier subagents
-            </div>
-          ) : null}
-        </div>
+        <SubagentRows
+          threadKey={threadKey}
+          light={light}
+          step={step}
+          leadWaiting={leadWaiting}
+          subagents={subagents}
+          subagentCount={subagentCount}
+          onOpen={openSubagent}
+          className="border-t border-border bg-card px-1.75 pt-0.5 pb-0.75 text-3xs"
+        />
       ) : null}
     </div>
   );
 });
-
-function isoOrNull(value: DateTime.Utc | null): string | null {
-  return value === null ? null : DateTime.formatIso(value);
-}
-
-function StepText(props: { readonly step: OverviewStepLine; readonly className?: string }) {
-  return (
-    <span className={cn("truncate", STEP_TONE_CLASS[props.step.tone], props.className)}>
-      {props.step.text}
-      {props.step.code ? <code className="font-mono">{props.step.code}</code> : null}
-    </span>
-  );
-}
 
 function WaitStrip(props: { readonly wait: OverviewWaitStrip }) {
   const Icon = WAIT_ICON[props.wait.icon];

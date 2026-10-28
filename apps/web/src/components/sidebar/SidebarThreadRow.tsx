@@ -43,6 +43,7 @@ import {
   memo,
   useRef,
   useState,
+  type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
@@ -54,6 +55,9 @@ import { useOpenPrLink } from "../../lib/openPullRequestLink";
 import { useUiStateStore } from "../../uiStateStore";
 import { useThreadSelectionStore } from "../../threadSelectionStore";
 import { useProjectAccentColor } from "../../hooks/useProjectAccentColor";
+import { projectFillColor } from "../../projectAccentColor.logic";
+import { deriveActiveWorkStartedAt } from "../../session-logic";
+import { create } from "zustand";
 import { vcsEnvironment } from "../../state/vcs";
 import { useEnvironmentQuery } from "../../state/query";
 import { readEnvironmentScope, useEnvironmentScope } from "../../state/session";
@@ -107,6 +111,15 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { MiddleTruncate } from "../ui/middle-truncate";
 import { useThreadHasUnsentDraft } from "../../composerDraftStore";
 import { UnsentDraftLabel } from "./UnsentDraftLabel";
+import { AgentElapsed } from "../chat/AgentElapsed";
+import { StatusLight } from "../StatusLight";
+import {
+  overviewLight,
+  overviewRunningSubagents,
+  overviewStrobeDelay,
+  sidebarStepLine,
+} from "../overview/Overview.logic";
+import { StepText, SubagentRows, SubagentToggle } from "../overview/OverviewSubagents";
 
 // The fields thread rows show. Provider status pushes refresh `checkedAt`,
 // status and auth on every provider; leaving those out keeps each
@@ -122,6 +135,55 @@ export type SidebarProviderEntry = Pick<
   | "acpRegistryIconUrl"
   | "models"
 >;
+
+const useSubagentsExpandedStore = create<{
+  readonly threadKeys: ReadonlySet<string>;
+  readonly toggle: (threadKey: string) => void;
+}>((set) => ({
+  threadKeys: new Set(),
+  toggle: (threadKey) =>
+    set((state) => {
+      const threadKeys = new Set(state.threadKeys);
+      if (!threadKeys.delete(threadKey)) threadKeys.add(threadKey);
+      return { threadKeys };
+    }),
+}));
+
+// The open thread's row is lit like the open tab. Its children re-point the text tokens at the
+// inverted colors, so every label, light and action inside reads on the light fill.
+export const SIDEBAR_ACTIVE_ROW_CLASS =
+  "bg-sidebar-foreground text-sidebar *:[--contrast-foreground:var(--sidebar)] *:[--contrast-sidebar-foreground:var(--sidebar)] *:[--contrast-muted-foreground:color-mix(in_oklab,var(--sidebar)_68%,var(--sidebar-foreground))] *:[--contrast-sidebar-muted-foreground:color-mix(in_oklab,var(--sidebar)_68%,var(--sidebar-foreground))] *:[--contrast-secondary-label:color-mix(in_oklab,var(--sidebar)_68%,var(--sidebar-foreground))] *:[--contrast-placeholder:color-mix(in_oklab,var(--sidebar)_68%,var(--sidebar-foreground))]";
+
+/** The project name in its Overview column color; muted when the project has no color. */
+export function SidebarProjectTag(props: {
+  readonly name: string;
+  readonly color: string | null;
+  readonly inverted: boolean;
+}) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "max-w-[40%] shrink-0 truncate text-2xs",
+        props.color === null
+          ? "text-muted-foreground"
+          : "text-(--project-tag) light:text-(--project-tag-raw)",
+        props.color !== null && props.inverted && "dark:brightness-50",
+      )}
+      style={
+        props.color === null
+          ? undefined
+          : ({
+              "--project-tag": projectFillColor(props.color),
+              "--project-tag-raw": props.color,
+            } as CSSProperties)
+      }
+    >
+      {props.name}
+    </span>
+  );
+}
+
 function JumpHintBadge(props: { label: string }) {
   return (
     <span
@@ -553,7 +615,9 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
     variant,
     variantAction,
   } = props;
-  const projectAccentColor = useProjectAccentColor(props.project);
+  // A folder row sits under its project's name, so it shows no project tag.
+  const inFolder = variant === "folder" || variant === "folder-multiline";
+  const projectAccentColor = useProjectAccentColor(inFolder ? null : props.project);
   const threadRef = scopeThreadRef(thread.environmentId, thread.id);
   const threadKey = scopedThreadKey(threadRef);
   const canOperateThread = useEnvironmentScope(thread.environmentId, AuthOrchestrationOperateScope);
@@ -630,6 +694,26 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
     isCompleted: isSidebarThreadCompleted(thread),
   });
   const isWokeStatus = topStatus?.icon === "woke";
+  const statusIcon = topStatus?.icon ?? null;
+  const light = overviewLight(statusIcon);
+  const working = light === "working";
+  const quiet = light === "done" || light === "idle";
+  const activity = thread.source.activity ?? null;
+  const subagents = activity?.subagents ?? [];
+  const subagentCount = activity?.subagentCount ?? 0;
+  const runningSubagents = overviewRunningSubagents(activity);
+  const step = sidebarStepLine({
+    icon: statusIcon,
+    activity,
+    lastError: thread.runtime?.lastError ?? null,
+    blockedOnThreadWait: thread.blockedOnThreadWait ?? false,
+    statusLabel: topStatus?.label ?? null,
+  });
+  const workingSince = working
+    ? deriveActiveWorkStartedAt(thread.latestRun, thread.runtime, null)
+    : null;
+  const subagentsExpanded =
+    useSubagentsExpandedStore((state) => state.threadKeys.has(threadKey)) && subagentCount > 0;
 
   const branchMismatch = resolveLocalCheckoutBranchMismatch({
     effectiveEnvMode: thread.worktreePath === null ? "local" : "worktree",
@@ -794,20 +878,13 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
     }
   };
 
-  const projectEdge = projectAccentColor ? (
-    <span
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-y-0 left-0 z-10 w-0.5"
-      style={{ backgroundColor: projectAccentColor }}
-    />
-  ) : null;
   const rowSurfaceClassName = cn(
     "group/sidebar-row relative w-full cursor-pointer overflow-hidden rounded-none text-left sm:border-b sm:border-sidebar-border outline-none select-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
     variantAction === "unsettle" &&
       !props.isActive &&
       "[&:not(:hover):not(:focus-within)_*]:text-secondary-label",
     props.isActive
-      ? "bg-sidebar-row-active text-sidebar-foreground light:ring-1 light:ring-inset light:ring-sidebar-border/70"
+      ? SIDEBAR_ACTIVE_ROW_CLASS
       : isSelected || props.sweepAction !== null
         ? "bg-sidebar-row-selected text-sidebar-foreground light:ring-1 light:ring-inset light:ring-sidebar-border/70"
         : shouldRecede
@@ -871,10 +948,10 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
     <span
       aria-hidden
       className={cn(
-        "min-w-0 flex-1 truncate text-start text-sm font-normal transition-opacity motion-reduce:transition-none",
-        shouldRecede
-          ? "text-foreground/75 group-hover/sidebar-row:text-foreground group-focus-visible/sidebar-row:text-foreground"
-          : "text-foreground",
+        "min-w-0 flex-1 truncate text-start text-sm leading-4.5 transition-opacity motion-reduce:transition-none",
+        quiet
+          ? "font-normal text-muted-foreground group-hover/sidebar-row:text-foreground group-focus-visible/sidebar-row:text-foreground"
+          : "font-semibold text-foreground",
         isRegeneratingTitle && "opacity-55",
       )}
       dir={textDirection(thread.title)}
@@ -1056,12 +1133,12 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
         />
         <TooltipPopup side="top">Dismiss Woke notification</TooltipPopup>
       </Tooltip>
-    ) : topStatus ? (
-      // Not a live region: a collapsed sidebar is inert, so BackgroundThreadAnnouncer
-      // and the open thread's timeline speak status changes instead.
-      <span className={cn("font-semibold", topStatus.className)}>{topStatus.label}</span>
+    ) : workingSince !== null ? (
+      <span className="text-status-working">
+        <AgentElapsed agent={{ status: "running", startedAt: workingSince, completedAt: null }} />
+      </span>
     ) : (
-      <span className="text-placeholder">
+      <span className={light === "waiting" ? "text-status-waiting" : "text-muted-foreground"}>
         <RelativeTimeLabel
           timestamp={
             variantAction === "unsettle"
@@ -1107,11 +1184,14 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
     </span>
   );
 
-  // Every row already shows its branch line here, so the multiline folder setting looks like "folder".
-  const inFolder = variant === "folder" || variant === "folder-multiline";
-  const machineLabel = isRemote && !showsScratchMachine ? props.environmentLabel : null;
-  const separator = <span aria-hidden> &middot; </span>;
+  const machineLabel = showsScratchMachine
+    ? props.scratchMachineLabel
+    : isRemote
+      ? props.environmentLabel
+      : null;
   const queuedCount = thread.source.queuedRunCount ?? 0;
+  const hasDetailLine =
+    !inFolder || step !== null || queuedCount > 0 || hasUnsentDraft || machineLabel !== null;
 
   return (
     <li
@@ -1120,7 +1200,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
       {...sortableRootProps}
       {...(fileDropHandlers ?? {})}
       className={cn(
-        "list-none [content-visibility:auto] [contain-intrinsic-size:auto_37px]",
+        "list-none [content-visibility:auto] [contain-intrinsic-size:auto_40px]",
         sortable?.isDragging && "relative z-20",
       )}
     >
@@ -1146,7 +1226,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
               aria-busy={isRegeneratingTitle || undefined}
               className={cn(
                 rowSurfaceClassName,
-                "grid grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-x-2 border-b border-sidebar-border px-2 py-1 leading-snug",
+                "grid grid-cols-[0.625rem_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-px border-b border-sidebar-border px-2 py-0.75",
               )}
               onClick={handleClick}
               onDoubleClick={handleDoubleClick}
@@ -1156,16 +1236,26 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
           }
         >
           {accessibleTitle}
-          {projectEdge}
-          <span className="row-span-2 flex items-center justify-center">
-            {props.project && !inFolder ? (
-              <ProjectFavicon project={props.project} className="size-4" />
-            ) : null}
+          <span className="flex items-center justify-center">
+            <StatusLight
+              tone={light}
+              strobe={working || runningSubagents > 0}
+              strobeDelay={overviewStrobeDelay(threadKey)}
+            />
           </span>
           <span className="flex min-w-0 items-center gap-1.5">
             {title}
             {pinIndicator}
+            {subagentCount > 0 ? (
+              <SubagentToggle
+                subagents={subagents}
+                subagentCount={subagentCount}
+                expanded={subagentsExpanded}
+                onToggle={() => useSubagentsExpandedStore.getState().toggle(threadKey)}
+              />
+            ) : null}
             {terminalStatusIcon}
+            {prBadge}
             {isRegeneratingTitle ? (
               <span role="status" className="sr-only">
                 Regenerating title
@@ -1176,45 +1266,56 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
             {statusSlot}
             {props.sweepAction !== null ? dragDestination : null}
           </span>
-          <span className="col-span-2 flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
-            <span aria-hidden className="min-w-0 truncate">
-              {/* A folder row sits under its project's name, so the line starts at the branch. */}
-              {inFolder ? null : (props.projectDisplayName ?? "No project")}
-              {thread.branch ? (
-                <>
-                  {inFolder ? null : separator}
-                  {thread.worktreePath?.trim() ? (
-                    <FolderGit2Icon className="mr-0.5 inline size-3 align-text-bottom" />
-                  ) : null}
-                  <span className="font-mono">{thread.branch}</span>
-                </>
-              ) : showsScratchMachine ? (
-                <>
-                  {inFolder ? null : separator}
-                  {props.scratchMachineLabel}
-                </>
+          {hasDetailLine ? (
+            <span className="col-span-2 col-start-2 flex min-w-0 items-center gap-1.5 text-xs leading-4 text-muted-foreground">
+              {step ? (
+                <span aria-hidden className="flex min-w-0 flex-1">
+                  <StepText step={step} />
+                </span>
+              ) : (
+                <span className="flex-1" />
+              )}
+              {queuedCount > 0 ? (
+                <span className="shrink-0 text-2xs tabular-nums">{queuedCount} queued</span>
+              ) : null}
+              {hasUnsentDraft ? (
+                <span className="shrink-0 text-2xs">
+                  <UnsentDraftLabel testId={`sidebar-draft-indicator-${thread.id}`} />
+                </span>
               ) : null}
               {machineLabel ? (
-                <>
-                  {inFolder && !thread.branch ? null : separator}
+                <span aria-hidden className="max-w-[30%] shrink-0 truncate text-2xs">
                   {machineLabel}
-                </>
+                </span>
               ) : null}
+              {inFolder ? null : (
+                <SidebarProjectTag
+                  name={props.projectDisplayName ?? "No project"}
+                  color={projectAccentColor}
+                  inverted={props.isActive}
+                />
+              )}
             </span>
-            {queuedCount > 0 ? (
-              <span className="shrink-0 tabular-nums text-muted-foreground/80">
-                {queuedCount} queued
-              </span>
-            ) : null}
-            {hasUnsentDraft ? (
-              <UnsentDraftLabel testId={`sidebar-draft-indicator-${thread.id}`} />
-            ) : null}
-            {prBadge}
-          </span>
+          ) : null}
           {props.jumpLabel ? <JumpHintBadge label={props.jumpLabel} /> : null}
         </TooltipTrigger>
         {detailsTooltip}
       </Tooltip>
+      {subagentsExpanded ? (
+        <SubagentRows
+          threadKey={threadKey}
+          light={light}
+          step={step}
+          leadWaiting={step?.tone === "dim" && working && runningSubagents > 0}
+          subagents={subagents}
+          subagentCount={subagentCount}
+          onOpen={(subagent) => {
+            if (subagent.threadId === null) return;
+            onThreadActivate(scopeThreadRef(thread.environmentId, subagent.threadId));
+          }}
+          className="border-b border-sidebar-border py-0.5 pr-2 pl-6.5 text-2xs"
+        />
+      ) : null}
     </li>
   );
 });

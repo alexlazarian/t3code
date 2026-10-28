@@ -28,6 +28,7 @@ import {
   overviewLight,
   orderOverviewProjects,
   overviewStepLine,
+  sidebarStepLine,
   overviewWaitStrip,
   overviewSplitDragFraction,
   resolveOverviewSplitRelease,
@@ -469,6 +470,21 @@ describe("overviewStepLine", () => {
     expect(line("working", null)).toEqual({ tone: "dim", text: "Thinking" });
     expect(line("working", activity(null))).toEqual({ tone: "dim", text: "Thinking" });
     expect(line("done", null)).toBeNull();
+  });
+
+  it("falls back to the status word on a sidebar row that needs you or waits without a step", () => {
+    const row = (icon: Parameters<typeof overviewStepLine>[0]["icon"], statusLabel: string) =>
+      sidebarStepLine({
+        icon,
+        activity: null,
+        lastError: null,
+        blockedOnThreadWait: false,
+        statusLabel,
+      });
+    expect(row("approval", "Approval")).toEqual({ tone: "needs-you", text: "Approval" });
+    expect(row("waiting", "Waiting")).toEqual({ tone: "dim", text: "Waiting" });
+    expect(row("woke", "Woke")).toBeNull();
+    expect(row("working", "Working")).toEqual({ tone: "dim", text: "Thinking" });
   });
 });
 

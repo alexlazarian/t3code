@@ -10,7 +10,9 @@ import {
 import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
 import { cn } from "~/lib/utils";
 import { resolveSidebarRowAccessibility } from "../Sidebar.logic";
-import { ProjectFavicon, type ProjectFaviconProject } from "../ProjectFavicon";
+import type { ProjectFaviconProject } from "../ProjectFavicon";
+import { StatusLight } from "../StatusLight";
+import { useProjectAccentColor } from "../../hooks/useProjectAccentColor";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import {
   composerDraftHasUserContent,
@@ -20,6 +22,7 @@ import {
   type DraftSessionState,
 } from "../../composerDraftStore";
 import { UnsentDraftLabel } from "./UnsentDraftLabel";
+import { SIDEBAR_ACTIVE_ROW_CLASS, SidebarProjectTag } from "./SidebarThreadRow";
 
 const SidebarDraftRow = memo(function SidebarDraftRow(props: {
   draftId: DraftId;
@@ -32,6 +35,7 @@ const SidebarDraftRow = memo(function SidebarDraftRow(props: {
   onContextMenu: (draftId: DraftId, position: { x: number; y: number }) => void;
 }) {
   const { composer, draftId, onContextMenu, onDiscard, onNavigate } = props;
+  const projectAccentColor = useProjectAccentColor(props.project);
   const promptPreview =
     replaceComposerContextReferences(composer.prompt, (occurrence) => occurrence.label)
       .trim()
@@ -79,7 +83,7 @@ const SidebarDraftRow = memo(function SidebarDraftRow(props: {
     onDiscard(draftId);
   };
   return (
-    <li className="list-none py-0.5">
+    <li className="list-none">
       <div
         role="treeitem"
         tabIndex={-1}
@@ -88,47 +92,52 @@ const SidebarDraftRow = memo(function SidebarDraftRow(props: {
         aria-current={accessibility.current}
         data-testid="sidebar-draft-row"
         className={cn(
-          "group/sidebar-row relative w-full cursor-pointer overflow-hidden rounded-md text-left text-sidebar-foreground outline-none select-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-          props.isActive ? "bg-sidebar-row-active" : "hover:bg-sidebar-row-hover",
+          "group/sidebar-row relative grid w-full cursor-pointer grid-cols-[0.625rem_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-px overflow-hidden border-b border-sidebar-border px-2 py-0.75 text-left text-sidebar-foreground outline-none select-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+          props.isActive ? SIDEBAR_ACTIVE_ROW_CLASS : "hover:bg-sidebar-row-hover",
         )}
         onClick={handleActivate}
         onContextMenu={handleContextMenu}
         onKeyDown={handleKeyDown}
       >
         <span className="sr-only">{preview}</span>
-        <div className="relative z-10 h-[4.875rem] px-(--sidebar-row-content-inset) py-(--sidebar-content-inset)">
-          <div className="flex h-5 min-w-0 items-center gap-1.5">
-            {props.project ? (
-              <ProjectFavicon project={props.project} className="size-4 shrink-0" />
-            ) : null}
-            <span className="min-w-0 flex-1 truncate text-xs font-medium text-secondary-label">
-              {props.projectDisplayName}
-            </span>
-            <span className="shrink-0 text-xs">
-              <UnsentDraftLabel />
-            </span>
-            <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-end">
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <button
-                      type="button"
-                      aria-label="Discard draft"
-                      onClick={handleDiscard}
-                      className="pointer-events-none inline-flex cursor-pointer items-center rounded-md bg-transparent px-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover/sidebar-row:pointer-events-auto group-hover/sidebar-row:opacity-100"
-                    >
-                      <XIcon className="size-3" />
-                    </button>
-                  }
-                />
-                <TooltipPopup side="top">Discard draft</TooltipPopup>
-              </Tooltip>
-            </span>
-          </div>
-          <div aria-hidden className="mt-0.5 truncate text-sm font-medium text-foreground/90">
-            {preview}
-          </div>
-        </div>
+        <span className="flex items-center justify-center">
+          <StatusLight tone="idle" />
+        </span>
+        <span
+          aria-hidden
+          className="min-w-0 truncate text-sm leading-4.5 font-normal text-muted-foreground group-hover/sidebar-row:text-foreground"
+        >
+          {preview}
+        </span>
+        <span className="flex h-4 min-w-4 shrink-0 items-center justify-end">
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  aria-label="Discard draft"
+                  onClick={handleDiscard}
+                  className="pointer-events-none inline-flex cursor-pointer items-center rounded-md bg-transparent px-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover/sidebar-row:pointer-events-auto group-hover/sidebar-row:opacity-100"
+                >
+                  <XIcon className="size-3" />
+                </button>
+              }
+            />
+            <TooltipPopup side="top">Discard draft</TooltipPopup>
+          </Tooltip>
+        </span>
+        <span className="col-span-2 col-start-2 flex min-w-0 items-center gap-1.5 text-2xs leading-4">
+          <span className="min-w-0 flex-1">
+            <UnsentDraftLabel />
+          </span>
+          {props.projectDisplayName ? (
+            <SidebarProjectTag
+              name={props.projectDisplayName}
+              color={projectAccentColor}
+              inverted={props.isActive}
+            />
+          ) : null}
+        </span>
       </div>
     </li>
   );

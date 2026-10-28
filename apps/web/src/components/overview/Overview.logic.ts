@@ -330,6 +330,20 @@ export function overviewStepLine(input: {
   return { tone, ...describeStep(step) };
 }
 
+/**
+ * A sidebar row's second line: the card's step line, or the status word for a thread that needs
+ * you or waits with no step to show, since the row has no other place for it.
+ */
+export function sidebarStepLine(
+  input: Parameters<typeof overviewStepLine>[0] & { readonly statusLabel: string | null },
+): OverviewStepLine | null {
+  const step = overviewStepLine(input);
+  if (step !== null || input.statusLabel === null) return step;
+  const light = overviewLight(input.icon);
+  if (light === "needs-you") return { tone: "needs-you", text: input.statusLabel };
+  return light === "waiting" ? { tone: "dim", text: input.statusLabel } : null;
+}
+
 export type OverviewWaitStrip = {
   readonly icon: "command" | "pull-request" | "monitor" | "subagent" | "task" | "many";
   readonly text: string;
