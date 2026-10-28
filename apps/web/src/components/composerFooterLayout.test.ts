@@ -2,44 +2,9 @@ import { describe, expect, it } from "vite-plus/test";
 
 import { resolveContextStripLabelsCompact } from "./BranchToolbar.logic";
 import {
-  resolveComposerTimelineInset,
   resolveRestingComposerControlsLayout,
   resolveRestingComposerControlsNaturalWidth,
 } from "./composerFooterLayout";
-
-describe("resolveComposerTimelineInset", () => {
-  it("keeps timeline padding stable when the model-only strip appears on collapse", () => {
-    const expanded = resolveComposerTimelineInset({
-      currentInset: 0,
-      overlayHeight: 172,
-      isResting: false,
-      remPx: 13,
-    });
-    const collapsed = resolveComposerTimelineInset({
-      currentInset: expanded,
-      overlayHeight: 110,
-      isResting: true,
-      restingOnlyHeight: 32,
-      remPx: 13,
-    });
-    expect(collapsed).toBe(expanded);
-    expect(
-      resolveComposerTimelineInset({
-        currentInset: collapsed,
-        overlayHeight: 172,
-        isResting: false,
-        remPx: 13,
-      }),
-    ).toBe(expanded);
-  });
-
-  it("reserves the resting composer's expansion in root-relative units", () => {
-    const resting = (remPx: number) =>
-      resolveComposerTimelineInset({ currentInset: 0, overlayHeight: 100, isResting: true, remPx });
-    expect(resting(16)).toBe(100 + 71);
-    expect(resting(13)).toBe(100 + 58);
-  });
-});
 
 describe("context strip labels and resting composer controls", () => {
   const stripWidth = 724;

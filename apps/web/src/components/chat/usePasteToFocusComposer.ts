@@ -8,8 +8,8 @@ import { isTerminalFocused } from "../../lib/terminalFocus";
 import type { ThreadId } from "@t3tools/contracts";
 import type { ComposerHandleRef } from "../../composerHandleContext";
 /**
- * Paste-to-focus: the resting composer blurs on a click into the timeline, so a paste that
- * follows has no editable target and would be dropped. This sends it to the composer instead.
+ * Paste-to-focus: the composer blurs on a click into the timeline, so a paste that follows has
+ * no editable target and would be dropped. This sends it to the composer instead.
  */
 export function usePasteToFocusComposer(
   activeThreadId: ThreadId | null,

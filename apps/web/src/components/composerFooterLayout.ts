@@ -23,62 +23,6 @@ export function shouldUseCompactComposerFooter(
   return width !== null && width < breakpoint;
 }
 
-export function shouldUseRestingComposerLayout(input: {
-  isExistingThread: boolean;
-  isMobileViewport: boolean;
-  isScrollCollapsed: boolean;
-  hasExpandedChrome: boolean;
-  hasMultilinePrompt: boolean;
-  timelineOverflows: boolean;
-}): boolean {
-  return (
-    input.isExistingThread &&
-    !input.isMobileViewport &&
-    input.timelineOverflows &&
-    input.isScrollCollapsed &&
-    !input.hasMultilinePrompt &&
-    !input.hasExpandedChrome
-  );
-}
-
-/**
- * How much taller the empty expanded composer is than its resting row on
- * desktop widths, from the layout classes in ChatComposer: the body's bottom
- * padding grows 0.125rem (pb-1.5 to py-2), the prompt clamps from min-h-17.5
- * to min-h-8, and the docked footer (h-6.5 controls, p-1, 1px border-t) leaves flow.
- */
-function composerRestingExpansionPx(remPx: number): number {
-  return Math.ceil((4.375 - 2 + 2.125 - 0.125) * remPx + 1);
-}
-
-/** Reserve expansion height because the timeline does not move when footer growth covers its last rows. */
-export function resolveComposerTimelineInset(input: {
-  currentInset: number;
-  overlayHeight: number;
-  isResting: boolean;
-  restingOnlyHeight?: number;
-  /** The root font size in pixels. */
-  remPx: number;
-}): number {
-  const overlayHeight = Math.ceil(input.overlayHeight);
-  return input.isResting
-    ? Math.max(
-        input.currentInset,
-        overlayHeight +
-          (input.currentInset === 0
-            ? composerRestingExpansionPx(input.remPx) - (input.restingOnlyHeight ?? 0)
-            : 0),
-      )
-    : overlayHeight;
-}
-
-export function overlayComposerIsResting(input: {
-  composerMounted: boolean;
-  composerReportedResting: boolean;
-}): boolean {
-  return input.composerMounted && input.composerReportedResting;
-}
-
 export function shouldAnimateComposerRestingTransition(input: {
   hasCompletedInitialLayout: boolean;
   stateChanged: boolean;

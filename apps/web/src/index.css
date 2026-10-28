@@ -2058,8 +2058,7 @@ html[data-focus-dimming]:has([data-chat-composer-form]:focus-within):not(
 }
 
 /* Block spacing separates blocks, not the draft from the composer edge. A
-   leading list or quote would otherwise push the first line down, and the
-   one-line resting composer clips it. */
+   leading list or quote would otherwise push the first line down. */
 .composer-tiptap > :first-child {
   margin-top: 0;
 }

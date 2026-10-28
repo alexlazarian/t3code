@@ -8,7 +8,6 @@ const COMPOSER_RESTING_CONTROLS_ARRIVAL_DRIFT_PX = 4;
 
 export function useComposerRestingTransition(
   isCollapsed: boolean,
-  isResting: boolean,
   restingControlsRef: React.RefObject<HTMLDivElement | null>,
   onOverlayHeightChange: (height: number) => void,
   animationsActive: boolean,
@@ -17,7 +16,6 @@ export function useComposerRestingTransition(
   const elementRef = useRef<HTMLDivElement>(null);
   const isCollapsedRef = useRef(isCollapsed);
   const previousCollapsedRef = useRef(isCollapsed);
-  const previousRestingRef = useRef(isResting);
   const previousHeightRef = useRef<number | null>(null);
   const previousModelStripHeightRef = useRef<number | null>(null);
   const previousContentOffsetsRef = useRef<{
@@ -218,13 +216,8 @@ export function useComposerRestingTransition(
         footer.style.top = "auto";
         footer.style.bottom = `${String(footerBottom)}px`;
         footer.style.height = "3rem";
-        if (nextIsCollapsed) {
-          footer.style.left = "auto";
-          footer.style.right = "1px";
-        } else {
-          footer.style.left = "1px";
-          footer.style.right = "1px";
-        }
+        footer.style.left = "1px";
+        footer.style.right = "1px";
       }
 
       let stripAnimation: Animation | null = null;
@@ -451,14 +444,6 @@ export function useComposerRestingTransition(
       }
     };
   }, [isCollapsed, transitionToCurrentGeometry]);
-
-  useLayoutEffect(() => {
-    if (previousRestingRef.current === isResting) return;
-    previousRestingRef.current = isResting;
-    if (animationRef.current) return;
-    const overlay = elementRef.current?.closest<HTMLElement>('[data-chat-composer-overlay="true"]');
-    if (overlay) onOverlayHeightChange(overlay.getBoundingClientRect().height);
-  }, [isResting, onOverlayHeightChange]);
 
   useLayoutEffect(() => {
     const element = elementRef.current;
