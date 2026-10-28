@@ -180,7 +180,6 @@ import {
 import {
   createSidebarCollisionDetection,
   createSidebarSortingStrategy,
-  unstuckSidebarRect,
   restrictBelowSidebarLabel,
 } from "./Sidebar.drag";
 import { SidebarPointerSensor } from "./Sidebar.pointer";
@@ -1560,7 +1559,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     const header = list?.querySelector<HTMLElement>('[data-testid="sidebar-pinned-header"]');
     if (list && header) {
       dragLabelOffsetRef.current =
-        unstuckSidebarRect(header).bottom - list.getBoundingClientRect().top;
+        header.getBoundingClientRect().bottom - list.getBoundingClientRect().top;
     } else {
       dragLabelOffsetRef.current = 0;
     }

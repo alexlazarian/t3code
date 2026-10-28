@@ -14,18 +14,6 @@ const hidden = { ...stationary, scaleY: 0 };
 type ThreadItem = Extract<SidebarListItem, { kind: "thread" }>;
 type Layout = Parameters<SortingStrategy>[0];
 
-/** Section headers are sticky, so a stuck one reports where it is pinned, not its place in the list. */
-export function unstuckSidebarRect(node: Element) {
-  const rect = node.getBoundingClientRect();
-  const previousBottom = node.previousElementSibling?.getBoundingClientRect().bottom;
-  const top =
-    previousBottom === undefined
-      ? node.parentElement?.getBoundingClientRect().top
-      : previousBottom + 1;
-  if (top === undefined) return rect;
-  return { top, bottom: top + rect.height, left: rect.left, right: rect.right };
-}
-
 export function restrictBelowSidebarLabel(
   { transform, containerNodeRect, draggingNodeRect }: Parameters<Modifier>[0],
   offset: number,
@@ -51,10 +39,9 @@ export function createSidebarCollisionDetection(
     const pointer = args.pointerCoordinates;
     const items = options.items;
     const source = items?.find((item) => item.kind === "thread" && item.key === args.active.id);
-    const boundaryNode = args.droppableContainers.find(
-      (container) => container.id === sidebarMarkerId("pinned-divider"),
-    )?.node.current;
-    const boundary = boundaryNode ? unstuckSidebarRect(boundaryNode) : undefined;
+    const boundary = args.droppableContainers
+      .find((container) => container.id === sidebarMarkerId("pinned-divider"))
+      ?.node.current?.getBoundingClientRect();
     if (items && boundary && source?.kind === "thread" && pointer) {
       boundarySection ??= source.section === "pinned" ? "pinned" : "active";
       // Only pointer movement changes sections; opening the destination moves rows under stationary gestures.

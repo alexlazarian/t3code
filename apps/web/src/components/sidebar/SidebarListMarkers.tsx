@@ -98,11 +98,7 @@ export function SidebarSectionHeader(props: {
     );
   }
   return (
-    <SortableSidebarMarker
-      marker={props.marker}
-      data-testid={`sidebar-${props.marker}`}
-      className="sticky top-0 z-15"
-    >
+    <SortableSidebarMarker marker={props.marker} data-testid={`sidebar-${props.marker}`}>
       <button
         type="button"
         aria-expanded={props.toggle.expanded}
