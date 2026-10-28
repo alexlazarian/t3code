@@ -684,6 +684,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
     hasActionableProposedPlan: thread.hasActionableProposedPlan,
     isWoke,
     isUnread,
+    isCompleted: variantAction !== "unsettle" && thread.latestRun?.completedAt != null,
   });
   const isWokeStatus = topStatus?.icon === "woke";
 
@@ -1119,6 +1120,10 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
                       />
                       <TooltipPopup side="top">Dismiss Woke notification</TooltipPopup>
                     </Tooltip>
+                  ) : topStatus ? (
+                    <span className={cn("text-xs font-medium", topStatus.className)}>
+                      {topStatus.label}
+                    </span>
                   ) : (
                     <span className="text-xs">
                       <RelativeTimeLabel

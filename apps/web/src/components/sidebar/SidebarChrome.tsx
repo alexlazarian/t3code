@@ -51,32 +51,39 @@ export const SidebarChromeHeader = memo(function SidebarChromeHeader({
       : null;
 
   return (
-    <div
-      className={cn(
-        "relative flex h-[var(--workspace-topbar-height)] shrink-0 flex-row items-center gap-2 pr-3",
-        isElectron && "drag-region",
-      )}
-    >
-      {backdropVariant ? <SidebarStageBackdrop variant={backdropVariant} /> : null}
-      <div className="relative top-[calc(var(--workspace-controls-top)-env(safe-area-inset-top))] z-10 ml-[calc(var(--workspace-controls-left)+1px-env(safe-area-inset-left))] flex shrink-0 items-center md:hidden">
-        <SidebarTrigger
-          variant={backdropVariant ? "media-navigation" : "ghost"}
-          className="relative top-auto translate-y-0"
-          aria-label="Toggle main sidebar"
-        />
-      </div>
-      <div className="relative z-10 flex h-8 min-w-0 flex-1 flex-wrap content-start items-center gap-x-2 overflow-hidden py-0.5">
-        <SidebarBrand onBackdrop={backdropVariant !== null} />
-        {pillLabel ? (
-          <div className="ml-1 flex h-7 items-center">
-            <Badge data-environment-identification="pill" size="sm" variant="secondary">
-              {pillLabel}
-            </Badge>
-          </div>
-        ) : null}
+    <>
+      <div
+        className={cn(
+          "relative flex h-[var(--workspace-topbar-height)] shrink-0 flex-row items-center gap-2 pr-3",
+          isElectron && "drag-region",
+        )}
+      >
+        {backdropVariant ? <SidebarStageBackdrop variant={backdropVariant} /> : null}
+        <div className="relative top-[calc(var(--workspace-controls-top)-env(safe-area-inset-top))] z-10 ml-[calc(var(--workspace-controls-left)+1px-env(safe-area-inset-left))] flex shrink-0 items-center md:hidden">
+          <SidebarTrigger
+            variant={backdropVariant ? "media-navigation" : "ghost"}
+            className="relative top-auto translate-y-0"
+            aria-label="Toggle main sidebar"
+          />
+        </div>
+        <div className="relative z-10 flex h-8 min-w-0 flex-1 flex-wrap content-start items-center gap-x-2 overflow-hidden py-0.5">
+          {showPanelTabs ? null : <SidebarBrand onBackdrop={backdropVariant !== null} />}
+          {pillLabel ? (
+            <div
+              className={cn(
+                "ml-1 flex h-7 items-center",
+                showPanelTabs && "max-md:ml-1 md:ml-[var(--workspace-titlebar-content-left)]",
+              )}
+            >
+              <Badge data-environment-identification="pill" size="sm" variant="secondary">
+                {pillLabel}
+              </Badge>
+            </div>
+          ) : null}
+        </div>
       </div>
       {showPanelTabs ? <SidebarPanelTabs /> : null}
-    </div>
+    </>
   );
 });
 
@@ -109,7 +116,7 @@ function SidebarPanelTabs() {
     <div
       role="tablist"
       aria-label="Left panel"
-      className="relative z-10 flex shrink-0 gap-0.5"
+      className="relative z-10 flex shrink-0 gap-0.5 px-3 pb-1.5 [&>button]:flex-1"
       onKeyDown={onKeyDown}
     >
       {PANEL_TABS.map((tab) => {

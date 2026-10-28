@@ -46,6 +46,16 @@ describe("resolveSidebarStatusLabel", () => {
     expect(resolveSidebarStatusLabel({ ...quiet, status: "ready" })).toBeNull();
   });
 
+  it("calls a completed, unsettled ready thread Done even once read, and leaves settled ones to a time", () => {
+    expect(resolveSidebarStatusLabel({ ...quiet, status: "ready", isCompleted: true })?.label).toBe(
+      "Done",
+    );
+    expect(resolveSidebarStatusLabel({ ...quiet, status: "ready", isCompleted: false })).toBeNull();
+    expect(
+      resolveSidebarStatusLabel({ ...quiet, status: "working", isCompleted: true })?.label,
+    ).toBe("Working");
+  });
+
   it("shows Plan ready for a ready thread with an actionable plan, ahead of Woke and Done", () => {
     expect(
       resolveSidebarStatusLabel({

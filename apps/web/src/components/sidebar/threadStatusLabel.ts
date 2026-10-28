@@ -37,6 +37,8 @@ export function resolveSidebarStatusLabel(input: {
   readonly hasActionableProposedPlan: boolean;
   readonly isWoke: boolean;
   readonly isUnread: boolean;
+  /** A ready thread whose last run finished and that is not settled; settled rows show a time. */
+  readonly isCompleted?: boolean;
 }): SidebarStatusLabel | null {
   switch (input.status) {
     case "working":
@@ -62,6 +64,8 @@ export function resolveSidebarStatusLabel(input: {
     return { label: "Plan ready", icon: "plan", className: "text-status-needs-you" };
   }
   if (input.isWoke) return { label: "Woke", icon: "woke", className: "text-warning-foreground" };
-  if (input.isUnread) return { label: "Done", icon: "done", className: "text-success-foreground" };
+  if (input.isUnread || input.isCompleted === true) {
+    return { label: "Done", icon: "done", className: "text-success-foreground" };
+  }
   return null;
 }
