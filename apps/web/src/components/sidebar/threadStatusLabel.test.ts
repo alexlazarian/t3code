@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { isSidebarThreadWoke, resolveSidebarStatusLabel } from "./threadStatusLabel";
+import {
+  isSidebarThreadCompleted,
+  isSidebarThreadWoke,
+  resolveSidebarStatusLabel,
+} from "./threadStatusLabel";
 
 const quiet = {
   goalActive: false,
   hasActionableProposedPlan: false,
   isWoke: false,
   isUnread: false,
+  isCompleted: false,
 };
 
 describe("resolveSidebarStatusLabel", () => {
@@ -32,6 +37,7 @@ describe("resolveSidebarStatusLabel", () => {
         hasActionableProposedPlan: true,
         isWoke: true,
         isUnread: true,
+        isCompleted: false,
       })?.label,
     ).toBe("Approval");
   });
@@ -126,5 +132,17 @@ describe("isSidebarThreadWoke", () => {
     expect(
       isSidebarThreadWoke({ wokeAt, lastVisitedAt: undefined, settledOverride: "settled" }),
     ).toBe(false);
+  });
+});
+
+describe("isSidebarThreadCompleted", () => {
+  it("is true only for a finished thread that is not settled", () => {
+    const finished = { latestRun: { completedAt: "2026-01-01T00:00:00Z" } };
+    expect(isSidebarThreadCompleted({ ...finished, settledOverride: null })).toBe(true);
+    expect(isSidebarThreadCompleted({ ...finished, settledOverride: "settled" })).toBe(false);
+    expect(
+      isSidebarThreadCompleted({ latestRun: { completedAt: null }, settledOverride: null }),
+    ).toBe(false);
+    expect(isSidebarThreadCompleted({ latestRun: null, settledOverride: null })).toBe(false);
   });
 });

@@ -31,14 +31,21 @@ export function isSidebarThreadWoke(input: {
   );
 }
 
+/** A finished, unsettled thread reads Done; settled ones show a time instead. */
+export function isSidebarThreadCompleted(thread: {
+  readonly latestRun?: { readonly completedAt: unknown } | null;
+  readonly settledOverride: "settled" | "active" | null;
+}): boolean {
+  return thread.latestRun?.completedAt != null && thread.settledOverride !== "settled";
+}
+
 export function resolveSidebarStatusLabel(input: {
   readonly status: SidebarThreadStatus;
   readonly goalActive: boolean;
   readonly hasActionableProposedPlan: boolean;
   readonly isWoke: boolean;
   readonly isUnread: boolean;
-  /** A ready thread whose last run finished and that is not settled; settled rows show a time. */
-  readonly isCompleted?: boolean;
+  readonly isCompleted: boolean;
 }): SidebarStatusLabel | null {
   switch (input.status) {
     case "working":
@@ -64,8 +71,8 @@ export function resolveSidebarStatusLabel(input: {
     return { label: "Plan ready", icon: "plan", className: "text-status-needs-you" };
   }
   if (input.isWoke) return { label: "Woke", icon: "woke", className: "text-warning-foreground" };
-  if (input.isUnread || input.isCompleted === true) {
-    return { label: "Done", icon: "done", className: "text-success-foreground" };
+  if (input.isUnread || input.isCompleted) {
+    return { label: "Done", icon: "done", className: "text-muted-foreground" };
   }
   return null;
 }

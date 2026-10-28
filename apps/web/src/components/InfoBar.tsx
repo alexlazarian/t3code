@@ -21,7 +21,11 @@ import {
 } from "./Sidebar.logic";
 import { runtimeModeConfig } from "./chat/runtimeModeConfig";
 import { sidebarProviderEntriesAtom } from "./sidebar/sidebarProviderEntries";
-import { isSidebarThreadWoke, resolveSidebarStatusLabel } from "./sidebar/threadStatusLabel";
+import {
+  isSidebarThreadCompleted,
+  isSidebarThreadWoke,
+  resolveSidebarStatusLabel,
+} from "./sidebar/threadStatusLabel";
 
 const TARGET_SELECTOR = "[data-info],[aria-label],[data-info-thread]";
 const TRIGGER_SELECTOR = '[data-slot="tooltip-trigger"][data-info]';
@@ -52,6 +56,7 @@ function lookupThread(
     goalActive: thread.goal?.status === "active",
     hasActionableProposedPlan: thread.hasActionableProposedPlan,
     isUnread: hasUnseenCompletion({ ...thread, lastVisitedAt }),
+    isCompleted: isSidebarThreadCompleted(thread),
     isWoke: isSidebarThreadWoke({
       wokeAt: threadWokeAt(thread, { now: new Date().toISOString() }),
       lastVisitedAt,

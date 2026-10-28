@@ -7,6 +7,7 @@ import { cn } from "~/lib/utils";
 import type { SidebarThreadSummary } from "../../types";
 import { RelativeTimeLabel, threadTimeTimestamp } from "../sidebar/RelativeTimeLabel";
 import {
+  isSidebarThreadCompleted,
   isSidebarThreadWoke,
   resolveSidebarStatusLabel,
   type SidebarStatusLabel,
@@ -48,6 +49,7 @@ export const OverviewCard = memo(function OverviewCard(props: {
     goalActive: thread.goal?.status === "active",
     hasActionableProposedPlan: thread.hasActionableProposedPlan,
     isUnread: hasUnseenCompletion({ ...thread, lastVisitedAt }),
+    isCompleted: isSidebarThreadCompleted(thread),
     isWoke: isSidebarThreadWoke({
       wokeAt: props.wokeAt,
       lastVisitedAt,

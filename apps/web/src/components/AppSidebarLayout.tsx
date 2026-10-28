@@ -463,7 +463,9 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
   // A clamped drag may not change width, so viewport changes need a separate subscription.
   const viewportWidth = useSyncExternalStore(subscribeToViewportWidth, readViewportWidth);
   const [brandWidth, setBrandWidth] = useState(0);
-  const sidebarMinimumWidth = resolveThreadSidebarMinimumWidth(brandWidth);
+  const sidebarMinimumWidth = resolveThreadSidebarMinimumWidth(
+    legacySidebarEnabled ? brandWidth : 0,
+  );
   const sidebarMaximumWidth = resolveThreadSidebarMaximumWidth(viewportWidth, sidebarMinimumWidth);
   const resetSidebarWidth = () => {
     try {
@@ -497,7 +499,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
           defaultOpen
           style={sidebarProviderStyle}
         >
-          <SidebarBrandWidthProbe onWidthChange={setBrandWidth} />
+          {legacySidebarEnabled ? <SidebarBrandWidthProbe onWidthChange={setBrandWidth} /> : null}
           <Sidebar
             side="left"
             collapsible="offcanvas"
