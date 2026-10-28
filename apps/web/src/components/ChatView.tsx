@@ -3344,33 +3344,36 @@ export default function ChatView(props: ChatViewProps) {
               data-chat-composer-overlay="true"
               className={
                 isDraftHeroState
-                  ? "pointer-events-none absolute inset-0 z-20 flex items-center"
-                  : "pointer-events-none absolute inset-x-0 bottom-0 z-20 pt-1.5 sm:pt-2"
+                  ? "pointer-events-none absolute inset-0 z-20 flex flex-col"
+                  : "pointer-events-none absolute inset-x-0 bottom-0 z-20"
               }
             >
-              <div ref={draftHeroTransitionGroupRef} className="chat-composer-lane w-full">
+              {isDraftHeroState ? (
+                <div className="chat-composer-lane flex min-h-0 flex-1 items-center">
+                  <div
+                    className="pointer-events-auto mx-auto w-full max-w-(--chat-content-max-width)"
+                    style={
+                      forceExpandedMobileComposer
+                        ? { viewTransitionName: MOBILE_DRAFT_HEADLINE_VIEW_TRANSITION_NAME }
+                        : undefined
+                    }
+                  >
+                    <DraftHeroHeadline
+                      draftId={draftId}
+                      activeProjectRef={activeProjectRef}
+                      activeProjectTitle={activeProject?.title ?? null}
+                    />
+                  </div>
+                </div>
+              ) : null}
+              <div
+                ref={draftHeroTransitionGroupRef}
+                className="chat-composer-lane pointer-events-auto w-full border-t border-border bg-surface-raised pt-1.5"
+              >
                 <div
                   data-chat-composer-stack="true"
-                  className="group/composer-stack pointer-events-auto relative z-10 mx-auto w-full max-w-(--chat-content-max-width)"
+                  className="group/composer-stack relative z-10 mx-auto w-full max-w-(--chat-content-max-width)"
                 >
-                  {isDraftHeroState ? (
-                    <div className="absolute inset-x-0 bottom-full">
-                      <div
-                        className="pb-4 group-has-data-[composer-shoulder-tab]/composer-stack:pb-0"
-                        style={
-                          forceExpandedMobileComposer
-                            ? { viewTransitionName: MOBILE_DRAFT_HEADLINE_VIEW_TRANSITION_NAME }
-                            : undefined
-                        }
-                      >
-                        <DraftHeroHeadline
-                          draftId={draftId}
-                          activeProjectRef={activeProjectRef}
-                          activeProjectTitle={activeProject?.title ?? null}
-                        />
-                      </div>
-                    </div>
-                  ) : null}
                   <div
                     ref={draftHeroComposerAnchorRef}
                     className="relative z-10"
@@ -3589,7 +3592,6 @@ export default function ChatView(props: ChatViewProps) {
                               aria-hidden={showComposerModelStrip ? undefined : true}
                               inert={showComposerModelStrip ? undefined : true}
                               className={cn(
-                                "group-data-model-strip-transition/composer-surface:before:backdrop-blur-(--glass-blur) group-data-model-strip-transition/composer-surface:before:bg-(--chat-composer-glass-surface)/(--glass-opacity)",
                                 !showComposerModelStrip &&
                                   "pointer-events-none invisible absolute inset-x-0 top-full",
                               )}
@@ -3649,10 +3651,7 @@ export default function ChatView(props: ChatViewProps) {
                         </div>
                       </div>
                     </ComposerSurface.Shell>
-                    <div
-                      aria-hidden
-                      className="h-[calc(env(safe-area-inset-bottom)+1rem)] sm:h-[calc(env(safe-area-inset-bottom)+1.25rem)]"
-                    />
+                    <div aria-hidden className="h-[calc(env(safe-area-inset-bottom)+0.375rem)]" />
                   </div>
                 </div>
               </div>

@@ -582,6 +582,7 @@ export const TraitsPicker = memo(function TraitsPicker({
                   aria-label={triggerLabel}
                   data-composer-shortcut={isComposerOwned ? "composer.effort" : undefined}
                   size={size}
+                  variant={isComposerOwned ? "boxed" : "ghost"}
                   className={cn(
                     isCodexStyle
                       ? "min-w-0 max-w-40 shrink justify-start overflow-hidden whitespace-nowrap sm:max-w-48"

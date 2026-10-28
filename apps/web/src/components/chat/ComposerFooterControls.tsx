@@ -53,6 +53,7 @@ export const ComposerFooterModeControls = memo(function ComposerFooterModeContro
         render={
           <ComposerControl
             size={size}
+            variant="boxed"
             className="shrink-0 whitespace-nowrap"
             aria-pressed={props.interactionMode === "plan"}
             type="button"
@@ -96,6 +97,7 @@ export const ComposerFooterModeControls = memo(function ComposerFooterModeContro
               <ComposerSelectControl
                 data-composer-shortcut="composer.mode"
                 size={size}
+                variant="boxed"
                 aria-label="Runtime mode"
               />
             }
@@ -156,6 +158,7 @@ export const ComposerFooterPrimaryActions = memo(function ComposerFooterPrimaryA
   followUpBehavior: "queue" | "steer";
   canSteer: boolean;
   alternateShortcutLabel: string | null;
+  sendHint: string | null;
   showPlanFollowUpPrompt: boolean;
   promptHasText: boolean;
   isSendBusy: boolean;
@@ -190,6 +193,11 @@ export const ComposerFooterPrimaryActions = memo(function ComposerFooterPrimaryA
         />
       ) : props.reserveContextWindowMeter ? (
         <ContextWindowMeterPlaceholder />
+      ) : null}
+      {props.sendHint ? (
+        <span className="hidden whitespace-nowrap px-1 text-muted-foreground text-xs sm:inline">
+          {props.sendHint}
+        </span>
       ) : null}
       <ComposerPrimaryActions
         compact={props.compact}
