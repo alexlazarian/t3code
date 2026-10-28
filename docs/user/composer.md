@@ -226,6 +226,15 @@ the queue while a turn is running; if the turn already ended, it stays **Paused*
 the message starts or is removed another way, such as from another device, the edit ends: changed
 content moves into the composer when it is empty, and is discarded otherwise.
 
+### Safe send
+
+Turn on **Settings → Chat → Safe send** to give every message 3 seconds before it goes out.
+A message that starts or steers a turn shows **Sending in 3s · Undo** below it; **Undo** puts its
+text, attachments, and context back in the composer, after anything you typed since. Leaving the
+thread does not cancel it. Queueing is not delayed, but when a turn ends the next queued message
+shows **Starting in 3s** with **Cancel**, which pauses it. **Send now** skips the wait. The wait
+runs on the server, so it applies to messages queued from any device.
+
 ## Commands and skills
 
 Type `/` for commands or `$` to add a skill from the selected environment and

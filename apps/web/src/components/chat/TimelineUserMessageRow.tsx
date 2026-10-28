@@ -70,6 +70,8 @@ import {
 import { chatMarkdownClipboardPayload } from "../../markdown-clipboard";
 import type { ChatMarkdownContextReference } from "../ChatMarkdown";
 import { cn } from "~/lib/utils";
+import { safeSendSecondsLeft, undoSafeSend, useSafeSendDeadline } from "../../lib/safeSend";
+import { useNowSecond } from "../../hooks/useNowSecond";
 import { formatChatTimestampTooltip, formatDayAwareTimestamp } from "../../timestampFormat";
 import { WorkflowOpeningBlock } from "./WorkflowOpeningBlock";
 import { TimelineRowCtx, TimelineRowActivityCtx, type TimelineRow } from "./timelineRowContext";
@@ -193,6 +195,7 @@ function AutomationMessageRow({ row }: { row: Extract<TimelineRow, { kind: "mess
         ) : null}
       </div>
       <UserMessageProjectedStatus row={row} />
+      <SafeSendPendingStatus messageId={row.message.id} />
       {expanded ? (
         <div className="flex w-full max-w-[80%] items-center justify-end pe-1 text-xs tabular-nums opacity-0 transition-opacity duration-200 pointer-coarse:opacity-100 focus-within:opacity-100 group-hover:opacity-100">
           <div className="flex shrink-0 items-center gap-2">
@@ -284,6 +287,25 @@ function UserMessageProjectedStatus({ row }: { row: Extract<TimelineRow, { kind:
       <span className="rounded-none border border-destructive/25 bg-destructive/8 px-1.5 py-0.5 text-3xs font-medium text-destructive">
         {status}
       </span>
+    </div>
+  );
+}
+
+function SafeSendPendingStatus({ messageId }: { readonly messageId: string }) {
+  const sendAtMs = useSafeSendDeadline(messageId);
+  return sendAtMs === null ? null : <SafeSendCountdown messageId={messageId} sendAtMs={sendAtMs} />;
+}
+
+/** Mounted only while a send waits, so idle rows never subscribe to the second tick. */
+function SafeSendCountdown(props: { readonly messageId: string; readonly sendAtMs: number }) {
+  const seconds = safeSendSecondsLeft(props.sendAtMs, useNowSecond());
+  return (
+    <div className="me-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+      <span className="tabular-nums">{seconds > 0 ? `Sending in ${seconds}s` : "Sending"}</span>
+      <span aria-hidden>·</span>
+      <InlineButton tone="muted" onClick={() => undoSafeSend(props.messageId)}>
+        Undo
+      </InlineButton>
     </div>
   );
 }
@@ -686,6 +708,7 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
         ) : null}
       </div>
       <UserMessageProjectedStatus row={row} />
+      <SafeSendPendingStatus messageId={row.message.id} />
       {folded && expanded ? (
         <div className="flex w-full max-w-[80%] justify-end pe-1">{messageActions}</div>
       ) : null}

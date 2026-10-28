@@ -676,6 +676,8 @@ export const OrchestrationV2Run = Schema.Struct({
   status: OrchestrationV2RunStatus,
   queuePosition: Schema.optional(Schema.NullOr(PositiveInt)),
   queueHeld: Schema.optional(Schema.Boolean),
+  /** With Safe send on, when the server will start this queued run unless it is held first. */
+  queueStartsAt: Schema.optional(Schema.DateTimeUtc),
   requestedAt: Schema.DateTimeUtc,
   startedAt: Schema.NullOr(Schema.DateTimeUtc),
   completedAt: Schema.NullOr(Schema.DateTimeUtc),
@@ -2302,6 +2304,7 @@ export const OrchestrationV2RunJson = OrchestrationV2Run.mapFields((fields) => (
   startedAt: Schema.NullOr(Schema.DateTimeUtcFromString),
   completedAt: Schema.NullOr(Schema.DateTimeUtcFromString),
   workStartedAt: Schema.optional(Schema.DateTimeUtcFromString),
+  queueStartsAt: Schema.optional(Schema.DateTimeUtcFromString),
 }));
 export type OrchestrationV2RunJson = typeof OrchestrationV2RunJson.Type;
 

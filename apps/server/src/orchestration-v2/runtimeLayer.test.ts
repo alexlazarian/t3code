@@ -7173,6 +7173,139 @@ it.layer(layerTest)("usage-limit recovery", (it) => {
   );
 });
 
+const layerSafeSendTest = Layer.mergeAll(
+  RuntimeLayer.layer,
+  RuntimeLayer.layerEventSink,
+  ProjectStore.layer,
+  ProjectionStore.layer,
+  EffectOutbox.layer,
+  ThreadCommandExecutor.layer,
+).pipe(
+  Layer.provide(McpSessionRegistryTestkit.layer),
+  Layer.provide(McpProviderSessions.layer),
+  Layer.provide(SqlitePersistence.layerMemory),
+  Layer.provide(layerCheckpointStoreTest),
+  Layer.provide(layerServerConfig),
+  Layer.provide(ServerSettings.layerTest({ safeSend: true })),
+  Layer.provide(layerTestProviderInstanceRegistry),
+  Layer.provide(layerGitWorkflowTest),
+  Layer.provide(layerProjectServiceTest),
+  Layer.provide(layerPlatformTest),
+);
+
+it.layer(layerSafeSendTest)("Safe send", (it) => {
+  it.effect.each(["waits", "hold", "send now"] as const)(
+    "starts a queued run 3 seconds after the turn ends unless the user acts: %s",
+    (action) =>
+      Effect.gen(function* () {
+        const orchestrator = yield* Orchestrator.OrchestratorV2;
+        const events = yield* EventSink.EventSinkV2;
+        const outbox = yield* EffectOutbox.EffectOutboxV2;
+        const threadId = ThreadId.make(`safe-send-${action.replace(" ", "-")}`);
+        yield* orchestrator.dispatch({
+          type: "thread.create",
+          createdBy: "user",
+          creationSource: "web",
+          commandId: CommandId.make(`${threadId}:create`),
+          threadId,
+          projectId: ProjectId.make(`${threadId}:project`),
+          title: "Safe send",
+          modelSelection,
+          runtimeMode: "full-access",
+          interactionMode: "default",
+          branch: null,
+          worktreePath: process.cwd(),
+        });
+        const send = (index: number, text: string) =>
+          orchestrator.dispatch({
+            type: "message.dispatch",
+            createdBy: "user",
+            creationSource: "web",
+            commandId: CommandId.make(`${threadId}:message:${index}`),
+            threadId,
+            messageId: MessageId.make(`${threadId}:message:${index}`),
+            text,
+            attachments: [],
+            modelSelection,
+            dispatchMode: { type: index === 0 ? "start_immediately" : "queue_after_active" },
+          });
+        yield* send(0, "Active");
+        yield* send(1, "Queued");
+        const before = yield* orchestrator.getThreadProjection(threadId);
+        const [active, queued] = [before.runs[0]!, before.runs[1]!];
+        const endedAt = yield* DateTime.now;
+        yield* events.write({
+          events: [
+            {
+              id: EventId.make(`${threadId}:active-done`),
+              type: "run.updated",
+              threadId,
+              runId: active.id,
+              occurredAt: endedAt,
+              payload: { ...active, status: "completed", completedAt: endedAt },
+            },
+          ],
+        });
+        yield* orchestrator.resumeQueuedRuns;
+
+        const counting = yield* orchestrator.getThreadProjection(threadId);
+        const countingRun = counting.runs.find((run) => run.id === queued.id);
+        assert.equal(countingRun?.status, "queued");
+        const startsAt = DateTime.add(endedAt, { seconds: 3 });
+        assert.deepEqual(countingRun?.queueStartsAt, startsAt);
+        const deadlines = yield* outbox.listByCommandId(
+          CommandId.make(`command:system:queued-run-auto-start:${queued.id}`),
+        );
+        assert.deepEqual(
+          deadlines.map((effect) => [effect.request.type, effect.availableAt]),
+          [["queued-run.auto-start", DateTime.formatIso(startsAt)]],
+        );
+        // An early wake, or another turn end, must not start it or move the deadline.
+        yield* orchestrator.startDueQueuedRun(threadId, queued.id);
+        yield* orchestrator.resumeQueuedRuns;
+        const early = yield* orchestrator.getThreadProjection(threadId);
+        assert.deepEqual(
+          early.runs.find((run) => run.id === queued.id),
+          countingRun,
+        );
+
+        if (action === "hold") {
+          yield* orchestrator.dispatch({
+            type: "queued-run.hold",
+            commandId: CommandId.make(`${threadId}:hold`),
+            threadId,
+            runId: queued.id,
+            held: true,
+          });
+        } else if (action === "send now") {
+          yield* orchestrator.dispatch({
+            type: "queued-run.start",
+            commandId: CommandId.make(`${threadId}:send-now`),
+            threadId,
+            runId: queued.id,
+          });
+          const sent = yield* orchestrator.getThreadProjection(threadId);
+          const sentRun = sent.runs.find((run) => run.id === queued.id);
+          assert.equal(sentRun?.status, "starting", "Send now must not wait for the deadline");
+          assert.isUndefined(sentRun?.queueStartsAt);
+        }
+        yield* TestClock.adjust("3 seconds");
+        yield* orchestrator.startDueQueuedRun(threadId, queued.id);
+
+        const after = yield* orchestrator.getThreadProjection(threadId);
+        const afterRun = after.runs.find((run) => run.id === queued.id);
+        if (action === "hold") {
+          assert.equal(afterRun?.status, "queued");
+          assert.isTrue(afterRun?.queueHeld);
+          assert.isUndefined(afterRun?.queueStartsAt);
+          return;
+        }
+        assert.equal(afterRun?.status, "starting");
+        assert.isUndefined(afterRun?.queueStartsAt);
+      }),
+  );
+});
+
 const queueResumeDisabledInstanceProjectId = ProjectId.make(
   "project:queue-resume-disabled-instance",
 );

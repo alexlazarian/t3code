@@ -2153,6 +2153,41 @@ it.layer(layerTest)("orchestration V2 foundation persistence", (it) => {
     }),
   );
 
+  it.effect("keeps a waiting Safe send deadline from holding back the thread's turns", () =>
+    Effect.gen(function* () {
+      const outbox = yield* EffectOutbox.EffectOutboxV2;
+      const commandId = CommandId.make("command:foundation-auto-start-lane");
+      const threadId = ThreadId.make("thread:foundation-auto-start-lane");
+      const runId = RunId.make("run:foundation-auto-start-lane");
+      yield* outbox.enqueue([
+        {
+          id: "effect:foundation-auto-start-lane:a-deadline",
+          commandId,
+          threadId,
+          request: { type: "queued-run.auto-start", runId },
+          availableAt: DateTime.add(yield* DateTime.now, { seconds: 3 }),
+        },
+        {
+          id: "effect:foundation-auto-start-lane:b-provider",
+          commandId,
+          threadId,
+          request: { type: "provider-turn.start", runId },
+        },
+      ]);
+
+      const claimed = yield* outbox.claimNext({ workerId: "auto-start-lane-worker" });
+      assert.isTrue(Option.isSome(claimed));
+      if (Option.isNone(claimed)) return;
+      assert.equal(claimed.value.id, "effect:foundation-auto-start-lane:b-provider");
+      yield* outbox.succeed({ effectId: claimed.value.id, workerId: "auto-start-lane-worker" });
+      yield* outbox.cancelUnsettled({
+        threadId,
+        effectTypes: ["queued-run.auto-start"],
+        reason: "Test cleanup.",
+      });
+    }),
+  );
+
   it.effect("ignores deadlines blocked by a running effect on the same thread", () =>
     Effect.gen(function* () {
       const outbox = yield* EffectOutbox.EffectOutboxV2;

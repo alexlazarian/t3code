@@ -142,6 +142,9 @@ export const AppearanceContrast = Schema.Int.check(
 );
 export type AppearanceContrast = typeof AppearanceContrast.Type;
 const DEFAULT_APPEARANCE_CONTRAST: AppearanceContrast = 100;
+/** How long a send waits with Safe send on, on the client and for queued runs on the server. */
+export const SAFE_SEND_DELAY_MS = 3_000;
+
 export const MIN_PANEL_ANIMATION_DURATION_MS = 0;
 export const MAX_PANEL_ANIMATION_DURATION_MS = 400;
 export const PanelAnimationDurationMs = Schema.Int.check(
@@ -1191,6 +1194,7 @@ export const ServerSettings = Schema.Struct({
     Schema.withDecodingDefault(Effect.succeed("paragraph" as const)),
   ),
   enableProviderUpdateChecks: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
+  safeSend: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
   continueThreadsAfterServerUpdate: Schema.Boolean.pipe(
     Schema.withDecodingDefault(Effect.succeed(true)),
   ),
@@ -1558,6 +1562,7 @@ export const ServerSettingsPatch = Schema.Struct({
   worktreesDirectory: Schema.optionalKey(TrimmedString),
   responseStreamingMode: Schema.optionalKey(ResponseStreamingMode),
   enableProviderUpdateChecks: Schema.optionalKey(Schema.Boolean),
+  safeSend: Schema.optionalKey(Schema.Boolean),
   continueThreadsAfterServerUpdate: Schema.optionalKey(Schema.Boolean),
   enableAgentBrowserAccess: Schema.optionalKey(Schema.Boolean),
   projectAgentBrowserAccessOverrides: Schema.optionalKey(

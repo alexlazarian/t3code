@@ -4,6 +4,7 @@ import {
   shouldDockDraftHeroForSubmission,
   restorePlanFollowUpComposer,
   buildExpiredTerminalContextToastCopy,
+  cloneComposerImageForRetry,
   deriveComposerSendState,
   boundAttachmentIds,
   formatOutgoingPrompt,
@@ -18,6 +19,7 @@ import { isUsageLimitsCommand } from "@t3tools/shared/usageLimits";
 import {
   AuthOrchestrationOperateScope,
   DEFAULT_MODEL,
+  SAFE_SEND_DELAY_MS,
   type EnvironmentId,
   type ModelSelection,
   type PreviewAnnotationPayload,
@@ -104,6 +106,7 @@ import {
   startAttachmentUpload,
 } from "../../lib/attachmentUploadQueue";
 import { appAtomRegistry } from "../../rpc/atomRegistry";
+import { waitForSafeSend } from "../../lib/safeSend";
 import { fileAttachmentCapabilityBlockReason } from "./composerAttachmentFiles";
 import { useLinkedEnvironments } from "../../state/peerLinks";
 import { readEnvironmentScope } from "../../state/session";
@@ -143,6 +146,41 @@ import type { useWorktreeSetup } from "./useWorktreeSetup";
 const ENVIRONMENT_UNAVAILABLE_SEND_TOAST_TRAIL_SIZE = 3;
 
 const selectPlanModeEnabled = (settings: UnifiedSettings) => settings.planModeEnabled;
+const selectSafeSend = (settings: UnifiedSettings) => settings.safeSend;
+
+/** Puts an undone send back in its draft, after anything typed since it was sent. */
+function restoreUndoneComposerDraft(
+  draftTarget: Parameters<typeof restoreComposerDraft>[0],
+  snapshot: Parameters<typeof restoreComposerDraft>[1],
+) {
+  const store = useComposerDraftStore.getState();
+  const current = store.getComposerDraft(draftTarget);
+  if (current === null || !composerDraftHasUserContent(current)) {
+    restoreComposerDraft(draftTarget, snapshot);
+  } else {
+    store.setPrompt(
+      draftTarget,
+      [current.prompt, snapshot.messageText].filter((text) => text.length > 0).join("\n\n"),
+    );
+    store.addImages(draftTarget, snapshot.images.map(cloneComposerImageForRetry));
+    store.addFiles(draftTarget, snapshot.files);
+    store.setTerminalContexts(draftTarget, [
+      ...current.terminalContexts,
+      ...snapshot.terminalContexts,
+    ]);
+    store.setPreviewAnnotations(draftTarget, [
+      ...current.previewAnnotations,
+      ...snapshot.previewAnnotations,
+    ]);
+    store.setReviewComments(draftTarget, [...current.reviewComments, ...snapshot.reviewComments]);
+    store.setThreadContexts(draftTarget, [...current.threadContexts, ...snapshot.threadContexts]);
+    store.setEnvironmentContexts(draftTarget, [
+      ...current.environmentContexts,
+      ...snapshot.environmentContexts,
+    ]);
+  }
+  return store.getComposerDraft(draftTarget);
+}
 
 function readEnvironmentPresentation(environmentId: EnvironmentId) {
   return appAtomRegistry.get(environmentPresentations.presentationsAtom).get(environmentId);
@@ -329,6 +367,7 @@ export function useComposerSend(input: ComposerSendInput) {
   const navigate = useNavigate();
   const clientSettingsHydrated = useClientSettingsHydrated();
   const planModeEnabled = useEnvironmentSettings(environmentId, selectPlanModeEnabled);
+  const safeSendEnabled = useEnvironmentSettings(environmentId, selectSafeSend);
   const startThreadTurn = useOrchestrationCommand(threadEnvironment.startTurn, {
     reportFailure: false,
   });
@@ -1190,8 +1229,13 @@ export function useComposerSend(input: ComposerSendInput) {
     );
 
     let failure: AtomCommandResult<unknown, unknown> | null = null;
+    // Queued sends wait on the server when the queue starts them; this covers starts and steers.
+    const undone =
+      safeSendEnabled &&
+      !shouldQueueBehindActiveRun &&
+      (await waitForSafeSend(messageIdForSend, SAFE_SEND_DELAY_MS)) === "undo";
 
-    if (failure === null && isServerThread) {
+    if (!undone && isServerThread) {
       const settingsResult = await persistThreadSettingsForNextTurn({
         threadId: threadIdForSend,
         createdAt: messageCreatedAt,
@@ -1214,11 +1258,11 @@ export function useComposerSend(input: ComposerSendInput) {
       }
       return turnAttachments;
     });
-    if (failure === null && turnAttachmentsResult._tag === "Failure") {
+    if (!undone && failure === null && turnAttachmentsResult._tag === "Failure") {
       failure = turnAttachmentsResult;
     }
 
-    if (failure === null && compactBeforeSend) {
+    if (!undone && failure === null && compactBeforeSend) {
       const compactResult = await startThreadTurn({
         environmentId,
         input: {
@@ -1242,7 +1286,7 @@ export function useComposerSend(input: ComposerSendInput) {
 
     let backgroundDraftOpened = false;
     let turnStartSucceeded = false;
-    if (failure === null && turnAttachmentsResult._tag === "Success") {
+    if (!undone && failure === null && turnAttachmentsResult._tag === "Success") {
       const bootstrap =
         isLocalDraftThread || baseBranchForWorktree
           ? {
@@ -1371,6 +1415,29 @@ export function useComposerSend(input: ComposerSendInput) {
       }
     }
 
+    if (undone) {
+      if (isLocalDraftThread && draftId && draftThread) {
+        restoreFailedDraftThread(draftId, draftThread, threadIdForSend);
+        clearBackgroundDraftSubmissionByRef(scopeThreadRef(environmentId, threadIdForSend));
+      }
+      setOptimisticUserMessages((existing) => {
+        const next = existing.filter((message) => message.id !== messageIdForSend);
+        return next.length === existing.length ? existing : next;
+      });
+      optimisticBlobPreviews.release(optimisticMessage);
+      const restored = restoreUndoneComposerDraft(composerDraftTarget, sendSnapshot);
+      if (restored !== null && currentRouteThreadKeyRef.current === routeThreadKey) {
+        promptRef.current = restored.prompt;
+        composerImagesRef.current = restored.images;
+        composerFilesRef.current = restored.files;
+        composerTerminalContextsRef.current = restored.terminalContexts;
+        composerRef.current?.resetCursorState({
+          cursor: collapseExpandedComposerCursor(restored.prompt, restored.prompt.length),
+          prompt: restored.prompt,
+          detectTrigger: true,
+        });
+      }
+    }
     if (failure !== null) {
       if (isLocalDraftThread && draftId && draftThread) {
         restoreFailedDraftThread(

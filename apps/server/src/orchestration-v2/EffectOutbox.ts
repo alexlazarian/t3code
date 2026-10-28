@@ -119,6 +119,11 @@ export const OrchestrationEffectRequestV2 = Schema.Union([
     type: Schema.Literal("delegated-tasks.stop"),
     reason: Schema.optional(Schema.String),
   }),
+  // Safe send's deadline for a queued run; the orchestrator rechecks the run when it fires.
+  Schema.Struct({
+    type: Schema.Literal("queued-run.auto-start"),
+    runId: RunId,
+  }),
 ]);
 export type OrchestrationEffectRequestV2 = typeof OrchestrationEffectRequestV2.Type;
 
@@ -133,6 +138,13 @@ export const REPLAY_SAFE_EFFECT_TYPES_AFTER_PROCESS_LOSS = [
   "attachment.cleanup",
   "thread-title.generate",
   "delegated-tasks.stop",
+  "queued-run.auto-start",
+] as const satisfies ReadonlyArray<OrchestrationEffectRequestV2["type"]>;
+
+// Each runs in its own per-thread lane: a title or a Safe send deadline waiting must not hold back turns.
+const SEPARATE_LANE_EFFECT_TYPES = [
+  "thread-title.generate",
+  "queued-run.auto-start",
 ] as const satisfies ReadonlyArray<OrchestrationEffectRequestV2["type"]>;
 
 export const PROCESS_BOUND_EFFECT_TYPES = [
@@ -339,15 +351,11 @@ export const layer: Layer.Layer<EffectOutboxV2, never, SqlClient.SqlClient> = La
               )
             )
             AND (
-              (
-                candidate.effect_type = 'thread-title.generate'
-                AND active.effect_type = 'thread-title.generate'
-              )
-              OR
-              (
-                candidate.effect_type != 'thread-title.generate'
-                AND active.effect_type != 'thread-title.generate'
-              )
+              CASE WHEN active.effect_type IN ${sql.in(SEPARATE_LANE_EFFECT_TYPES)}
+                THEN active.effect_type ELSE '' END
+            ) = (
+              CASE WHEN candidate.effect_type IN ${sql.in(SEPARATE_LANE_EFFECT_TYPES)}
+                THEN candidate.effect_type ELSE '' END
             )
         )
       `;

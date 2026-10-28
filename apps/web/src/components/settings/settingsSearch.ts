@@ -605,6 +605,13 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["enter return command ctrl multiline prompt new line composer"],
   },
   {
+    id: "safe-send",
+    title: "Safe send",
+    to: "/settings/chat",
+    scope: "environment-defaults",
+    searchTerms: ["delay undo cancel wait seconds send message queue mistake"],
+  },
+  {
     id: "follow-up-behavior",
     title: "Follow-up behavior",
     to: "/settings/chat",

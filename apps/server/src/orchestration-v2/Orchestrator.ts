@@ -66,6 +66,7 @@ import {
   type ProviderSessionId,
   RunId,
   RuntimeMode,
+  SAFE_SEND_DELAY_MS,
   ThreadLinkedPullRequest,
   ThreadId,
   TurnItemId,
@@ -316,6 +317,11 @@ export interface OrchestratorV2DispatchResult {
 
 export interface OrchestratorV2Shape {
   readonly resumeQueuedRuns: Effect.Effect<number, OrchestratorV2Error>;
+  /** Starts a queued run whose Safe send deadline passed, unless it was held, started, or moved. */
+  readonly startDueQueuedRun: (
+    threadId: ThreadId,
+    runId: RunId,
+  ) => Effect.Effect<void, OrchestratorV2Error>;
   readonly recoverDelegatedTasks: Effect.Effect<void>;
   readonly recoverDelegatedTask: (threadId: ThreadId, sourceRunId: RunId) => Effect.Effect<void>;
   readonly delegatedTaskResultPending: (
@@ -716,6 +722,12 @@ function delegatedTaskTerminalStatus(
     case "waiting":
       return null;
   }
+}
+
+function withoutQueueStart(run: OrchestrationV2Run): OrchestrationV2Run {
+  if (run.queueStartsAt === undefined) return run;
+  const { queueStartsAt: _queueStartsAt, ...rest } = run;
+  return rest;
 }
 
 // The turn may have ended while the run was held; nothing else would start it.
@@ -1473,6 +1485,8 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
         readonly failedRunId?: RunId;
         readonly endedRunId?: RunId;
         readonly queuedRunId?: RunId;
+        /** The run whose Safe send deadline fired; any other caller arms a new deadline. */
+        readonly dueRunId?: RunId;
       },
     ) {
       if (!(yield* projectionStore.canStartQueuedRun(threadId))) return;
@@ -1499,7 +1513,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
       );
       const modelSelection = queuedRunModelSelection(projection, storedQueuedRun);
       const queuedRun = {
-        ...storedQueuedRun,
+        ...withoutQueueStart(storedQueuedRun),
         modelSelection,
         providerInstanceId: modelSelection.instanceId,
       };
@@ -1553,6 +1567,58 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
             })),
         );
         return;
+      }
+      // "Send now" passes queuedRunId and skips the wait; automated messages never wait.
+      if (
+        settings.safeSend &&
+        options?.queuedRunId === undefined &&
+        queuedMessage !== undefined &&
+        queuedMessage.createdBy === "user" &&
+        queuedMessage.notification === undefined &&
+        queuedMessage.delegatedCompletion === undefined &&
+        queuedMessage.scheduledTaskId === undefined
+      ) {
+        const now = yield* DateTime.now;
+        const startsAt = storedQueuedRun.queueStartsAt;
+        const due =
+          startsAt !== undefined &&
+          options?.dueRunId === storedQueuedRun.id &&
+          DateTime.isLessThanOrEqualTo(startsAt, now);
+        if (!due) {
+          if (startsAt !== undefined && DateTime.isGreaterThan(startsAt, now)) return;
+          const queueStartsAt = DateTime.add(now, { milliseconds: SAFE_SEND_DELAY_MS });
+          yield* writeSystemEvents(
+            projection.runs
+              .filter(
+                (run) =>
+                  run.id === storedQueuedRun.id ||
+                  (run.status === "queued" && run.queueStartsAt !== undefined),
+              )
+              .map((run) => ({
+                type: "run.updated" as const,
+                threadId,
+                runId: run.id,
+                providerInstanceId: run.providerInstanceId,
+                occurredAt: now,
+                payload:
+                  run.id === storedQueuedRun.id
+                    ? { ...run, queueStartsAt }
+                    : withoutQueueStart(run),
+              })),
+            [
+              {
+                id: `effect:queued-run.auto-start:${storedQueuedRun.id}:${DateTime.formatIso(queueStartsAt)}`,
+                commandId: CommandId.make(
+                  `command:system:queued-run-auto-start:${storedQueuedRun.id}`,
+                ),
+                threadId,
+                request: { type: "queued-run.auto-start", runId: storedQueuedRun.id },
+                availableAt: queueStartsAt,
+              },
+            ],
+          );
+          return;
+        }
       }
       // Move queued ordinals after runs that started while they waited to preserve transcript and checkpoint order.
       // Started runs have prompts; cancelled queued messages do not.
@@ -2215,6 +2281,24 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
           cause,
         }),
     ),
+  );
+
+  const startDueQueuedRun = Effect.fn("Orchestrator.startDueQueuedRun")(
+    function* (threadId: ThreadId, runId: RunId) {
+      yield* threadDispatch.withLock(threadId, startNextQueuedRun(threadId, { dueRunId: runId }));
+    },
+    (effect, threadId, runId) =>
+      effect.pipe(
+        Effect.mapError(
+          (cause) =>
+            new OrchestratorDispatchError({
+              commandId: CommandId.make(`command:system:queued-run-auto-start:${runId}`),
+              commandType: "message.dispatch",
+              cause,
+            }),
+        ),
+        Effect.annotateLogs({ threadId }),
+      ),
   );
 
   const dispatchDelegatedTaskCompletionDeliveryResolution = Effect.fn(
@@ -9413,7 +9497,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
       runId: queuedRun.id,
       providerInstanceId: queuedRun.providerInstanceId,
       occurredAt: yield* DateTime.now,
-      payload: { ...queuedRun, queueHeld: command.held },
+      payload: { ...withoutQueueStart(queuedRun), queueHeld: command.held },
     });
   });
 
@@ -12694,7 +12778,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
             runId: run.id,
             providerInstanceId: run.providerInstanceId,
             occurredAt: now,
-            payload: { ...run, queueHeld: false },
+            payload: { ...withoutQueueStart(run), queueHeld: false },
           });
         }
         if (queued.length === 0) {
@@ -13290,6 +13374,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
 
   return OrchestratorV2.of({
     resumeQueuedRuns,
+    startDueQueuedRun,
     recoverDelegatedTasks,
     recoverDelegatedTask,
     delegatedTaskResultPending,

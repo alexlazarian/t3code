@@ -25,6 +25,8 @@ import * as DateTime from "effect/DateTime";
 import { useId, useImperativeHandle, useRef, useState, type ReactNode, type Ref } from "react";
 
 import { useAssetUrls } from "../../assets/assetUrls";
+import { useNowSecond } from "../../hooks/useNowSecond";
+import { safeSendSecondsLeft } from "../../lib/safeSend";
 import { threadEnvironment } from "../../state/threads";
 import { useQuietThreadShell, useThreadProjection } from "../../state/entities";
 import { useAtomCommand } from "../../state/use-atom-command";
@@ -97,6 +99,8 @@ export function QueuedRunsControl({
   const promote = useAtomCommand(threadEnvironment.promoteQueuedRun);
   const resume = useAtomCommand(threadEnvironment.resumeThreadQueue);
   const cancel = useAtomCommand(threadEnvironment.cancelQueuedRun);
+  // A rejected hold means the run already started; the queue row is gone by then.
+  const hold = useAtomCommand(threadEnvironment.holdQueuedRun, { reportFailure: false });
   const [showAll, setShowAll] = useState(false);
   const queueListId = useId();
   const [busyRunId, setBusyRunId] = useState<RunId | null>(null);
@@ -130,6 +134,11 @@ export function QueuedRunsControl({
       serverIndex,
       text,
       held: run.queueHeld === true,
+      // A deadline left behind once another turn started no longer counts down.
+      startsAtMs:
+        run.queueHeld === true || run.queueStartsAt === undefined || activeRun !== null
+          ? null
+          : DateTime.toEpochMillis(run.queueStartsAt),
       // A guest's message keeps the guest's words; the owner can cancel it, not rewrite it.
       editable: context?.guest === undefined,
       attachments,
@@ -150,6 +159,7 @@ export function QueuedRunsControl({
       serverIndex: null,
       text: message.text,
       held: false,
+      startsAtMs: null,
       editable: true,
       attachments: [] as ReadonlyArray<ContractChatAttachment>,
       thumbnails: (message.attachments ?? [])
@@ -219,6 +229,15 @@ export function QueuedRunsControl({
   const resumeQueue = async (runId: RunId) => {
     setBusyRunId(runId);
     await resume({ environmentId: props.environmentId, input: { threadId: props.threadId } });
+    setBusyRunId(null);
+  };
+
+  const pause = async (runId: RunId) => {
+    setBusyRunId(runId);
+    await hold({
+      environmentId: props.environmentId,
+      input: { threadId: props.threadId, runId, held: true },
+    });
     setBusyRunId(null);
   };
 
@@ -299,6 +318,21 @@ export function QueuedRunsControl({
                     <Clock3Icon aria-hidden className="size-3" />
                     Saving
                   </span>
+                ) : null}
+                {item.startsAtMs !== null && item.runId !== null && !isEditing ? (
+                  <>
+                    <SafeSendCountdown startsAtMs={item.startsAtMs} />
+                    <Button
+                      size="xs"
+                      variant="ghost-muted"
+                      disabled={busyRunId !== null}
+                      onClick={() => {
+                        if (item.runId !== null) void pause(item.runId);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </>
                 ) : null}
                 {item.held && !isEditing ? (
                   <Tooltip>
@@ -414,6 +448,17 @@ export function QueuedRunsControl({
         </div>
       ) : null}
     </section>
+  );
+}
+
+/** Safe send's wait before the server starts this queued run; one text node ticks each second. */
+function SafeSendCountdown(props: { readonly startsAtMs: number }) {
+  const seconds = safeSendSecondsLeft(props.startsAtMs, useNowSecond());
+  return (
+    <span className="flex items-center gap-1 px-1 tabular-nums">
+      <Clock3Icon aria-hidden className="size-3" />
+      {seconds > 0 ? `Starting in ${seconds}s` : "Starting"}
+    </span>
   );
 }
 

@@ -539,6 +539,17 @@ export const layerExecutor: Layer.Layer<
                     }),
                 ),
               );
+          case "queued-run.auto-start":
+            return threads.startDueQueuedRun(effect.threadId, effect.request.runId).pipe(
+              Effect.mapError(
+                (cause) =>
+                  new OrchestrationEffectExecutionError({
+                    effectId: effect.id,
+                    effectType: effect.request.type,
+                    cause,
+                  }),
+              ),
+            );
           case "delegated-tasks.stop":
             return threads
               .stopDelegatedTasks({

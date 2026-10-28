@@ -487,6 +487,7 @@ export function useSettingsRestore(onRestored?: () => void) {
     ...(settings.followUpBehavior !== DEFAULT_UNIFIED_SETTINGS.followUpBehavior
       ? ["Follow-up behavior"]
       : []),
+    ...(settings.safeSend !== DEFAULT_UNIFIED_SETTINGS.safeSend ? ["Safe send"] : []),
     ...(settings.contextWindowMeterEnabled !== DEFAULT_UNIFIED_SETTINGS.contextWindowMeterEnabled
       ? ["Context window indicator"]
       : []),
@@ -605,6 +606,7 @@ export function useSettingsRestore(onRestored?: () => void) {
       composerRichTextEnabled: DEFAULT_UNIFIED_SETTINGS.composerRichTextEnabled,
       sendShortcut: DEFAULT_UNIFIED_SETTINGS.sendShortcut,
       followUpBehavior: DEFAULT_UNIFIED_SETTINGS.followUpBehavior,
+      safeSend: DEFAULT_UNIFIED_SETTINGS.safeSend,
       contextWindowMeterEnabled: DEFAULT_UNIFIED_SETTINGS.contextWindowMeterEnabled,
       glassOpacity: DEFAULT_UNIFIED_SETTINGS.glassOpacity,
       panelAnimationDurationMs: DEFAULT_UNIFIED_SETTINGS.panelAnimationDurationMs,
@@ -1145,6 +1147,28 @@ export function ChatSettingsPanel() {
                 ))}
               </SelectPopup>
             </Select>
+          }
+        />
+        <SettingsRow
+          serverScoped
+          settingKeys={["safeSend"]}
+          {...searchableSetting("safe-send")}
+          description="Wait 3 seconds before each message goes out, with a way to undo it. Queued messages wait too, and Cancel pauses them."
+          resetAction={
+            settings.safeSend !== DEFAULT_UNIFIED_SETTINGS.safeSend ? (
+              <SettingResetButton
+                label="safe send"
+                onClick={() => updateSettings({ safeSend: DEFAULT_UNIFIED_SETTINGS.safeSend })}
+              />
+            ) : null
+          }
+          control={
+            <ScopedSwitch
+              settingKeys={["safeSend"]}
+              checked={settings.safeSend}
+              onCheckedChange={(checked) => updateSettings({ safeSend: Boolean(checked) })}
+              aria-label="Safe send"
+            />
           }
         />
         <AdvancedSettings targetIds={[searchableSetting("skills-in-slash-menu").id]}>
