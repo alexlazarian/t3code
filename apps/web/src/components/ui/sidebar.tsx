@@ -1,12 +1,10 @@
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
-import { PanelLeft, PanelLeftClose } from "lucide";
 import * as React from "react";
 import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
 import { Input, type InputProps } from "~/components/ui/input";
-import { MorphIcon } from "~/components/MorphIcon";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import {
   Sheet,
@@ -405,9 +403,28 @@ function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<t
       variant="ghost"
       {...props}
     >
-      <MorphIcon className="size-4" icon={isOpen ? PanelLeftClose : PanelLeft} />
+      <SidebarToggleIcon open={isOpen} />
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
+  );
+}
+
+function SidebarToggleIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      aria-hidden
+      className="size-[calc(1rem*15/13)]"
+      viewBox="0 0 15 13"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.2"
+    >
+      <rect x=".6" y=".6" width="13.8" height="11.8" />
+      <line x1="5" y1=".6" x2="5" y2="12.4" />
+      {open ? (
+        <rect x="1.2" y="1.2" width="3.2" height="10.6" fill="currentColor" stroke="none" />
+      ) : null}
+    </svg>
   );
 }
 
