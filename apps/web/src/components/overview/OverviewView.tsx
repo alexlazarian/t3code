@@ -533,55 +533,66 @@ export function OverviewView() {
                           </button>
                         </div>
                         {expanded
-                          ? columns.map((column) => (
-                              <div
-                                key={column.projectKey}
-                                role="gridcell"
-                                className="flex min-h-2.5 min-w-0 flex-col gap-0.75 border-r border-b border-border p-0.75"
-                              >
-                                {(row.cells.get(column.projectKey) ?? []).map((thread) => {
-                                  const key = threadShellKey(thread);
-                                  const instanceId =
-                                    thread.runtime?.providerInstanceId ??
-                                    thread.modelSelection.instanceId;
-                                  const providerEntry = providerEntriesByEnvironment
-                                    .get(thread.environmentId)
-                                    ?.get(instanceId);
-                                  return (
-                                    <OverviewCard
-                                      key={key}
-                                      thread={thread}
-                                      section={row.section}
+                          ? columns.map((column) => {
+                              const cellThreads = row.cells.get(column.projectKey) ?? [];
+                              return (
+                                <div
+                                  key={column.projectKey}
+                                  role="gridcell"
+                                  className="flex min-h-2.5 min-w-0 flex-col gap-0.75 border-r border-b border-border p-0.75"
+                                >
+                                  {cellThreads.length === 0 && column.project !== null ? (
+                                    <NewThreadInColumnButton
                                       projectName={column.displayName}
-                                      machineLabel={
-                                        machineLabelsByColumn
-                                          .get(column.projectKey)
-                                          ?.get(thread.environmentId) ?? null
-                                      }
-                                      providerName={
-                                        providerEntry?.displayName ??
-                                        thread.runtime?.providerName ??
-                                        instanceId
-                                      }
-                                      providerEntry={providerEntry}
-                                      lastVisitedAt={resolveThreadLastVisitedAt(
-                                        thread.lastVisitedAt,
-                                        lastVisitedById[key],
-                                      )}
-                                      wokeAt={threadWokeAt(thread, { now: partition.snoozeNow })}
-                                      offline={isOverviewThreadOffline(
-                                        thread.environmentId,
-                                        phases,
-                                      )}
-                                      selected={key === openKey}
-                                      tabbable={key === tabbableKey}
-                                      onOpen={openThread}
-                                      onSelect={showThread}
+                                      onClick={() => {
+                                        if (column.project !== null) startThreadIn(column.project);
+                                      }}
                                     />
-                                  );
-                                })}
-                              </div>
-                            ))
+                                  ) : null}
+                                  {cellThreads.map((thread) => {
+                                    const key = threadShellKey(thread);
+                                    const instanceId =
+                                      thread.runtime?.providerInstanceId ??
+                                      thread.modelSelection.instanceId;
+                                    const providerEntry = providerEntriesByEnvironment
+                                      .get(thread.environmentId)
+                                      ?.get(instanceId);
+                                    return (
+                                      <OverviewCard
+                                        key={key}
+                                        thread={thread}
+                                        section={row.section}
+                                        projectName={column.displayName}
+                                        machineLabel={
+                                          machineLabelsByColumn
+                                            .get(column.projectKey)
+                                            ?.get(thread.environmentId) ?? null
+                                        }
+                                        providerName={
+                                          providerEntry?.displayName ??
+                                          thread.runtime?.providerName ??
+                                          instanceId
+                                        }
+                                        providerEntry={providerEntry}
+                                        lastVisitedAt={resolveThreadLastVisitedAt(
+                                          thread.lastVisitedAt,
+                                          lastVisitedById[key],
+                                        )}
+                                        wokeAt={threadWokeAt(thread, { now: partition.snoozeNow })}
+                                        offline={isOverviewThreadOffline(
+                                          thread.environmentId,
+                                          phases,
+                                        )}
+                                        selected={key === openKey}
+                                        tabbable={key === tabbableKey}
+                                        onOpen={openThread}
+                                        onSelect={showThread}
+                                      />
+                                    );
+                                  })}
+                                </div>
+                              );
+                            })
                           : null}
                       </div>
                       {showMore ? (
@@ -606,18 +617,6 @@ export function OverviewView() {
                     </Fragment>
                   );
                 })}
-                <div role="row" className="contents">
-                  {columns.map(({ projectKey, project, displayName }) => (
-                    <div key={projectKey} role="gridcell" className="border-r border-border p-0.75">
-                      {project === null ? null : (
-                        <NewThreadInColumnButton
-                          projectName={displayName}
-                          onClick={() => startThreadIn(project)}
-                        />
-                      )}
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
             {openRef === null ? null : (
@@ -667,7 +666,7 @@ function NewThreadInColumnButton(props: {
       type="button"
       aria-label={`New thread in ${props.projectName}`}
       onClick={props.onClick}
-      className="flex h-6 w-full cursor-pointer items-center justify-center gap-1 border border-dashed border-muted-foreground/40 text-2xs text-muted-foreground hover:border-muted-foreground hover:text-foreground"
+      className="flex min-h-6 w-full flex-1 cursor-pointer items-center justify-center gap-1 border border-dashed border-muted-foreground/20 text-2xs text-muted-foreground/50 hover:border-muted-foreground hover:text-foreground"
     >
       <PlusIcon aria-hidden className="size-3" />
       New thread
