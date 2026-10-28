@@ -21,7 +21,6 @@ export type LibraryCategory =
   | "models"
   | "providers"
   | "access"
-  | "actions"
   | "stash"
   | "scheduled"
   | "projects"
@@ -60,11 +59,6 @@ export const LIBRARY_GROUPS: ReadonlyArray<{
         id: "access",
         name: "Access modes",
         tip: "How often the open thread asks before acting.",
-      },
-      {
-        id: "actions",
-        name: "Project actions",
-        tip: "Scripts for the open thread's project. Output goes to the terminal drawer.",
       },
       {
         id: "stash",

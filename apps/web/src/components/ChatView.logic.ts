@@ -12,6 +12,8 @@ import * as Option from "effect/Option";
 import type { SetStateAction } from "react";
 import { applyClaudePromptEffortPrefix, resolvePromptInjectedEffort } from "@t3tools/shared/model";
 import { getProviderModelCapabilities } from "../providerModels";
+import { resolveAppModelSelectionForInstance } from "../modelSelection";
+import type { UnifiedSettings } from "@t3tools/contracts/settings";
 import { sanitizeThreadErrorMessage } from "~/rpc/transportError";
 import type {
   EnvironmentThread,
@@ -34,6 +36,7 @@ import {
   type PreviewAnnotationPayload,
   type ProviderInteractionMode,
   ProviderDriverKind,
+  type ProviderOptionSelection,
   type ProviderInstanceId,
   type ServerProvider,
   type ScopedProjectRef,
@@ -963,6 +966,47 @@ export function getStartedThreadModelChangeBlockReason(input: {
     title: "Start a new chat to change models",
     description: "This provider does not allow switching models after a conversation has started.",
   };
+}
+
+/** The model picker's switch for a started or fresh thread: the next selection, or why it can't. */
+export function resolveThreadModelSwitch(input: {
+  readonly instanceId: ProviderInstanceId;
+  readonly model: string;
+  readonly settings: UnifiedSettings;
+  readonly providers: ReadonlyArray<ServerProvider>;
+  readonly stickyOptionsByModelByProvider: Partial<
+    Record<ProviderInstanceId, Partial<Record<string, ReadonlyArray<ProviderOptionSelection>>>>
+  >;
+  readonly currentModelSelection: ModelSelection;
+  readonly currentProviderInstanceId: ProviderInstanceId | null;
+  readonly hasStartedSession: boolean;
+  readonly supportsProviderSwitchingViaHandoff: boolean;
+}):
+  | { readonly kind: "unresolved" }
+  | { readonly kind: "blocked"; readonly reason: { title: string; description: string } }
+  | { readonly kind: "ok"; readonly selection: ModelSelection } {
+  const { instanceId } = input;
+  const model = resolveAppModelSelectionForInstance(
+    instanceId,
+    input.settings,
+    input.providers,
+    input.model,
+  );
+  if (!model) return { kind: "unresolved" };
+  const remembered = input.stickyOptionsByModelByProvider[instanceId]?.[model];
+  const selection: ModelSelection =
+    remembered !== undefined && remembered.length > 0
+      ? { instanceId, model, options: [...remembered] }
+      : { instanceId, model };
+  const reason = getStartedThreadModelChangeBlockReason({
+    providers: input.providers,
+    hasStartedSession: input.hasStartedSession,
+    supportsProviderSwitchingViaHandoff: input.supportsProviderSwitchingViaHandoff,
+    currentModelSelection: input.currentModelSelection,
+    currentProviderInstanceId: input.currentProviderInstanceId,
+    nextModelSelection: selection,
+  });
+  return reason ? { kind: "blocked", reason } : { kind: "ok", selection };
 }
 
 export async function waitForStartedServerThread(

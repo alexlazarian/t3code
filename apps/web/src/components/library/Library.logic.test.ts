@@ -43,7 +43,7 @@ describe("libraryInsertTarget", () => {
 describe("LIBRARY_GROUPS", () => {
   it("categories keep the prototype order", () => {
     expect(LIBRARY_GROUPS.map((g) => [g.group, g.categories.map((c) => c.id)])).toEqual([
-      ["Library", ["skills", "models", "providers", "access", "actions", "stash", "scheduled"]],
+      ["Library", ["skills", "models", "providers", "access", "stash", "scheduled"]],
       ["Places", ["projects", "machines"]],
     ]);
   });

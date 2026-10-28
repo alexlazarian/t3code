@@ -69,12 +69,6 @@ function LibraryCategoryItems(props: { readonly category: LibraryCategory }) {
       return <LibraryProviders ctx={ctx} />;
     case "access":
       return <LibraryAccess ctx={ctx} />;
-    case "actions":
-      return (
-        <p className="px-2 py-1 text-xs text-sidebar-muted-foreground">
-          Not available in this build
-        </p>
-      );
     case "stash":
       return <LibraryStash ctx={ctx} />;
     case "scheduled":

@@ -1,16 +1,13 @@
 import { scopeProjectRef } from "@t3tools/client-runtime/environment";
-import type { EnvironmentId, ModelSelection, ProviderInstanceId } from "@t3tools/contracts";
+import type { EnvironmentId, ProviderInstanceId } from "@t3tools/contracts";
 import { useNavigate } from "@tanstack/react-router";
 
 import { useComposerDraftStore } from "../../composerDraftStore";
 import { useHandleNewThread } from "../../hooks/useHandleNewThread";
 import { useEnvironmentSettings } from "../../hooks/useSettings";
-import {
-  getAppModelOptionsForInstance,
-  resolveAppModelSelectionForInstance,
-} from "../../modelSelection";
+import { getAppModelOptionsForInstance } from "../../modelSelection";
 import { isProviderInstancePickerVisible } from "../../providerInstances";
-import { getStartedThreadModelChangeBlockReason } from "../ChatView.logic";
+import { resolveThreadModelSwitch } from "../ChatView.logic";
 import { getProviderSummary } from "../settings/providerStatus";
 import { toastManager } from "../ui/toast";
 import { libraryModelAction, type LibraryContext } from "./Library.logic";
@@ -32,7 +29,7 @@ function LibraryModelList(props: {
   readonly provider: ReturnType<typeof useLibraryProvider>;
 }) {
   const { ctx, environmentId } = props;
-  const { providers, entries, entry, threadShell } = props.provider;
+  const { providers, entries, threadShell } = props.provider;
   const settings = useEnvironmentSettings(environmentId);
   const navigate = useNavigate();
   const { handleNewThread, defaultProjectRef } = useHandleNewThread();
@@ -42,31 +39,40 @@ function LibraryModelList(props: {
       : defaultProjectRef?.environmentId === environmentId
         ? defaultProjectRef
         : null;
-  const threadInstanceId = ctx.threadRef === null ? null : (entry?.instanceId ?? null);
+  const threadInstanceId =
+    threadShell === null
+      ? null
+      : (threadShell.runtime?.providerInstanceId ?? threadShell.modelSelection.instanceId);
 
-  const switchThreadModel = (instanceId: ProviderInstanceId, slug: string) => {
+  const switchThreadModel = (instanceId: ProviderInstanceId, slug: string, modelName: string) => {
     if (ctx.threadRef === null || threadShell === null) return;
-    const model = resolveAppModelSelectionForInstance(instanceId, settings, providers, slug);
-    if (model === null) return;
     const store = useComposerDraftStore.getState();
-    const remembered = store.stickyOptionsByModelByProvider[instanceId]?.[model];
-    const next: ModelSelection =
-      remembered !== undefined && remembered.length > 0
-        ? { instanceId, model, options: [...remembered] }
-        : { instanceId, model };
-    const blocked = getStartedThreadModelChangeBlockReason({
+    // Library only offers the thread's own provider here, so handoff never applies.
+    const modelSwitch = resolveThreadModelSwitch({
+      instanceId,
+      model: slug,
+      settings,
       providers,
-      hasStartedSession: threadShell.runtime !== null,
+      stickyOptionsByModelByProvider: store.stickyOptionsByModelByProvider,
       currentModelSelection: threadShell.modelSelection,
       currentProviderInstanceId: threadShell.runtime?.providerInstanceId ?? null,
-      nextModelSelection: next,
+      hasStartedSession: threadShell.runtime !== null,
+      supportsProviderSwitchingViaHandoff: false,
     });
-    if (blocked) {
-      toastManager.add({ type: "warning", ...blocked });
+    if (modelSwitch.kind === "unresolved") return;
+    if (modelSwitch.kind === "blocked") {
+      toastManager.add({ type: "warning", ...modelSwitch.reason });
       return;
     }
-    store.setModelSelection(ctx.threadRef, next, { explicit: true, replaceOptions: true });
-    store.setStickyModelSelection(next);
+    store.setModelSelection(ctx.threadRef, modelSwitch.selection, {
+      explicit: true,
+      replaceOptions: true,
+    });
+    store.setStickyModelSelection(modelSwitch.selection);
+    toastManager.add({
+      type: "success",
+      title: `"${threadShell.title}" uses ${modelName} from its next message.`,
+    });
   };
 
   const newThreadWith = async (instanceId: ProviderInstanceId, model: string) => {
@@ -114,7 +120,7 @@ function LibraryModelList(props: {
             actions: [
               {
                 label: "Use in this thread",
-                onSelect: () => switchThreadModel(candidate.instanceId, option.slug),
+                onSelect: () => switchThreadModel(candidate.instanceId, option.slug, option.name),
               },
             ],
           };

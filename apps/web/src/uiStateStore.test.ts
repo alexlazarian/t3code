@@ -168,6 +168,12 @@ describe("parsePersistedState", () => {
     });
   });
 
+  it("falls back to skills for the dropped project actions category", () => {
+    expect(
+      parsePersistedState({ sidebarPanel: "library", libraryCategory: "actions" }),
+    ).toMatchObject({ libraryCategory: "skills" });
+  });
+
   it("migrates legacy CWD project preferences into local alias keys", () => {
     const parsed = parsePersistedState({
       collapsedProjectCwds: ["/repo/b"],

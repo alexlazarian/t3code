@@ -7,7 +7,9 @@ import {
   withMessageContext,
   deriveAvailableRevertTurnCounts,
   deriveWorkspaceMutationId,
+  resolveThreadModelSwitch,
 } from "./ChatView.logic";
+import { DEFAULT_UNIFIED_SETTINGS } from "@t3tools/contracts/settings";
 import { recallCheckoutIsRepo, rememberCheckoutIsRepo } from "./ChatView.logic";
 import { ProviderDriverKind, type ServerProvider } from "@t3tools/contracts";
 import { deriveProviderInstanceEntries } from "../providerInstances";
@@ -1196,5 +1198,68 @@ describe("deriveWorkspaceMutationId", () => {
     expect(deriveWorkspaceMutationId([item("reply", "assistant_message", "completed")], null)).toBe(
       null,
     );
+  });
+});
+
+describe("resolveThreadModelSwitch", () => {
+  const codex = ProviderInstanceId.make("codex");
+  const claude = ProviderInstanceId.make("claudeAgent");
+  const snapshot = (instanceId: ProviderInstanceId, driver: string): ServerProvider => ({
+    instanceId,
+    driver: ProviderDriverKind.make(driver),
+    enabled: true,
+    installed: true,
+    version: null,
+    status: "ready",
+    auth: { status: "authenticated" },
+    checkedAt: "2026-01-01T00:00:00.000Z",
+    models: [
+      { slug: "gpt-a", name: "GPT A", isCustom: false, capabilities: null },
+      { slug: "gpt-b", name: "GPT B", isCustom: false, capabilities: null },
+    ],
+    slashCommands: [],
+    skills: [],
+  });
+  const base = {
+    instanceId: codex,
+    model: "gpt-b",
+    settings: DEFAULT_UNIFIED_SETTINGS,
+    providers: [snapshot(codex, "codex"), snapshot(claude, "claudeAgent")],
+    stickyOptionsByModelByProvider: {},
+    currentModelSelection: { instanceId: codex, model: "gpt-a" },
+    currentProviderInstanceId: codex,
+    hasStartedSession: true,
+    supportsProviderSwitchingViaHandoff: false,
+  };
+
+  it("switches a started thread to another model on its provider", () => {
+    expect(resolveThreadModelSwitch(base)).toEqual({
+      kind: "ok",
+      selection: { instanceId: codex, model: "gpt-b" },
+    });
+  });
+
+  it("carries the options remembered for that model", () => {
+    const options = [{ id: "effort", value: "high" }];
+    expect(
+      resolveThreadModelSwitch({
+        ...base,
+        stickyOptionsByModelByProvider: { [codex]: { "gpt-b": options } },
+      }),
+    ).toEqual({ kind: "ok", selection: { instanceId: codex, model: "gpt-b", options } });
+  });
+
+  it("blocks a provider switch on a started thread unless the session hands off", () => {
+    const toClaude = { ...base, instanceId: claude, model: "gpt-a" };
+    expect(resolveThreadModelSwitch(toClaude).kind).toBe("blocked");
+    expect(
+      resolveThreadModelSwitch({ ...toClaude, supportsProviderSwitchingViaHandoff: true }).kind,
+    ).toBe("ok");
+  });
+
+  it("is unresolved for a provider that is not in the catalog", () => {
+    expect(
+      resolveThreadModelSwitch({ ...base, instanceId: ProviderInstanceId.make("missing") }),
+    ).toEqual({ kind: "unresolved" });
   });
 });

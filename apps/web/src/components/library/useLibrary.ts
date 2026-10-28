@@ -6,6 +6,7 @@ import { useThreadRouteTarget } from "../../hooks/useThreadRouteTarget";
 import { deriveProviderInstanceEntries } from "../../providerInstances";
 import { useQuietThreadShell } from "../../state/entities";
 import { useEnvironmentProviders, usePrimaryEnvironmentId } from "../../state/environments";
+import { toastManager } from "../ui/toast";
 import {
   appendComposerText,
   libraryContextFromRoute,
@@ -48,12 +49,22 @@ export function useLibraryProvider(ctx: LibraryContext) {
   return { environmentId, providers, entries, entry, threadShell };
 }
 
-/** A mounted composer inserts at its own boundary; otherwise the draft's prompt is appended. */
+/** A mounted composer applies its own guards; only with none mounted is the draft appended to. */
 export function useInsertInComposer(target: ComposerThreadTarget | null) {
   const composerRef = useComposerHandleContext();
   if (target === null) return null;
   return (text: string) => {
-    if (composerRef?.current?.insertTextAtEnd(text, { ensureLeadingBoundary: true })) return;
+    const composer = composerRef?.current;
+    if (composer) {
+      if (!composer.insertTextAtEnd(text, { ensureLeadingBoundary: true })) {
+        toastManager.add({
+          type: "error",
+          title: "Unable to add to chat",
+          description: "The composer is busy; try again once it is ready.",
+        });
+      }
+      return;
+    }
     const store = useComposerDraftStore.getState();
     store.setPrompt(target, appendComposerText(store.getComposerDraft(target)?.prompt ?? "", text));
   };
