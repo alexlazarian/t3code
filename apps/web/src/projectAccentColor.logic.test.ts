@@ -2,6 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   dominantColorFromPixels,
+  fillInkContrast,
   projectFillColor,
   projectIconOverrideColor,
 } from "./projectAccentColor.logic";
@@ -104,14 +105,37 @@ describe("projectIconOverrideColor", () => {
 });
 
 describe("projectFillColor", () => {
-  it("mixes the project color toward warm gray, keeping CSS vars intact", () => {
-    expect(projectFillColor("#f97316")).toBe("color-mix(in oklab, #f97316 74%, #8a857e)");
-    expect(projectFillColor("var(--color-blue-500)")).toBe(
-      "color-mix(in oklab, var(--color-blue-500) 74%, #8a857e)",
+  const sampleIn = (fill: string) => fill.match(/#[0-9a-f]{6}/)![0];
+
+  it("lifts sampled colors toward white by at least the prototype's 32%", () => {
+    expect(projectFillColor("#61dafb")).toBe("color-mix(in oklab, #94e6fc 74%, #8a857e)");
+    expect(projectFillColor("#f97316")).toBe("color-mix(in oklab, #fba061 74%, #8a857e)");
+  });
+
+  it("lifts dark samples further until dark ink reads at 4.5:1", () => {
+    expect(fillInkContrast("#1e3a8a")).toBeCloseTo(2.37, 2);
+    expect(fillInkContrast("#000080")).toBeCloseTo(1.67, 2);
+    expect(projectFillColor("#1e3a8a")).toBe("color-mix(in oklab, #6679af 74%, #8a857e)");
+    expect(projectFillColor("#000080")).toBe("color-mix(in oklab, #7575ba 74%, #8a857e)");
+    for (const navyOrBlackish of ["#1e3a8a", "#000080", "#101040", "#1a0033", "#000000"]) {
+      const contrast = fillInkContrast(sampleIn(projectFillColor(navyOrBlackish)));
+      expect(contrast).toBeGreaterThanOrEqual(4.5);
+      expect(contrast).toBeLessThan(4.8);
+    }
+  });
+
+  it("mixes CSS-var overrides with white so gray and indigo carry dark ink", () => {
+    expect(projectFillColor("var(--color-indigo-500)")).toBe(
+      "color-mix(in oklab, color-mix(in oklab, var(--color-indigo-500) 74%, #8a857e) 92%, white)",
     );
+    // sRGB values of Tailwind's gray-500 and indigo-500.
+    expect(fillInkContrast("#6a7282")).toBeCloseTo(4.12, 1);
+    expect(fillInkContrast("#6a7282", 0.08)).toBeCloseTo(4.75, 2);
+    expect(fillInkContrast("#615fff", 0.08)).toBeCloseTo(5.0, 2);
   });
 
   it("projects without a color get the neutral fill", () => {
     expect(projectFillColor(null)).toBe("color-mix(in oklab, #8d867d 74%, #8a857e)");
+    expect(fillInkContrast("#8d867d")).toBeCloseTo(5.12, 2);
   });
 });

@@ -183,7 +183,7 @@ const STATUS_BLOCKS: Partial<Record<SidebarStatusLabel["icon"], OverviewStatusBl
   request: { glyph: "?", className: "bg-status-needs-you" },
   plan: { glyph: "P", className: "bg-status-needs-you" },
   failed: { glyph: "x", className: "bg-status-failed" },
-  waiting: { glyph: "~", className: "bg-overview-idle" },
+  waiting: { glyph: "~", className: "bg-overview-idle text-white" },
 };
 
 /** Glyphs match the prototype's STATUS table; Done, Woke and unlabeled threads show an empty block. */

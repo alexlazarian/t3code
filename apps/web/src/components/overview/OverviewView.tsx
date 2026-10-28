@@ -4,21 +4,13 @@ import { useRouter } from "@tanstack/react-router";
 import * as Schema from "effect/Schema";
 import { parseScopedThreadKey, scopeProjectRef } from "@t3tools/client-runtime/environment";
 import { ChevronDownIcon, PlusIcon } from "lucide-react";
-import {
-  Fragment,
-  useEffect,
-  useRef,
-  useState,
-  type FocusEvent,
-  type KeyboardEvent,
-  type ReactNode,
-} from "react";
+import { Fragment, useEffect, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
 
 import { openCommandPalette } from "../../commandPaletteBus";
 import { isElectron } from "../../env";
 import { useNewThreadHandler } from "../../hooks/useHandleNewThread";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
-import { useProjectAccentColor } from "../../hooks/useProjectAccentColor";
+import { useProjectAccentColors } from "../../hooks/useProjectAccentColor";
 import { useStableCallback } from "../../hooks/useStableCallback";
 import { updateClientSettings, useClientSettings } from "../../hooks/useSettings";
 import { useSidebarProjectGroups } from "../../hooks/useSidebarProjectGroups";
@@ -195,6 +187,8 @@ export function OverviewView() {
       ] as const;
     }),
   );
+  const accentColors = useProjectAccentColors(columns.map((column) => column.project));
+  const fills = accentColors.map(projectFillColor);
   const phases = new Map(
     environments.map((environment) => [environment.environmentId, environment.connection.phase]),
   );
@@ -337,10 +331,11 @@ export function OverviewView() {
               style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(180px, 1fr))` }}
             >
               <div role="row" className="contents">
-                {columns.map((column) => (
+                {columns.map((column, index) => (
                   <OverviewColumnHeader
                     key={column.projectKey}
                     column={column}
+                    fill={fills[index]!}
                     machines={machinesByColumn.get(column.projectKey) ?? []}
                   />
                 ))}
@@ -379,51 +374,50 @@ export function OverviewView() {
                         </button>
                       </div>
                       {expanded
-                        ? columns.map((column) => (
-                            <OverviewColumnCell key={column.projectKey} column={column}>
-                              {(fill) =>
-                                (row.cells.get(column.projectKey) ?? []).map((thread) => {
-                                  const key = threadShellKey(thread);
-                                  const instanceId =
-                                    thread.runtime?.providerInstanceId ??
-                                    thread.modelSelection.instanceId;
-                                  return (
-                                    <OverviewCard
-                                      key={key}
-                                      thread={thread}
-                                      section={row.section}
-                                      projectName={column.displayName}
-                                      fill={fill}
-                                      machineLabel={
-                                        machineLabelsByColumn
-                                          .get(column.projectKey)
-                                          ?.get(thread.environmentId) ?? null
-                                      }
-                                      providerName={
-                                        providerEntriesByEnvironment
-                                          .get(thread.environmentId)
-                                          ?.get(instanceId)?.displayName ??
-                                        thread.runtime?.providerName ??
-                                        instanceId
-                                      }
-                                      lastVisitedAt={resolveThreadLastVisitedAt(
-                                        thread.lastVisitedAt,
-                                        lastVisitedById[key],
-                                      )}
-                                      wokeAt={threadWokeAt(thread, { now: partition.snoozeNow })}
-                                      offline={isOverviewThreadOffline(
-                                        thread.environmentId,
-                                        phases,
-                                      )}
-                                      selected={key === selectedKey}
-                                      tabbable={key === tabbableKey}
-                                      onOpen={openThread}
-                                      onPeek={peekThread}
-                                    />
-                                  );
-                                })
-                              }
-                            </OverviewColumnCell>
+                        ? columns.map((column, index) => (
+                            <div
+                              key={column.projectKey}
+                              role="gridcell"
+                              className="flex min-h-2.5 min-w-0 flex-col gap-0.75 border-r border-b border-border p-0.75"
+                            >
+                              {(row.cells.get(column.projectKey) ?? []).map((thread) => {
+                                const key = threadShellKey(thread);
+                                const instanceId =
+                                  thread.runtime?.providerInstanceId ??
+                                  thread.modelSelection.instanceId;
+                                return (
+                                  <OverviewCard
+                                    key={key}
+                                    thread={thread}
+                                    section={row.section}
+                                    projectName={column.displayName}
+                                    fill={fills[index]!}
+                                    machineLabel={
+                                      machineLabelsByColumn
+                                        .get(column.projectKey)
+                                        ?.get(thread.environmentId) ?? null
+                                    }
+                                    providerName={
+                                      providerEntriesByEnvironment
+                                        .get(thread.environmentId)
+                                        ?.get(instanceId)?.displayName ??
+                                      thread.runtime?.providerName ??
+                                      instanceId
+                                    }
+                                    lastVisitedAt={resolveThreadLastVisitedAt(
+                                      thread.lastVisitedAt,
+                                      lastVisitedById[key],
+                                    )}
+                                    wokeAt={threadWokeAt(thread, { now: partition.snoozeNow })}
+                                    offline={isOverviewThreadOffline(thread.environmentId, phases)}
+                                    selected={key === selectedKey}
+                                    tabbable={key === tabbableKey}
+                                    onOpen={openThread}
+                                    onPeek={peekThread}
+                                  />
+                                );
+                              })}
+                            </div>
                           ))
                         : null}
                     </div>
@@ -493,21 +487,5 @@ function NewThreadInColumnButton(props: {
       <PlusIcon aria-hidden className="size-3" />
       New thread
     </button>
-  );
-}
-
-// One accent lookup per cell, not per card, so cards stay memoized on a fill string.
-function OverviewColumnCell(props: {
-  readonly column: OverviewColumn;
-  readonly children: (fill: string) => ReactNode;
-}) {
-  const fill = projectFillColor(useProjectAccentColor(props.column.project));
-  return (
-    <div
-      role="gridcell"
-      className="flex min-h-2.5 min-w-0 flex-col gap-0.75 border-r border-b border-border p-0.75"
-    >
-      {props.children(fill)}
-    </div>
   );
 }

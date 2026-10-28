@@ -104,7 +104,7 @@ export const OverviewCard = memo(function OverviewCard(props: {
       <span
         aria-hidden
         className={cn(
-          "flex items-center justify-center text-3xs font-bold text-background",
+          "flex items-center justify-center text-2xs font-bold text-background",
           block.className,
         )}
       >
@@ -116,8 +116,8 @@ export const OverviewCard = memo(function OverviewCard(props: {
       </span>
       <span className="min-w-0 px-1.5 py-0.75">
         <span className="block truncate text-xs font-semibold">{thread.title}</span>
-        <span className="flex gap-1.5 overflow-hidden text-3xs whitespace-nowrap">
-          <span className="font-semibold">
+        <span className="flex gap-1.5 overflow-hidden text-3xs whitespace-nowrap text-overview-ink/80">
+          <span className="font-semibold text-overview-ink">
             {status ? (
               status.label
             ) : (

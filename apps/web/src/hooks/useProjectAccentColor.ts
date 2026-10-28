@@ -72,22 +72,74 @@ function subscriberFor(url: string) {
 
 const subscribeNothing = () => () => {};
 
+function faviconTarget(project: ProjectFaviconProject) {
+  return {
+    environmentId: project.environmentId,
+    cwd: project.workspaceRoot,
+    faviconPath: project.faviconPath,
+  };
+}
+
+function sampleableUrl(project: ProjectFaviconProject | null, src: string | null) {
+  return projectIconOverrideColor(project?.projectIcon) || !src || isProjectFaviconFallbackUrl(src)
+    ? null
+    : src;
+}
+
 export function useProjectAccentColor(project: ProjectFaviconProject | null): string | null {
   const src = useAtomValue(
-    project
-      ? projectFaviconUrlAtom({
-          environmentId: project.environmentId,
-          cwd: project.workspaceRoot,
-          faviconPath: project.faviconPath,
-        })
-      : NO_FAVICON_URL,
+    project ? projectFaviconUrlAtom(faviconTarget(project)) : NO_FAVICON_URL,
   );
-  const override = projectIconOverrideColor(project?.projectIcon);
-  const url = override || !src || isProjectFaviconFallbackUrl(src) ? null : src;
+  const url = sampleableUrl(project, src);
   const sampled = useSyncExternalStore(
     url ? subscriberFor(url) : subscribeNothing,
     () => (url ? (resolved.get(url) ?? null) : null),
     () => null,
   );
-  return override ?? sampled;
+  return projectIconOverrideColor(project?.projectIcon) ?? sampled;
+}
+
+const faviconUrlsAtom = Atom.family((key: string) =>
+  Atom.make((get) =>
+    (JSON.parse(key) as Array<ReturnType<typeof faviconTarget> | null>).map((target) =>
+      target ? get(projectFaviconUrlAtom(target)) : null,
+    ),
+  ),
+);
+
+const listSubscribers = new Map<string, (listener: () => void) => () => void>();
+
+function subscriberForUrls(urls: ReadonlyArray<string>) {
+  const key = urls.join("\n");
+  let subscribe = listSubscribers.get(key);
+  if (!subscribe) {
+    subscribe = (listener) => {
+      for (const url of urls) ensureSampled(url);
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    };
+    listSubscribers.set(key, subscribe);
+  }
+  return subscribe;
+}
+
+/** One lookup for a list of projects, for views that cannot call a hook per project. */
+export function useProjectAccentColors(
+  projects: ReadonlyArray<ProjectFaviconProject | null>,
+): ReadonlyArray<string | null> {
+  const srcs = useAtomValue(
+    faviconUrlsAtom(JSON.stringify(projects.map((p) => (p ? faviconTarget(p) : null)))),
+  );
+  const urls = projects.map((project, index) => sampleableUrl(project, srcs[index] ?? null));
+  // A joined string keeps the snapshot stable between unrelated sample resolutions.
+  const sampled = useSyncExternalStore(
+    subscriberForUrls(urls.filter((url) => url !== null)),
+    () => urls.map((url) => (url ? (resolved.get(url) ?? "") : "")).join("\n"),
+    () => "",
+  ).split("\n");
+  return projects.map(
+    (project, index) => projectIconOverrideColor(project?.projectIcon) ?? (sampled[index] || null),
+  );
 }

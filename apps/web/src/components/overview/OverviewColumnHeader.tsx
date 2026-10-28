@@ -1,23 +1,21 @@
 import { FolderIcon } from "lucide-react";
 import { Fragment } from "react";
 
-import { useProjectAccentColor } from "../../hooks/useProjectAccentColor";
-import { projectFillColor } from "../../projectAccentColor.logic";
 import { ProjectFavicon } from "../ProjectFavicon";
 import type { OverviewColumn, OverviewMachine } from "./Overview.logic";
 
 export function OverviewColumnHeader(props: {
   readonly column: OverviewColumn;
+  readonly fill: string;
   readonly machines: ReadonlyArray<OverviewMachine>;
 }) {
   const { column } = props;
-  const fill = projectFillColor(useProjectAccentColor(column.project));
   const { open, working, needsYou } = column.counts;
   return (
     <div className="sticky top-0 z-10 min-w-0 border-r border-border bg-muted">
       <div
         className="flex h-[22px] items-center gap-1.5 px-2 text-xs font-semibold text-overview-ink"
-        style={{ backgroundColor: fill }}
+        style={{ backgroundColor: props.fill }}
       >
         {column.project ? (
           <span className="inline-flex shrink-0 items-center justify-center bg-black/15 [&:has(img)]:bg-white [&:has(img)]:p-px">
