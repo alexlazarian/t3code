@@ -1,4 +1,5 @@
 import { useAtomValue } from "@effect/atom-react";
+import { ChartNoAxesColumnIcon, SearchIcon } from "lucide-react";
 import * as Schema from "effect/Schema";
 import {
   useEffect,
@@ -387,7 +388,7 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
     <header
       ref={appShellCommandsRef}
       className={cn(
-        "fixed inset-x-0 top-0 z-20 flex h-(--workspace-topbar-height) items-center border-b border-border bg-background pl-(--workspace-controls-left) pr-(--workspace-controls-right) text-xs wco:pr-(--workspace-native-controls-inset) [&>*]:flex [&>*]:h-full [&>*]:items-center [&>*]:gap-1 [&>*]:border-border [&>*]:px-2",
+        "fixed inset-x-0 top-0 z-20 flex h-(--app-top-bar-bottom) items-center border-b border-border bg-surface-raised pt-safe pl-(--workspace-controls-left) pr-(--workspace-controls-right) text-xs wco:pr-(--workspace-native-controls-inset) [&>*]:flex [&>*]:h-full [&>*]:items-center [&>*]:gap-1 [&>*]:border-border [&>*]:px-2",
         isElectron && "drag-region",
       )}
       style={windowControlsInsetStyle}
@@ -443,14 +444,16 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
         </Button>
       </div>
       <div className="min-w-0 flex-1 px-0!" />
-      <div className="border-r max-md:hidden">
+      <div className="border-r">
         <Button
           variant="ghost"
           size="xs"
+          aria-label="Search and commands"
           onClick={() => openCommandPalette()}
           data-info={`Search and commands${paletteShortcutLabel ? ` (${paletteShortcutLabel})` : ""}`}
         >
-          Search and commands
+          <SearchIcon className="md:hidden" />
+          <span className="max-md:hidden">Search and commands</span>
           {paletteShortcutLabel ? <TopBarShortcut label={paletteShortcutLabel} /> : null}
         </Button>
       </div>
@@ -458,11 +461,12 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
         <Button
           variant="ghost"
           size="xs"
-          className="max-md:hidden"
+          aria-label="Usage"
           onClick={() => void router.navigate({ to: "/usage" })}
           data-info={`Open usage${usageShortcutLabel ? ` (${usageShortcutLabel})` : ""}`}
         >
-          Usage
+          <ChartNoAxesColumnIcon className="md:hidden" />
+          <span className="max-md:hidden">Usage</span>
           {usageShortcutLabel ? <TopBarShortcut label={usageShortcutLabel} /> : null}
         </Button>
         <Button
@@ -531,7 +535,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
   const sidebarProviderStyle = {
     "--sidebar-width": `${clampThreadSidebarWidth(sidebarWidth, sidebarMinimumWidth, sidebarMaximumWidth)}px`,
     "--panel-animation-duration": `${panelAnimationDurationMs}ms`,
-    "--sidebar-top": "var(--workspace-topbar-height)",
+    "--sidebar-top": "var(--app-top-bar-bottom)",
   } as CSSProperties;
 
   return (
@@ -550,6 +554,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
             data-app-sidebar=""
             role="navigation"
             aria-label="Threads"
+            style={windowControlsInsetStyle}
             resizable={{
               maxWidth: sidebarMaximumWidth,
               minWidth: sidebarMinimumWidth,
