@@ -52,6 +52,8 @@ import {
 import {
   idleCompactionOf,
   isCompactionCommandMessage,
+  isProviderDriverKind,
+  PROVIDER_DISPLAY_NAMES,
   type MessageId,
   type OrchestrationV2IdleCompaction,
   type WorktreeSetupSnapshot,
@@ -688,6 +690,21 @@ function expandedWorkGroupRow(
     groupedEntries,
     isExpandedToolGroup: true,
   };
+}
+
+/** "<Provider> · <model>" for the run that wrote a message, or null when the run is unknown. */
+export function resolveAssistantCaption(
+  runId: RunId | null,
+  runs: ReadonlyArray<HandoffTimelineRun>,
+): string | null {
+  const run = runId === null ? undefined : runs.find((candidate) => candidate.id === runId);
+  if (run === undefined) return null;
+  const instanceId = run.providerInstanceId;
+  const provider =
+    (isProviderDriverKind(instanceId) ? PROVIDER_DISPLAY_NAMES[instanceId] : undefined) ??
+    instanceId;
+  const model = run.modelSelection.model.trim();
+  return model ? `${provider} · ${model}` : provider;
 }
 
 export function resolveAssistantMessageCopyState({

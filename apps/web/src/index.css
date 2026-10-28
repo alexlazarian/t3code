@@ -1863,7 +1863,14 @@ code {
 }
 
 /* Message spacing reaches prose in the thread (and its settings preview) only;
-   code keeps its own rhythm. */
+   code keeps its own rhythm. The built-in values match the setting defaults. */
+:is([data-chat-column], [data-reading-preview]) .chat-markdown {
+  --chat-reading-leading: 1.4;
+  --chat-reading-gap: 0.4rem;
+}
+:is([data-chat-column], [data-reading-preview]) .chat-markdown :is(h1, h2, h3, h4, h5, h6) {
+  margin: 0.75rem 0 0.25rem;
+}
 html[data-message-line-height] :is([data-chat-column], [data-reading-preview]) .chat-markdown {
   --chat-reading-leading: var(--message-line-height);
 }

@@ -6,8 +6,26 @@ import { formatChatTimestampTooltip, formatDayAwareTimestamp } from "../../times
 
 export const MESSAGE_HEADING_LEVEL = 3;
 
-export function MessageAuthorHeading({ children }: { children: string }) {
-  return <h3 className="sr-only select-none">{children}</h3>;
+/** The author line above a message: a small caption, or screen-reader only when hidden. */
+export function MessageAuthorHeading({
+  children,
+  visible = false,
+}: {
+  children: string;
+  visible?: boolean;
+}) {
+  return (
+    <h3
+      className={cn(
+        "select-none",
+        visible
+          ? "mb-0.5 text-xs font-normal uppercase leading-snug tracking-wider text-muted-foreground"
+          : "sr-only",
+      )}
+    >
+      {children}
+    </h3>
+  );
 }
 
 export function TimelineRowTimestamp({

@@ -118,7 +118,8 @@ function WorkingTimer({ createdAt }: { createdAt: string }) {
   );
 }
 
-const compactWorkEntryHeight = 24;
+/** A collapsed WorkLog row: its 20px box plus 3px trailing space. */
+const compactWorkEntryHeight = 23;
 
 function ExpandedWorkGroupEntries({
   anchorKey,
@@ -351,7 +352,8 @@ function CompactingLabel({ label }: { label: string }) {
 export function ThinkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "thinking" }> }) {
   const ctx = use(TimelineRowCtx);
   const { isCompacting, isPreparingWorktree } = use(TimelineRowActivityCtx);
-  if (isPreparingWorktree || isCompacting) return <WorkLogRow label="" />;
+  if (isPreparingWorktree || isCompacting)
+    return <div aria-hidden className="h-5 pb-0.75 box-content" />;
   const activity = <LiveActivityRow label="Thinking" iconName="brain" active shimmer />;
   const { groupId } = row;
   if (groupId === undefined) return activity;
@@ -387,7 +389,7 @@ function LiveActivityRow({
   return (
     <div
       ref={animated ? observeVisibleAnimation : undefined}
-      className="relative min-h-6 w-fit max-w-full min-w-0 overflow-hidden rounded-md text-sm leading-relaxed"
+      className="relative w-full min-w-0 overflow-hidden text-sm leading-snug"
     >
       <LiveActivityContent
         label={label}

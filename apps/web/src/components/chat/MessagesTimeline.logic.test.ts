@@ -31,6 +31,7 @@ import {
   deriveMessagesTimelineRowsWithState,
   shouldCollapseUserMessage,
   resolveAssistantMessageCopyState,
+  resolveAssistantCaption,
   type MessagesTimelineRow,
   workEntryDisplayLabel,
 } from "./MessagesTimeline.logic";
@@ -144,6 +145,29 @@ describe("computeMessageDurationStart", () => {
         ["a2", "2026-01-01T00:01:00Z"],
       ]),
     );
+  });
+});
+
+describe("resolveAssistantCaption", () => {
+  const run = (id: string, instanceId: string, model: string) => ({
+    id: RunId.make(id),
+    ordinal: 1,
+    providerInstanceId: ProviderInstanceId.make(instanceId),
+    modelSelection: { instanceId: ProviderInstanceId.make(instanceId), model },
+  });
+  const runs = [run("run-1", "codex", "gpt-5.5"), run("run-2", "codex_work", "gpt-5.4")];
+
+  it("names the provider and model of the message's run", () => {
+    expect(resolveAssistantCaption(RunId.make("run-1"), runs)).toBe("Codex · gpt-5.5");
+  });
+
+  it("falls back to the instance id for a custom provider instance", () => {
+    expect(resolveAssistantCaption(RunId.make("run-2"), runs)).toBe("codex_work · gpt-5.4");
+  });
+
+  it("has no caption when the run is unknown", () => {
+    expect(resolveAssistantCaption(null, runs)).toBeNull();
+    expect(resolveAssistantCaption(RunId.make("run-3"), runs)).toBeNull();
   });
 });
 

@@ -293,9 +293,9 @@ export const ChatWidth = Schema.Literals(["comfortable", "wide", "full"]);
 export type ChatWidth = typeof ChatWidth.Type;
 
 /** Line height of agent messages in hundredths; the default leaves the built-in spacing alone. */
-export const MIN_MESSAGE_LINE_HEIGHT = 140;
+export const MIN_MESSAGE_LINE_HEIGHT = 120;
 export const MAX_MESSAGE_LINE_HEIGHT = 240;
-export const DEFAULT_MESSAGE_LINE_HEIGHT = 163;
+export const DEFAULT_MESSAGE_LINE_HEIGHT = 140;
 export const MessageLineHeight = Schema.Int.check(
   Schema.isBetween({ minimum: MIN_MESSAGE_LINE_HEIGHT, maximum: MAX_MESSAGE_LINE_HEIGHT }),
 );
@@ -303,7 +303,7 @@ export type MessageLineHeight = typeof MessageLineHeight.Type;
 /** Space between paragraphs of agent messages in hundredths of a rem. */
 export const MIN_MESSAGE_PARAGRAPH_SPACING = 20;
 export const MAX_MESSAGE_PARAGRAPH_SPACING = 250;
-export const DEFAULT_MESSAGE_PARAGRAPH_SPACING = 65;
+export const DEFAULT_MESSAGE_PARAGRAPH_SPACING = 40;
 export const MessageParagraphSpacing = Schema.Int.check(
   Schema.isBetween({
     minimum: MIN_MESSAGE_PARAGRAPH_SPACING,
