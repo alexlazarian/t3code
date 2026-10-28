@@ -8,14 +8,27 @@ export interface InfoBarThread {
   readonly provider: string | null;
   readonly model: string | null;
   readonly access: string | null;
-  readonly pullRequest: { readonly number: number; readonly state: string | null } | null;
+  readonly pullRequest: { readonly number: number } | null;
 }
 
 export interface InfoBarTarget {
   readonly info?: string | undefined;
   readonly ariaLabel?: string | undefined;
   readonly threadKey?: string | undefined;
+  /** The element's role attribute, or its tag name when it has none. */
+  readonly role?: string | undefined;
 }
+
+const CONTAINER_ROLES = new Set([
+  "nav",
+  "navigation",
+  "region",
+  "main",
+  "aside",
+  "grid",
+  "rowgroup",
+  "list",
+]);
 
 function formatInfoBarThread(thread: InfoBarThread): string {
   const place = [
@@ -31,9 +44,7 @@ function formatInfoBarThread(thread: InfoBarThread): string {
     `${thread.title}: ${thread.status ?? "Done"}.`,
     where ? `${where}.` : null,
     agent ? `${agent}.` : null,
-    thread.pullRequest === null
-      ? null
-      : `PR #${thread.pullRequest.number}${thread.pullRequest.state ? ` ${thread.pullRequest.state}` : ""}.`,
+    thread.pullRequest === null ? null : `PR #${thread.pullRequest.number}.`,
   ];
   return sentences.filter((part) => part !== null).join(" ");
 }
@@ -47,5 +58,6 @@ export function resolveInfoBarText(
     const thread = lookup(target.threadKey);
     if (thread) return formatInfoBarThread(thread);
   }
+  if (target.role !== undefined && CONTAINER_ROLES.has(target.role)) return null;
   return target.ariaLabel || null;
 }

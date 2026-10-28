@@ -64,7 +64,7 @@ function lookupThread(threadKey: string): InfoBarThread | null {
     provider: providerName,
     model: thread.modelSelection.model,
     access: runtimeModeConfig[thread.runtimeMode]?.label ?? null,
-    pullRequest: pullRequest ? { number: pullRequest.number, state: null } : null,
+    pullRequest: pullRequest ? { number: pullRequest.number } : null,
   };
 }
 
@@ -75,6 +75,7 @@ function targetOf(element: Element): InfoBarTarget {
     info: source.getAttribute("data-info") ?? undefined,
     ariaLabel: element.getAttribute("aria-label") ?? undefined,
     threadKey: element.getAttribute("data-thread-key") ?? undefined,
+    role: element.getAttribute("role") ?? element.tagName.toLowerCase(),
   };
 }
 

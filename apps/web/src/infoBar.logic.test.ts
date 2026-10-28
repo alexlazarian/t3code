@@ -12,7 +12,7 @@ const thread: InfoBarThread = {
   provider: "Claude",
   model: "Opus",
   access: "Full access",
-  pullRequest: { number: 42, state: "open" },
+  pullRequest: { number: 42 },
 };
 
 describe("resolveInfoBarText", () => {
@@ -25,7 +25,7 @@ describe("resolveInfoBarText", () => {
 
   it("formats a thread line and omits a missing PR", () => {
     expect(resolveInfoBarText({ threadKey: "k" }, () => thread)).toBe(
-      "Fix login: Working. api on Studio, fix/login. Claude Opus, Full access. PR #42 open.",
+      "Fix login: Working. api on Studio, fix/login. Claude Opus, Full access. PR #42.",
     );
     expect(
       resolveInfoBarText({ threadKey: "k" }, () => ({
@@ -41,9 +41,27 @@ describe("resolveInfoBarText", () => {
       resolveInfoBarText({ threadKey: "k" }, () => ({
         ...thread,
         project: null,
-        pullRequest: { number: 7, state: null },
+        pullRequest: { number: 7 },
       })),
     ).toBe("Fix login: Working. Studio, fix/login. Claude Opus, Full access. PR #7.");
+  });
+
+  it("ignores aria-labels on landmark and container elements", () => {
+    for (const role of [
+      "nav",
+      "navigation",
+      "region",
+      "main",
+      "aside",
+      "grid",
+      "rowgroup",
+      "list",
+    ]) {
+      expect(resolveInfoBarText({ ariaLabel: "Threads", role }, () => null)).toBeNull();
+    }
+    expect(resolveInfoBarText({ ariaLabel: "Archive", role: "button" }, () => null)).toBe(
+      "Archive",
+    );
   });
 
   it("returns null for an unknown target", () => {

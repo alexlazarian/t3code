@@ -447,6 +447,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
   const infoBarEnabled = useClientSettings((s) => s.infoBarEnabled);
   const infoBarHeightStyle = {
     "--info-bar-height": infoBarEnabled ? "20px" : "0px",
+    "--app-height": "calc(100dvh - var(--info-bar-height))",
   } as CSSProperties;
   const [sidebarRouteReveal] = useState<SidebarRouteReveal>(() => ({
     observedKey: null,
@@ -491,7 +492,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
     <PanelAnimationSuppressionProvider value={panelAnimationsSuppressed}>
       <div style={infoBarHeightStyle}>
         <SidebarProvider
-          className="h-[calc(100dvh-var(--info-bar-height,0px))]! min-h-0!"
+          className="h-(--app-height)! min-h-0!"
           data-panel-animations={routePanelAnimationsActive ? "true" : "false"}
           defaultOpen
           style={sidebarProviderStyle}
