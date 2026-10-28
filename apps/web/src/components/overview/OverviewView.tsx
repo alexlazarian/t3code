@@ -71,7 +71,7 @@ const LEGEND = [
   { label: "Working", className: "bg-status-working" },
   { label: "Needs you", className: "bg-status-needs-you" },
   { label: "Failed", className: "bg-status-failed" },
-  { label: "Waiting or done", className: "bg-overview-idle" },
+  { label: "Waiting or done", className: "border border-border bg-background" },
 ] as const;
 
 const ARROW_DIRECTIONS: Partial<Record<string, OverviewFocusDirection>> = {
