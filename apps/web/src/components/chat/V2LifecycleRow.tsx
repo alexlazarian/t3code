@@ -54,7 +54,7 @@ import { ProviderInstanceIcon, providerTextColor } from "./ProviderInstanceIcon"
 import { cn } from "~/lib/utils";
 import { TimelineSystemDivider } from "./TimelineSystemDivider";
 import { subagentResumedSince } from "./V2LifecycleRow.logic";
-import { subagentDetailLine } from "./SubagentBlock.logic";
+import { subagentDetailLine, subagentRowState } from "./SubagentBlock.logic";
 import { Button, InlineButton } from "../ui/button";
 import { T3Wordmark } from "../T3Wordmark";
 
@@ -204,13 +204,6 @@ const STATUS_VISUALS: Record<
 function subagentStatusVisual(status: OrchestrationV2TurnItem["status"]) {
   return STATUS_VISUALS[status];
 }
-
-const SETTLED_SUBAGENT_STATUSES = new Set<OrchestrationV2TurnItem["status"]>([
-  "completed",
-  "failed",
-  "cancelled",
-  "interrupted",
-]);
 
 export function isoOrNull(value: DateTime.Utc | null | undefined): string | null {
   return value ? DateTime.formatIso(value) : null;
@@ -385,8 +378,11 @@ function SubagentTimelineLink(props: {
   const statusLabel = props.event?.label ?? subagentStatusVisual(liveStatus).label;
   const result = (agent?.result ?? props.result)?.trim();
   const progress = (agent?.progress ?? props.progress)?.trim();
-  const settled = SETTLED_SUBAGENT_STATUSES.has(status ?? liveStatus);
-  const detail = subagentDetailLine({ settled, result, progress });
+  const detail = subagentDetailLine({
+    state: subagentRowState(status ?? liveStatus),
+    result,
+    progress,
+  });
   const failed = status === "failed";
   const timing = {
     status: liveStatus,

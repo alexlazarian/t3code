@@ -16,6 +16,7 @@ import {
   subagentBlockSummary,
   subagentDetailLine,
   subagentRowState,
+  selectSubagentsById,
   type SubagentRowState,
 } from "./SubagentBlock.logic";
 import { subagentGroupTiming } from "./TimelineV2EventRow.logic";
@@ -27,6 +28,7 @@ type SubagentItem = Extract<OrchestrationV2TurnItem, { type: "subagent" }>;
 
 const STATE_TEXT: Record<SubagentRowState, string> = {
   running: "text-status-working",
+  idle: "text-muted-foreground",
   done: "text-muted-foreground",
   failed: "text-status-failed",
   stopped: "text-muted-foreground",
@@ -42,12 +44,15 @@ export const SubagentBlock = memo(function SubagentBlock({
   const members = (row.subagents ?? [row.projectedItem]).flatMap(({ item }) =>
     item.type === "subagent" ? [item] : [],
   );
+  const memberIdsKey = members.map((item) => item.subagentId).join("\n");
+  // Keyed on the id string so the compiler keeps one selector, and its cache, per member set.
+  const pickLiveAgents = selectSubagentsById<OrchestrationV2Subagent>(memberIdsKey.split("\n"));
   // One subscription per block, not per row.
   const liveAgents = useAtomValue(
     environmentThreadDetails.threadAtom(
       scopeThreadRef(ctx.activeThreadEnvironmentId, row.projectedItem.item.threadId),
     ),
-    (thread) => thread?.projection.subagents,
+    (thread) => pickLiveAgents(thread?.projection.subagents),
   );
   const [openIds, setOpenIds] = useState<ReadonlySet<string>>(
     () =>
@@ -57,8 +62,8 @@ export const SubagentBlock = memo(function SubagentBlock({
           .filter((id) => ctx.workGroupViewState.expandedEntries.has(`subagent:${id}`)),
       ),
   );
-  const agents = members.map((item) => {
-    const live = liveAgents?.find((agent) => agent.id === item.subagentId) ?? null;
+  const agents = members.map((item, index) => {
+    const live = liveAgents[index] ?? null;
     return {
       item,
       live,
@@ -139,7 +144,7 @@ function SubagentBlockRow(props: {
   const word = SUBAGENT_STATUS_WORDS[status];
   const title = formatSubagentDisplayTitle(item.title ?? "Subagent");
   const detail = subagentDetailLine({
-    settled: state !== "running",
+    state,
     result: props.result,
     progress: props.progress,
   });
@@ -210,11 +215,7 @@ function SubagentBlockRow(props: {
               driver={item.driver}
               title={title}
               threadId={threadId}
-              elapsed={
-                props.live ? (
-                  <AgentElapsed agent={projectedSubagentsToRuntime([props.live])[0]!} />
-                ) : null
-              }
+              elapsed={props.live ? <LiveSubagentElapsed agent={props.live} /> : null}
               model={props.live?.model ?? null}
               modelSelection={props.live?.modelSelection}
               status={status}
@@ -242,7 +243,8 @@ function SubagentBlockRow(props: {
       </div>
       {props.open && expandable ? (
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-0.5 border-t border-border/60 bg-background py-1 ps-12 pe-2 text-muted-foreground">
-          {progress !== null && (state === "running" || result === null || state === "failed") ? (
+          {progress !== null &&
+          (state === "running" || state === "idle" || result === null || state === "failed") ? (
             <>
               <dt className={state === "running" ? "text-status-working" : "text-foreground"}>
                 {state === "running" ? "Now" : "Last step"}
@@ -271,6 +273,11 @@ function SubagentBlockRow(props: {
   );
 }
 
+/** Rendered only inside the open hover card, so closed rows skip the runtime conversion. */
+function LiveSubagentElapsed({ agent }: { agent: OrchestrationV2Subagent }) {
+  return <AgentElapsed agent={projectedSubagentsToRuntime([agent])[0]!} />;
+}
+
 /** Static shape plus color; never animated. */
 function SubagentStateGlyph({ state }: { state: SubagentRowState }) {
   return (
@@ -282,6 +289,7 @@ function SubagentStateGlyph({ state }: { state: SubagentRowState }) {
         state === "failed" && "bg-status-failed text-background",
         (state === "done" || state === "stopped") &&
           "border border-muted-foreground/50 text-muted-foreground",
+        state === "idle" && "border border-muted-foreground/30",
       )}
     >
       {state === "running" ? (
@@ -290,7 +298,7 @@ function SubagentStateGlyph({ state }: { state: SubagentRowState }) {
         "✓"
       ) : state === "failed" ? (
         "×"
-      ) : (
+      ) : state === "idle" ? null : (
         <span className="size-1.75 bg-current" />
       )}
     </span>
