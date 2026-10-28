@@ -939,6 +939,7 @@ type ShellThreadRow = {
   readonly active_run_id: string | null;
   readonly active_run_status: string | null;
   readonly activity_run_id: string | null;
+  readonly queued_run_count: number;
   readonly activity_run_status: string | null;
   readonly activity_run_started_at: string | null;
   readonly last_error: string | null;
@@ -1508,6 +1509,15 @@ export function threadShellFromProjection(
       providerSession?.lastError ?? null,
     ),
     pendingRuntimeRequest,
+    queuedRunCount: projection.runs.filter(
+      (run) =>
+        run.status === "queued" &&
+        !projection.messages.some(
+          (message) =>
+            message.id === run.userMessageId &&
+            (message.delegatedCompletion !== undefined || message.notification !== undefined),
+        ),
+    ).length,
     pendingGuestMessageCount: pendingGuestMessageCount(projection.thread.guestShare),
     // Thread detail owns message bodies. Keeping them out of shell rows makes
     // initial hydration and streaming updates independent of transcript size.
@@ -1624,6 +1634,7 @@ type ShellThreadState = {
   readonly lastErrorCode: OrchestrationV2ThreadShell["lastErrorCode"];
   readonly usageLimitResetAt: OrchestrationV2ThreadShell["usageLimitResetAt"];
   readonly pendingRuntimeRequest: OrchestrationV2PendingRuntimeRequestSummary | null;
+  readonly queuedRunCount: number;
   readonly latestUserMessageAt: DateTime.Utc | null;
   readonly latestUserAuthoredMessageAt: DateTime.Utc | null;
   readonly hasActionableProposedPlan: boolean;
@@ -1787,6 +1798,7 @@ function shellFromState(input: {
     lastErrorCode: input.state.lastErrorCode,
     usageLimitResetAt: input.state.usageLimitResetAt,
     pendingRuntimeRequest: input.state.pendingRuntimeRequest,
+    queuedRunCount: input.state.queuedRunCount,
     pendingGuestMessageCount: pendingGuestMessageCount(input.state.thread.guestShare),
     latestVisibleMessage: null,
     activity:
@@ -5790,6 +5802,21 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
                 LIMIT 1
               ) AS activity_run_id,
               (
+                -- Mirrors getUserQueuedThreadRuns: automatic deliveries are not user messages.
+                SELECT COUNT(*)
+                FROM orchestration_v2_projection_runs queued
+                WHERE queued.thread_id = t.thread_id
+                  AND queued.status = 'queued'
+                  AND NOT EXISTS (
+                    SELECT 1 FROM orchestration_v2_projection_messages message
+                    WHERE message.message_id = json_extract(queued.payload_json, '$.userMessageId')
+                      AND (
+                        json_extract(message.payload_json, '$.delegatedCompletion') IS NOT NULL
+                        OR json_extract(message.payload_json, '$.notification') IS NOT NULL
+                      )
+                  )
+              ) AS queued_run_count,
+              (
                 SELECT r.status
                 FROM orchestration_v2_projection_runs r
                 WHERE r.thread_id = t.thread_id
@@ -6574,6 +6601,7 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
             row.last_error,
           ),
           pendingRuntimeRequest,
+          queuedRunCount: row.queued_run_count,
           latestUserMessageAt:
             row.latest_user_message_at === null
               ? null

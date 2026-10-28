@@ -608,6 +608,23 @@ it.effect("SQL shells summarize the presented run's step, stats and subagents", 
       payload: queued,
     });
     assert.deepEqual(yield* activity, ended);
+    const queuedCount = Effect.gen(function* () {
+      const listed = (yield* store.getShellSnapshot()).threads.find((row) => row.id === threadId);
+      const memory = ProjectionStore.threadShellFromProjection(
+        yield* store.getThreadProjection(threadId),
+      );
+      assert.equal(listed?.queuedRunCount, memory.queuedRunCount);
+      return listed?.queuedRunCount;
+    });
+    assert.equal(yield* queuedCount, 1);
+    yield* store.apply({
+      id: EventId.make("event:card-activity:queued-held"),
+      type: "run.updated",
+      threadId,
+      occurredAt: at,
+      payload: { ...queued, queueHeld: true },
+    });
+    assert.equal(yield* queuedCount, 1, "a held queued message still counts");
     yield* store.apply({
       id: EventId.make("event:card-activity:queued-cancelled"),
       type: "run.updated",
@@ -618,6 +635,7 @@ it.effect("SQL shells summarize the presented run's step, stats and subagents", 
     assert.deepEqual(yield* activity, ended);
     const afterCancel = yield* store.getThreadShell(threadId);
     assert.equal(afterCancel?.status, "running");
+    assert.equal(yield* queuedCount, 0);
     assert.equal(afterCancel?.latestRunId, run.id);
     assert.equal(
       ProjectionStore.threadShellFromProjection(yield* store.getThreadProjection(threadId))

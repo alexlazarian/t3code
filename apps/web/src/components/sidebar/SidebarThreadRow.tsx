@@ -1133,6 +1133,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
   const inFolder = variant === "folder" || variant === "folder-multiline";
   const machineLabel = isRemote && !showsScratchMachine ? props.environmentLabel : null;
   const separator = <span aria-hidden> &middot; </span>;
+  const queuedCount = thread.source.queuedRunCount ?? 0;
 
   return (
     <li
@@ -1223,6 +1224,11 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
                 </>
               ) : null}
             </span>
+            {queuedCount > 0 ? (
+              <span className="shrink-0 tabular-nums text-muted-foreground/80">
+                {queuedCount} queued
+              </span>
+            ) : null}
             {prBadge}
           </span>
           {props.jumpLabel ? <JumpHintBadge label={props.jumpLabel} /> : null}

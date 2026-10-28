@@ -148,6 +148,7 @@ export const OverviewCard = memo(function OverviewCard(props: {
     ? deriveActiveWorkStartedAt(thread.latestRun, thread.runtime, null)
     : null;
   const files = activity?.files;
+  const queuedCount = thread.source.queuedRunCount ?? 0;
   const wait = light === "waiting" ? overviewWaitStrip(thread.pendingBackgroundTasks) : null;
 
   const handleKeyDown = (event: KeyboardEvent) => {
@@ -285,6 +286,7 @@ export const OverviewCard = memo(function OverviewCard(props: {
               </>
             )
           ) : null}
+          {queuedCount > 0 ? <span>{queuedCount} queued</span> : null}
           {props.machineLabel ? <span className="truncate">{props.machineLabel}</span> : null}
           <span
             className={cn(
