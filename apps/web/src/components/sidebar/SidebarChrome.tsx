@@ -1,5 +1,5 @@
 import { ArrowLeftIcon, ChartNoAxesColumnIcon, SettingsIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import { memo } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 
@@ -85,19 +85,40 @@ const PANEL_TABS: ReadonlyArray<{ id: SidebarPanel; label: string }> = [
   { id: "library", label: "Library" },
 ];
 
+export const sidebarPanelTabId = (panel: SidebarPanel) => `sidebar-tab-${panel}`;
+export const sidebarPanelId = (panel: SidebarPanel) => `sidebar-panel-${panel}`;
+
 function SidebarPanelTabs() {
   const panel = useUiStateStore((store) => store.sidebarPanel);
   const setPanel = useUiStateStore((store) => store.setSidebarPanel);
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+    if (step === 0) return;
+    event.preventDefault();
+    const index = PANEL_TABS.findIndex((tab) => tab.id === panel);
+    const next = PANEL_TABS[(index + step + PANEL_TABS.length) % PANEL_TABS.length];
+    if (!next) return;
+    setPanel(next.id);
+    document.getElementById(sidebarPanelTabId(next.id))?.focus();
+  };
   return (
-    <div role="tablist" aria-label="Left panel" className="relative z-10 flex shrink-0 gap-0.5">
+    <div
+      role="tablist"
+      aria-label="Left panel"
+      className="relative z-10 flex shrink-0 gap-0.5"
+      onKeyDown={onKeyDown}
+    >
       {PANEL_TABS.map((tab) => {
         const on = panel === tab.id;
         return (
           <button
             key={tab.id}
+            id={sidebarPanelTabId(tab.id)}
             type="button"
             role="tab"
             aria-selected={on}
+            aria-controls={sidebarPanelId(tab.id)}
+            tabIndex={on ? 0 : -1}
             onClick={() => setPanel(tab.id)}
             className={cn(
               "h-5 cursor-pointer whitespace-nowrap border px-1.5 text-2xs leading-4.5 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",

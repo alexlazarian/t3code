@@ -1160,6 +1160,7 @@ function OpenCommandPaletteDialog(props: {
       icon: <BellIcon className={ITEM_ICON_CLASS} />,
       run: async () => {
         useUiStateStore.getState().setSidebarStatusFilter("needs-you");
+        useUiStateStore.getState().setSidebarPanel("threads");
         requestOpenSidebar();
       },
     },

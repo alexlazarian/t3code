@@ -23,6 +23,13 @@ export function pendingSidebarRouteReveal(
   return reveal.pendingKey;
 }
 
+export function requestSidebarRouteReveal(
+  reveal: SidebarRouteReveal,
+  routeKey: string | null,
+): void {
+  reveal.pendingKey = routeKey;
+}
+
 export function completeSidebarRouteReveal(reveal: SidebarRouteReveal): void {
   reveal.pendingKey = null;
 }

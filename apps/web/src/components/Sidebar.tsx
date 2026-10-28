@@ -190,6 +190,7 @@ import { useStableCallback } from "../hooks/useStableCallback";
 import {
   resolveSidebarRouteReveal,
   type SidebarRouteReveal,
+  requestSidebarRouteReveal,
   useActiveRowReveal,
 } from "./sidebar/routeReveal";
 import { stackedThreadToast, toastManager } from "./ui/toast";
@@ -206,6 +207,7 @@ import {
 } from "./ui/combobox";
 import { SidebarContent, SidebarGroup, useSidebar } from "./ui/sidebar";
 import { LibraryPanel } from "./library/LibraryPanel";
+import { sidebarPanelId, sidebarPanelTabId } from "./sidebar/SidebarChrome";
 import { SidebarChromeFooter, SidebarChromeHeader } from "./sidebar/SidebarChrome";
 import { SidebarHeaderIconButton, SidebarThreadHeader } from "./sidebar/SidebarThreadHeader";
 import { TooltipProvider } from "./ui/tooltip";
@@ -838,6 +840,12 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     clearSelection();
     setPersistedProjectScopeKey(null);
   }, [clearSelection, revealWidensScope, setPersistedProjectScopeKey]);
+  // The thread list unmounts under Library; its rows reveal the open thread again on return.
+  const [lastPanel, setLastPanel] = useState(sidebarPanel);
+  if (lastPanel !== sidebarPanel) {
+    if (sidebarPanel === "threads") requestSidebarRouteReveal(routeReveal, routeRowThreadKey);
+    setLastPanel(sidebarPanel);
+  }
   const revealActiveRow = useActiveRowReveal(routeReveal, routeRowThreadKey);
   const showProjectEnvironments = projectGroupsSpanEnvironments(projectGroups);
   const scratchMachineLabelFor = (
@@ -2528,12 +2536,20 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
       <ThreadContextDragGhost />
       <SidebarChromeHeader isElectron={isElectron} showPanelTabs />
       {sidebarPanel === "library" ? (
-        <SidebarContent className="min-h-full">
+        <SidebarContent
+          className="min-h-full"
+          role="tabpanel"
+          id={sidebarPanelId("library")}
+          aria-labelledby={sidebarPanelTabId("library")}
+        >
           <LibraryPanel />
         </SidebarContent>
       ) : (
         <SidebarContent
           className="min-h-full"
+          role="tabpanel"
+          id={sidebarPanelId("threads")}
+          aria-labelledby={sidebarPanelTabId("threads")}
           fixedHeader={
             <SidebarGroup className="z-[1]">
               <SidebarThreadHeader
