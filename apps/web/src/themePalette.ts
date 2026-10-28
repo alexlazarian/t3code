@@ -836,7 +836,8 @@ export function createVividThemeColors(
     sidebarMutedForeground: themeRgbToThemeColor(standardMutedThemeText(sidebarRgb, textRgb)),
     sidebarControlSurface: themeColor(surfaceAt(dark ? 0.1 : 0.07, tintC * 1.5)),
     sidebarRowHover,
-    navSelected: sidebarRowHover,
+    // Neutral and one step past hover, so selection never reads as an accent or as a hover.
+    navSelected: themeColor(surfaceAt(dark ? 0.11 : 0.09, 0)),
     sidebarRowActive: themeColor(surfaceAt(dark ? 0.12 : 0.09, Math.min(0.1, accent.C * 0.55))),
     sidebarRowSelected: themeColor(surfaceAt(dark ? 0.14 : 0.1, Math.min(0.11, accent.C * 0.6))),
     sidebarBorder: themeColor(surfaceAt(dark ? 0.17 : 0.12, Math.min(0.08, accent.C * 0.4))),

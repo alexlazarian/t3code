@@ -1144,8 +1144,8 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   --sidebar-row-hover: var(--accent);
   --sidebar-row-active: var(--accent);
   --sidebar-row-selected: color-mix(in oklab, #ffffff, #1b4ed8 16%);
-  /* The one selected-item fill for navigation lists (Library, Settings, panels). */
-  --nav-selected: var(--sidebar-row-hover);
+  /* The one selected-item fill for navigation lists (Library, Settings, panels): neutral, a step past hover. */
+  --nav-selected: color-mix(in oklab, #ffffff, #27272a 11%);
   --sidebar-border: var(--border);
   --code-background: color-mix(in oklab, #ffffff, black 3%);
   --code-foreground: var(--foreground);
@@ -1190,6 +1190,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
     --sidebar-row-hover: var(--accent);
     --sidebar-row-active: var(--accent);
     --sidebar-row-selected: #4a3a28;
+    --nav-selected: #5a5a5a;
     --code-background: #24221f;
     --terminal-background: #141210;
     --terminal-cursor: rgb(180 203 255);

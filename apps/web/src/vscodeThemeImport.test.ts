@@ -89,6 +89,18 @@ describe("VS Code theme import", () => {
     expect(asHex(theme.colors.terminalBackground)).toBe("#101010");
   });
 
+  it("selects with the file's inactive selection, else a neutral gray rather than its hover", () => {
+    const derived = parseVsCodeThemeFile(VSCODE_DARK).colors;
+    expect(oklchParts(derived.navSelected).chroma).toBe(0);
+    expect(derived.navSelected).not.toBe(derived.sidebarRowHover);
+
+    const explicit = parseVsCodeThemeFile({
+      ...VSCODE_DARK,
+      colors: { ...VSCODE_DARK.colors, "list.inactiveSelectionBackground": "#333333" },
+    }).colors;
+    expect(asHex(explicit.navSelected)).toBe("#333333");
+  });
+
   it("keeps a fallback placeholder dimmer than entered text", () => {
     const theme = parseVsCodeThemeFile({
       name: "Dark placeholder fallback",
