@@ -321,7 +321,7 @@ export function overviewStepLine(input: {
     return { tone: "dim", text: `Waiting on ${running} subagent${running === 1 ? "" : "s"}` };
   }
   if (input.icon === "plan") return { tone: "needs-you", text: "Plan ready to review" };
-  if (step === null) return null;
+  if (step === null) return light === "working" ? { tone: "dim", text: "Thinking" } : null;
   const tone = light === "needs-you" ? "needs-you" : light === "done" ? "dim" : "normal";
   return { tone, ...describeStep(step) };
 }

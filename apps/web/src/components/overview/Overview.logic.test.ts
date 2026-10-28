@@ -428,7 +428,7 @@ describe("overviewStepLine", () => {
     ).toBe("Running ");
   });
 
-  it("shows the error when failed, the plan when one is ready, and nothing without a step", () => {
+  it("shows the error when failed, the plan when one is ready, and a placeholder or nothing without a step", () => {
     expect(line("failed", null, { lastError: "\nxcodebuild exited 65\nmore" })).toEqual({
       tone: "failed",
       text: "xcodebuild exited 65",
@@ -437,7 +437,10 @@ describe("overviewStepLine", () => {
       tone: "needs-you",
       text: "Plan ready to review",
     });
-    expect(line("working", null)).toBeNull();
+    // A turn that just started has no step yet; the card should not sit blank.
+    expect(line("working", null)).toEqual({ tone: "dim", text: "Thinking" });
+    expect(line("working", activity(null))).toEqual({ tone: "dim", text: "Thinking" });
+    expect(line("done", null)).toBeNull();
   });
 });
 
