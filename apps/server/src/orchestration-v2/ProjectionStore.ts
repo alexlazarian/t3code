@@ -6117,6 +6117,7 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
               THEN json_extract(item.payload_json, '$.questions[0].question')
             WHEN 'assistant_message' THEN json_extract(item.payload_json, '$.text')
             WHEN 'subagent' THEN json_extract(item.payload_json, '$.title')
+            WHEN 'compaction' THEN json_extract(item.payload_json, '$.title')
           END, 1, 2000) AS text
         FROM ranked
         INNER JOIN orchestration_v2_projection_turn_items item

@@ -18,6 +18,7 @@ export const SHELL_STEP_ITEM_TYPES = [
   "user_input_request",
   "assistant_message",
   "subagent",
+  "compaction",
 ] as const;
 
 /** The step types that count toward "N steps": the lead acting, not talking or asking. */
@@ -40,6 +41,8 @@ const STEP_KINDS: Record<string, OrchestrationV2ShellStep["kind"]> = {
   user_input_request: "question",
   assistant_message: "reply",
   subagent: "subagent",
+  // "tool" shows its text as is; a new kind would break older clients' shell decoding.
+  compaction: "tool",
 };
 
 const MAX_SHELL_SUBAGENTS = 12;

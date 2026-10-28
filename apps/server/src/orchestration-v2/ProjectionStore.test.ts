@@ -636,6 +636,23 @@ it.effect("SQL shells summarize the presented run's step, stats and subagents", 
     const afterCancel = yield* store.getThreadShell(threadId);
     assert.equal(afterCancel?.status, "running");
     assert.equal(yield* queuedCount, 0);
+
+    // A compaction reads as the step but does not count as one.
+    yield* updateItem({
+      ...base(),
+      type: "compaction",
+      driver,
+      status: "running",
+      title: "Compacting context",
+      completedAt: null,
+    });
+    const compacting = yield* activity;
+    assert.deepEqual(compacting?.step, {
+      kind: "tool",
+      text: "Compacting context",
+      status: "running",
+    });
+    assert.equal(compacting?.stepCount, ended?.stepCount);
     assert.equal(afterCancel?.latestRunId, run.id);
     assert.equal(
       ProjectionStore.threadShellFromProjection(yield* store.getThreadProjection(threadId))
