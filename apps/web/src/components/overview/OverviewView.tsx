@@ -69,6 +69,8 @@ import {
   buildOverviewGrid,
   isOverviewThreadOffline,
   moveOverviewFocus,
+  orderOverviewProjects,
+  overviewProjectOrderKeys,
   overviewColumnMachines,
   overviewProjectKeyOf,
   overviewSplitDragFraction,
@@ -141,6 +143,8 @@ export function OverviewView() {
   const threads = useQuietThreadShells();
   const serverConfigs = useServerConfigs();
   const projectGroups = useSidebarProjectGroups();
+  const projectOrder = useUiStateStore((store) => store.projectOrder);
+  const reorderProjects = useUiStateStore((store) => store.reorderProjects);
   const projectGroupingSettings = useClientSettings(selectProjectGroupingSettings);
   const workingShelfEnabled = useClientSettings((s) => s.sidebarWorkingShelfEnabled);
   const statusFilter = useUiStateStore((store) => store.sidebarStatusFilter);
@@ -156,6 +160,10 @@ export function OverviewView() {
   const expansion = useOverviewRowExpansion();
   const [focusKey, setFocusKey] = useState<string | null>(null);
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const [columnDrag, setColumnDrag] = useState<{
+    readonly from: string;
+    readonly over: string | null;
+  } | null>(null);
   const [splitFraction, setSplitFraction] = useLocalStorage(SPLIT_FRACTION_KEY, 0.5, Schema.Number);
   const gridRef = useRef<HTMLDivElement>(null);
   const splitRef = useRef<HTMLDivElement>(null);
@@ -167,9 +175,10 @@ export function OverviewView() {
     keys: persistedScopeKeys,
     settings: projectGroupingSettings,
   });
-  const scopedGroups = projectGroups.filter((group) => scopeKeys.includes(group.projectKey));
+  const orderedGroups = orderOverviewProjects(projectGroups, projectOrder);
+  const scopedGroups = orderedGroups.filter((group) => scopeKeys.includes(group.projectKey));
   const scopeKey = scopedGroups.length === 0 ? null : scopeKeys.join("\n");
-  const projects = scopedGroups.length === 0 ? projectGroups : scopedGroups;
+  const projects = scopedGroups.length === 0 ? orderedGroups : scopedGroups;
   const [settledTail, setSettledTail] = useState({
     scopeKey,
     count: SETTLED_TAIL_INITIAL_COUNT,
@@ -291,6 +300,28 @@ export function OverviewView() {
     setStatusFilter("all");
     clearSelection();
     setPersistedScopeKeys([]);
+  };
+
+  const columnIndex = (projectKey: string) =>
+    columns.findIndex((column) => column.projectKey === projectKey);
+  const handleColumnDragOver = (projectKey: string) => {
+    if (columnDrag === null) return false;
+    const target = columns[columnIndex(projectKey)];
+    if (target?.project == null || projectKey === columnDrag.from) return false;
+    if (columnDrag.over !== projectKey) setColumnDrag({ ...columnDrag, over: projectKey });
+    return true;
+  };
+  const handleColumnDrop = (projectKey: string) => {
+    const dragged = orderedGroups.find((group) => group.projectKey === columnDrag?.from);
+    const target = orderedGroups.find((group) => group.projectKey === projectKey);
+    setColumnDrag(null);
+    if (dragged === undefined || target === undefined || dragged === target) return;
+    // Columns can hide scoped-out projects, so the order spans every project.
+    reorderProjects(
+      overviewProjectOrderKeys(orderedGroups),
+      overviewProjectOrderKeys([dragged]),
+      overviewProjectOrderKeys([target]),
+    );
   };
 
   const handleGridFocus = (event: FocusEvent<HTMLDivElement>) => {
@@ -452,6 +483,17 @@ export function OverviewView() {
                       column={column}
                       fill={fills[index]!}
                       machines={machinesByColumn.get(column.projectKey) ?? []}
+                      dropSide={
+                        columnDrag?.over === column.projectKey
+                          ? columnIndex(columnDrag.from) > index
+                            ? "before"
+                            : "after"
+                          : null
+                      }
+                      onDragStart={(projectKey) => setColumnDrag({ from: projectKey, over: null })}
+                      onDragOver={handleColumnDragOver}
+                      onDrop={handleColumnDrop}
+                      onDragEnd={() => setColumnDrag(null)}
                     />
                   ))}
                 </div>

@@ -44,6 +44,43 @@ export function overviewProjectKeyOf(projects: ReadonlyArray<SidebarProjectSnaps
     byMemberRef.get(`${thread.environmentId}:${thread.projectId}`) ?? NO_PROJECT_KEY;
 }
 
+type OrderableProject = Pick<SidebarProjectSnapshot, "projectKey" | "createdAt"> & {
+  readonly memberProjects: ReadonlyArray<{ readonly physicalProjectKey: string }>;
+};
+
+/**
+ * Columns keep the order the user dragged them into, never activity order, so a project stays
+ * where they last saw it. Projects never placed follow, oldest first, so a new one cannot shift
+ * the others.
+ */
+export function orderOverviewProjects<Project extends OrderableProject>(
+  projects: ReadonlyArray<Project>,
+  projectOrder: ReadonlyArray<string>,
+): Project[] {
+  const rankByKey = new Map(projectOrder.map((key, index) => [key, index]));
+  const rank = (project: Project) =>
+    Math.min(
+      ...project.memberProjects.map(
+        (member) => rankByKey.get(member.physicalProjectKey) ?? Number.POSITIVE_INFINITY,
+      ),
+    );
+  return projects.toSorted(
+    (left, right) =>
+      rank(left) - rank(right) ||
+      left.createdAt.localeCompare(right.createdAt) ||
+      left.projectKey.localeCompare(right.projectKey),
+  );
+}
+
+/** The physical project keys behind columns, in column order, for `reorderProjects`. */
+export function overviewProjectOrderKeys(
+  projects: ReadonlyArray<Pick<OrderableProject, "memberProjects">>,
+): string[] {
+  return projects.flatMap((project) =>
+    project.memberProjects.map((member) => member.physicalProjectKey),
+  );
+}
+
 export function buildOverviewGrid(input: {
   partition: Pick<
     ReturnType<typeof partitionSidebarThreads>,

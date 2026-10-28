@@ -24,6 +24,7 @@ import {
   overviewColumnMachines,
   overviewProjectKeyOf,
   overviewLight,
+  orderOverviewProjects,
   overviewStepLine,
   overviewWaitStrip,
   overviewSplitDragFraction,
@@ -442,6 +443,26 @@ describe("overviewWaitStrip", () => {
       code: false,
       meta: null,
     });
+  });
+});
+
+describe("orderOverviewProjects", () => {
+  const project = (projectKey: string, createdAt: string, members = [projectKey]) => ({
+    projectKey,
+    createdAt,
+    memberProjects: members.map((physicalProjectKey) => ({ physicalProjectKey })),
+  });
+
+  it("keeps the dragged order and puts unplaced projects after it, oldest first", () => {
+    const projects = [
+      project("new", "2026-10-03"),
+      project("b", "2026-10-02"),
+      project("old", "2026-10-01"),
+      project("a", "2026-10-04", ["a-laptop", "a-studio"]),
+    ];
+    expect(
+      orderOverviewProjects(projects, ["a-studio", "b", "gone"]).map((p) => p.projectKey),
+    ).toEqual(["a", "b", "old", "new"]);
   });
 });
 
