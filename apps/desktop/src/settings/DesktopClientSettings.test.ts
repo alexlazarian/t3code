@@ -46,7 +46,7 @@ const clientSettings: ClientSettings = {
   fontFamilySans: "",
   fontFamilyTerminal: "",
   fontSizeCode: 13,
-  fontSizeInterface: 12,
+  fontSizeInterface: 13,
   fontSizePrompt: 14,
   fontSizeTerminal: 12,
   fontSmoothing: true,

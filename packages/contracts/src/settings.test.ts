@@ -200,7 +200,7 @@ describe("ClientSettings notifications", () => {
 
 describe("ClientSettings interface font size", () => {
   it("defaults to the prototype scale when never set", () => {
-    expect(decodeClientSettings({}).fontSizeInterface).toBe(12);
+    expect(decodeClientSettings({}).fontSizeInterface).toBe(13);
   });
 
   it("keeps a persisted value over the default", () => {
