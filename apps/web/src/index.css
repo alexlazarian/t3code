@@ -219,6 +219,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   --color-success: var(--success);
   --color-status-working: var(--status-working);
   --color-status-needs-you: var(--status-needs-you);
+  --color-status-waiting: var(--status-waiting);
   --color-status-failed: var(--status-failed);
   --color-diff-addition: var(--diff-addition);
   --color-diff-deletion: var(--diff-deletion);
@@ -1173,6 +1174,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   --update-foreground: var(--update);
   --status-working: color-mix(in oklab, #7fd34e, black 48%);
   --status-needs-you: color-mix(in oklab, #fe9a00, black 48%);
+  --status-waiting: color-mix(in oklab, #5aa9ff, black 30%);
   --status-failed: color-mix(in oklab, #fb2c36, black 22%);
   --sidebar: #ffffff;
   --sidebar-foreground: var(--foreground);
@@ -1220,6 +1222,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
     --update: var(--color-blue-400);
     --status-working: #7fd34e;
     --status-needs-you: #ffcf3d;
+    --status-waiting: #5aa9ff;
     --status-failed: #ff7a6c;
     --sidebar: #2a2826;
     --sidebar-control-surface: #34312e;
@@ -1327,6 +1330,7 @@ html[data-theme-id]:not([data-theme-id=""]) {
   --update-foreground: var(--app-theme-update-foreground);
   --status-working: color-mix(in oklab, #7fd34e, black 48%);
   --status-needs-you: color-mix(in oklab, var(--app-theme-warning), black 48%);
+  --status-waiting: color-mix(in oklab, #5aa9ff, black 30%);
   --status-failed: color-mix(in oklab, var(--app-theme-error), black 22%);
   --border: var(--app-theme-border);
   --input: var(--app-theme-input);
@@ -1350,6 +1354,7 @@ html[data-theme-id]:not([data-theme-id=""]) {
   @variant dark {
     --status-working: #7fd34e;
     --status-needs-you: color-mix(in oklab, var(--app-theme-warning), white 10%);
+    --status-waiting: #5aa9ff;
     --status-failed: color-mix(in oklab, var(--app-theme-error), white 38%);
   }
 }

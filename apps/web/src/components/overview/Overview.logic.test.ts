@@ -25,6 +25,7 @@ import {
   overviewProjectKeyOf,
   overviewLight,
   overviewStepLine,
+  overviewWaitStrip,
   overviewSplitDragFraction,
   resolveOverviewSplitRelease,
 } from "./Overview.logic";
@@ -404,6 +405,43 @@ describe("overviewStepLine", () => {
       text: "Plan ready to review",
     });
     expect(line("working", null)).toBeNull();
+  });
+});
+
+describe("overviewWaitStrip", () => {
+  it("names the one task a waiting run holds for, by kind", () => {
+    expect(
+      overviewWaitStrip([
+        { taskId: "a", kind: "command", description: "cd /repo && vp run check:changed" },
+      ]),
+    ).toEqual({ icon: "command", text: "vp run check:changed", code: true, meta: "running" });
+    expect(
+      overviewWaitStrip([
+        { taskId: "b", kind: "monitor", description: "Watching pull request #25862" },
+      ]),
+    ).toEqual({ icon: "pull-request", text: "PR #25862 checks", code: false, meta: "watching" });
+    expect(overviewWaitStrip([{ taskId: "c", kind: "monitor" }])).toEqual({
+      icon: "monitor",
+      text: "a monitor",
+      code: false,
+      meta: "watching",
+    });
+    expect(overviewWaitStrip([])).toBeNull();
+  });
+
+  it("lists two tasks and counts the rest", () => {
+    expect(
+      overviewWaitStrip([
+        { taskId: "a", kind: "command", description: "vp test run" },
+        { taskId: "b", kind: "monitor", description: "Watching pull request #812" },
+        { taskId: "c", kind: "background_task" },
+      ]),
+    ).toEqual({
+      icon: "many",
+      text: "vp test run, PR #812 checks, 1 more",
+      code: false,
+      meta: null,
+    });
   });
 });
 

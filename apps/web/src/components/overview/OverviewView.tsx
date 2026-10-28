@@ -99,7 +99,7 @@ const LEGEND = [
   { label: "Working", className: "bg-status-working" },
   { label: "Needs you", className: "bg-status-needs-you" },
   { label: "Failed", className: "bg-status-failed" },
-  { label: "Waiting", className: "bg-muted-foreground/45" },
+  { label: "Waiting", className: "bg-status-waiting" },
   { label: "Done", className: "border border-muted-foreground/45" },
 ] as const;
 

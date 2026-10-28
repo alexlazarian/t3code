@@ -2,6 +2,7 @@ import { scopedThreadKey, scopeThreadRef } from "@t3tools/client-runtime/environ
 import { resolveSettledThreadTimestamp } from "@t3tools/client-runtime/state/thread-sort";
 import type { OrchestrationV2ShellSubagent } from "@t3tools/contracts";
 import * as DateTime from "effect/DateTime";
+import { BotIcon, EyeIcon, ListIcon, RowsIcon, SquareTerminalIcon } from "lucide-react";
 import { memo, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
 
 import { readLocalApi } from "../../localApi";
@@ -24,23 +25,26 @@ import {
 import type { SidebarProviderEntry } from "../sidebar/SidebarThreadRow";
 import { AgentElapsed } from "../chat/AgentElapsed";
 import { ProviderInstanceIcon } from "../chat/ProviderInstanceIcon";
+import { PullRequestGlyph } from "../pullRequest/pullRequestIcons";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import {
   overviewLight,
   overviewRunningSubagents,
   overviewStepLine,
+  overviewWaitStrip,
   overviewStrobeDelay,
   overviewSubagentState,
   type OverviewLight,
   type OverviewStepLine,
   type OverviewSubagentState,
+  type OverviewWaitStrip,
 } from "./Overview.logic";
 
 const LIGHT_CLASS: Record<OverviewLight, string> = {
   working: "bg-status-working",
   "needs-you": "bg-status-needs-you",
   failed: "bg-status-failed",
-  waiting: "bg-muted-foreground/45",
+  waiting: "bg-status-waiting",
   done: "border border-muted-foreground/45",
 };
 
@@ -49,7 +53,7 @@ const HEADER_CLASS: Record<OverviewLight, string> = {
   working: "bg-[color-mix(in_oklab,var(--status-working)_16%,var(--muted))]",
   "needs-you": "bg-[color-mix(in_oklab,var(--status-needs-you)_16%,var(--muted))]",
   failed: "bg-[color-mix(in_oklab,var(--status-failed)_16%,var(--muted))]",
-  waiting: "bg-secondary",
+  waiting: "bg-[color-mix(in_oklab,var(--status-waiting)_16%,var(--muted))]",
   done: "bg-secondary",
 };
 
@@ -75,6 +79,18 @@ const SUBAGENT_FALLBACK: Record<OrchestrationV2ShellSubagent["status"], string> 
   failed: "Failed",
   cancelled: "Stopped",
   interrupted: "Stopped",
+};
+
+const WAIT_ICON: Record<
+  OverviewWaitStrip["icon"],
+  typeof ListIcon | typeof PullRequestGlyph.pullRequest
+> = {
+  command: SquareTerminalIcon,
+  "pull-request": PullRequestGlyph.pullRequest,
+  monitor: EyeIcon,
+  subagent: BotIcon,
+  task: ListIcon,
+  many: RowsIcon,
 };
 
 const SQUARE_CLASS: Record<OverviewSubagentState, string> = {
@@ -132,6 +148,7 @@ export const OverviewCard = memo(function OverviewCard(props: {
     ? deriveActiveWorkStartedAt(thread.latestRun, thread.runtime, null)
     : null;
   const files = activity?.files;
+  const wait = light === "waiting" ? overviewWaitStrip(thread.pendingBackgroundTasks) : null;
 
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.key === "Enter") {
@@ -242,6 +259,7 @@ export const OverviewCard = memo(function OverviewCard(props: {
           <TooltipPopup>{props.providerName}</TooltipPopup>
         </Tooltip>
       </div>
+      {wait ? <WaitStrip wait={wait} /> : null}
       <div className="min-w-0 px-1.75 pt-0.75 pb-1 text-3xs leading-normal">
         {step ? <StepText step={step} className="block" /> : null}
         <span className="flex gap-1.75 overflow-hidden whitespace-nowrap text-muted-foreground/80">
@@ -268,7 +286,13 @@ export const OverviewCard = memo(function OverviewCard(props: {
             )
           ) : null}
           {props.machineLabel ? <span className="truncate">{props.machineLabel}</span> : null}
-          <span className={cn("ml-auto shrink-0 tabular-nums", working && "text-status-working")}>
+          <span
+            className={cn(
+              "ml-auto shrink-0 tabular-nums",
+              working && "text-status-working",
+              light === "waiting" && "text-status-waiting",
+            )}
+          >
             {workingSince !== null ? (
               <AgentElapsed
                 agent={{ status: "running", startedAt: workingSince, completedAt: null }}
@@ -394,5 +418,22 @@ function StepText(props: { readonly step: OverviewStepLine; readonly className?:
       {props.step.text}
       {props.step.code ? <code className="font-mono">{props.step.code}</code> : null}
     </span>
+  );
+}
+
+function WaitStrip(props: { readonly wait: OverviewWaitStrip }) {
+  const Icon = WAIT_ICON[props.wait.icon];
+  return (
+    <div className="flex min-w-0 items-center gap-1.25 border-b border-border bg-status-waiting/8 px-1.75 py-0.5 text-3xs">
+      <Icon aria-hidden className="size-2.5 shrink-0 text-status-waiting" />
+      <span
+        className={cn("min-w-0 flex-1 truncate text-foreground", props.wait.code && "font-mono")}
+      >
+        {props.wait.text}
+      </span>
+      {props.wait.meta ? (
+        <span className="shrink-0 text-muted-foreground/80">{props.wait.meta}</span>
+      ) : null}
+    </div>
   );
 }

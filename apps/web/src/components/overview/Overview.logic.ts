@@ -2,6 +2,7 @@ import type { EnvironmentConnectionPhase } from "@t3tools/client-runtime/connect
 import { commandDisplayText } from "@t3tools/client-runtime/work-log/command-label";
 import {
   isOrchestrationV2WorkActive,
+  type OrchestrationV2PendingBackgroundTask,
   type OrchestrationV2ShellActivity,
   type OrchestrationV2ShellStep,
   type OrchestrationV2ShellSubagent,
@@ -282,6 +283,57 @@ export function overviewStepLine(input: {
   if (step === null) return null;
   const tone = light === "needs-you" ? "needs-you" : light === "done" ? "dim" : "normal";
   return { tone, ...describeStep(step) };
+}
+
+export type OverviewWaitStrip = {
+  readonly icon: "command" | "pull-request" | "monitor" | "subagent" | "task" | "many";
+  readonly text: string;
+  /** Shown in monospace: the waited-on command. */
+  readonly code: boolean;
+  readonly meta: "running" | "watching" | null;
+};
+
+const PULL_REQUEST_WATCH = /^Watching pull request #(\d+)$/u;
+
+function waitTaskLabel(task: OrchestrationV2PendingBackgroundTask): string {
+  const description = task.description?.trim();
+  const pullRequest = description?.match(PULL_REQUEST_WATCH);
+  if (pullRequest) return `PR #${pullRequest[1]} checks`;
+  if (description) {
+    return task.kind === "command" ? overviewCommandText(description) : description;
+  }
+  return task.kind === "subagent" ? "a subagent" : task.kind === "monitor" ? "a monitor" : "a task";
+}
+
+/** What a waiting card waits on, from the background work its run holds for. */
+export function overviewWaitStrip(
+  tasks: ReadonlyArray<OrchestrationV2PendingBackgroundTask>,
+): OverviewWaitStrip | null {
+  const [first, second] = tasks;
+  if (first === undefined) return null;
+  if (second !== undefined) {
+    const named = tasks.slice(0, 2).map(waitTaskLabel).join(", ");
+    return {
+      icon: "many",
+      text: tasks.length > 2 ? `${named}, ${tasks.length - 2} more` : named,
+      code: false,
+      meta: null,
+    };
+  }
+  const text = waitTaskLabel(first);
+  if (PULL_REQUEST_WATCH.test(first.description?.trim() ?? "")) {
+    return { icon: "pull-request", text, code: false, meta: "watching" };
+  }
+  switch (first.kind) {
+    case "command":
+      return { icon: "command", text, code: first.description !== undefined, meta: "running" };
+    case "monitor":
+      return { icon: "monitor", text, code: false, meta: "watching" };
+    case "subagent":
+      return { icon: "subagent", text, code: false, meta: "running" };
+    default:
+      return { icon: "task", text, code: false, meta: "running" };
+  }
 }
 
 export function overviewRunningSubagents(activity: OrchestrationV2ShellActivity | null): number {
