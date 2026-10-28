@@ -2,33 +2,26 @@ import { useLayoutEffect, useRef, useState, type ComponentProps, type CSSPropert
 import { useStore } from "zustand";
 import { ChatCanvasContext } from "./ChatCanvasContext";
 import type { ChatCanvasPreview } from "./chatCanvasLayout";
-import { resolveChatCanvasModel, type ChatCanvasStore } from "./canvasStore";
-import { selectThreadPanelOpen, useRightPanelStore } from "../../rightPanelStore";
+import { createChatCanvasStore, resolveChatCanvasModel } from "./canvasStore";
 import { observeResize } from "../../lib/observeResize";
-import type { ScopedThreadRef } from "@t3tools/contracts";
 
 export function ChatCanvas({
-  store,
-  threadRef,
   preview,
   composerOverlayElement,
   detailsCardTopInset = 0,
   children,
   ...props
 }: Omit<ComponentProps<"div">, "className" | "style" | "ref"> & {
-  store: ChatCanvasStore;
-  /** The thread whose details card sits on the canvas; other threads' measurements are stale. */
-  threadRef: ScopedThreadRef | null;
   /** The thread's mini player while it renders on this canvas. */
   preview: ChatCanvasPreview | null;
   composerOverlayElement: HTMLElement | null;
   detailsCardTopInset?: number;
 }) {
+  const [store] = useState(createChatCanvasStore);
   const elementRef = useRef<HTMLDivElement | null>(null);
   const widthProbeRef = useRef<HTMLDivElement | null>(null);
   const [timelineElement, registerTimeline] = useState<HTMLElement | null>(null);
   const measurements = useStore(store, (state) => state.measurements);
-  const detailsCardMeasurement = useStore(store, (state) => state.detailsCardMeasurement);
   useLayoutEffect(() => {
     const element = elementRef.current;
     const probe = widthProbeRef.current;
@@ -66,28 +59,13 @@ export function ChatCanvas({
     if (timelineElement) observed.push(timelineElement);
     return observeResize(observed, measure);
   }, [store, composerOverlayElement, timelineElement, detailsCardTopInset]);
-  const detailsCardInlineOpen = useRightPanelStore((state) =>
-    threadRef === null
-      ? false
-      : selectThreadPanelOpen(state.threadPanelVisibilityByThreadKey, threadRef, "inline"),
-  );
-  const model = resolveChatCanvasModel({
-    measurements,
-    detailsCardMeasurement,
-    threadRef,
-    preview,
-    detailsCardInlineOpen,
-  });
+  const model = resolveChatCanvasModel({ measurements, preview });
   const context = {
     container: model.container,
-    lane: model.lane,
     layout: model.layout,
     previewKey: preview?.key ?? null,
     registerTimeline,
-    measureDetailsCard: store.getState().measureDetailsCard,
     detailsCardTopInset: model.detailsCardTopInset,
-    preferredDetailsCard: model.preferredDetailsCard,
-    detailsCardPlacement: model.detailsCardPlacement,
   };
   const { layout } = context;
   return (

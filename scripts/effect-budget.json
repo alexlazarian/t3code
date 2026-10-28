@@ -254,7 +254,7 @@
   "apps/web/src/components/chat/ProviderModelPicker.tsx": 1,
   "apps/web/src/components/chat/ProviderSubagentBar.tsx": 1,
   "apps/web/src/components/chat/ThreadActivityAnnouncer.tsx": 1,
-  "apps/web/src/components/chat/ThreadDetailsCard.tsx": 4,
+  "apps/web/src/components/chat/ThreadDetailsCard.tsx": 1,
   "apps/web/src/components/chat/ThreadFindBar.tsx": 1,
   "apps/web/src/components/chat/ThreadFindProvider.tsx": 1,
   "apps/web/src/components/chat/ThreadTimeline.tsx": 1,

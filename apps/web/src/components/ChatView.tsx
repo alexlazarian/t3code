@@ -113,7 +113,6 @@ import { BackgroundThreadContext } from "./chat/backgroundThread";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { assistantCitationFromLocation } from "../lib/assistantCitationNavigation";
 import type { AssistantCitationSourceAnchor } from "~/lib/assistantTextSelection";
-import { useStore } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import {
   isAtomCommandInterrupted,
@@ -158,7 +157,6 @@ import {
   ThreadPreviewMiniPlayer,
   useThreadPreviewCanvasSource,
 } from "./preview/ThreadPreviewMiniPlayer";
-import { createChatCanvasStore, resolveChatCanvasModel } from "./chat/canvasStore";
 import { usePreviewSession } from "./preview/usePreviewSession";
 import { getConfiguredPreviewUrls } from "./preview/previewEmptyStateLogic";
 
@@ -676,7 +674,7 @@ export default function ChatView(props: ChatViewProps) {
   const prefersPlanSidebarSheet = useMediaQuery(RIGHT_PANEL_INLINE_LAYOUT_MEDIA_QUERY);
   const isMobileViewport = useMediaQuery("max-sm");
   const [workspaceLayoutElement, setWorkspaceLayoutElement] = useState<HTMLDivElement | null>(null);
-  const threadPanelPopoverAnchorRef = useRef<HTMLElement | null>(null);
+  const threadPanelAnchorRef = useRef<HTMLButtonElement | null>(null);
   const [terminalUiLaunchContext, setTerminalUiLaunchContext] =
     useState<TerminalLaunchContext | null>(null);
   // Overrides chosen before a server thread's first turn; they belong to that thread only.
@@ -986,7 +984,6 @@ export default function ChatView(props: ChatViewProps) {
   const canMaximizeRightPanel = rightPanelOpen;
   const rightPanelMaximized = canMaximizeRightPanel && rightPanelState.maximized === true;
   const [threadPanelPopoverHandle] = useState(PopoverCreateHandle);
-  const [chatCanvasStore] = useState(createChatCanvasStore);
 
   const latestRunSettled = isLatestRunSettled(activeLatestRun, activeRuntime);
   const activeThreadEnvironmentId = activeThread?.environmentId;
@@ -1820,28 +1817,8 @@ export default function ChatView(props: ChatViewProps) {
       ? activePreviewMiniPlayer
       : null;
   const canvasPreview = useThreadPreviewCanvasSource(activeThreadRef, shownPreviewMiniPlayer);
-  const threadPanelInlineOpen = useRightPanelStore((state) =>
-    selectThreadPanelOpen(state.threadPanelVisibilityByThreadKey, activeThreadRef, "inline"),
-  );
-  // Selects only the mode, so canvas resizes rerender the chat view only when the
-  // card switches presentation.
-  const threadPanelPresentation = useStore(
-    chatCanvasStore,
-    (state) =>
-      resolveChatCanvasModel({
-        measurements: state.measurements,
-        detailsCardMeasurement: state.detailsCardMeasurement,
-        threadRef: activeThreadRef,
-        preview: canvasPreview,
-        detailsCardInlineOpen: threadPanelInlineOpen,
-      }).detailsCardMode,
-  );
   const threadPanelOpen = useRightPanelStore((state) =>
-    selectThreadPanelOpen(
-      state.threadPanelVisibilityByThreadKey,
-      activeThreadRef,
-      threadPanelPresentation,
-    ),
+    selectThreadPanelOpen(state.threadPanelOpenByThreadKey, activeThreadRef),
   );
   const supportsThreadPullRequests =
     serverConfig?.environment.capabilities.threadPullRequests === true;
@@ -2281,7 +2258,6 @@ export default function ChatView(props: ChatViewProps) {
     togglePullRequestsSurfaceStable,
     toggleRightPanelMaximizedStable,
     toggleRightPanelStable,
-    toggleThreadPanelStable,
     shortcuts: rightPanelShortcuts,
   } = useRightPanelActions({
     activeThreadRef,
@@ -2291,7 +2267,6 @@ export default function ChatView(props: ChatViewProps) {
     deviceState,
     deviceStateLoaded,
     pullRequestPanelTarget,
-    threadPanelPresentation,
     isServerThread,
     isGitRepo,
     browserAvailable,
@@ -3110,7 +3085,6 @@ export default function ChatView(props: ChatViewProps) {
         data-chat-column
       >
         <header
-          ref={threadPanelPopoverAnchorRef}
           data-chat-header
           className={cn(
             "relative bg-background",
@@ -3133,10 +3107,9 @@ export default function ChatView(props: ChatViewProps) {
               ? { onOpenProjectSettings: handleOpenDraftProjectSettingsStable }
               : {})}
             threadPanelOpen={threadPanelOpen}
-            threadPanelPresentation={threadPanelPresentation}
             threadPanelPopoverHandle={threadPanelPopoverHandle}
+            threadPanelAnchorRef={threadPanelAnchorRef}
             threadPanelShortcutLabel={threadPanelShortcutLabel}
-            onToggleThreadPanel={toggleThreadPanelStable}
             activeSurfaceKind={activeRightPanelKind}
             isGitRepo={isGitRepo}
             hasProject={activeProject !== null}
@@ -3168,8 +3141,6 @@ export default function ChatView(props: ChatViewProps) {
               thread: activeThreadRef,
               enabled: threadFindEnabled,
             }}
-            store={chatCanvasStore}
-            threadRef={activeThreadRef}
             preview={canvasPreview}
             detailsCardTopInset={isThreadFindActive ? THREAD_FIND_BAR_RESERVED_HEIGHT : 0}
             composerOverlayElement={isDraftHeroState ? null : composerOverlayElement}
@@ -3645,7 +3616,7 @@ export default function ChatView(props: ChatViewProps) {
             />
 
             <ThreadDetailsPanel
-              anchor={threadPanelPopoverAnchorRef}
+              anchor={threadPanelAnchorRef}
               handle={threadPanelPopoverHandle}
               forceNewWorktree={multipleModelSelections !== null}
               environmentId={activeThread.environmentId}

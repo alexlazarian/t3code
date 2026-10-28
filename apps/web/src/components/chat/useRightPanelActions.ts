@@ -12,7 +12,6 @@ import {
   squashAtomCommandFailure,
 } from "@t3tools/client-runtime/state/runtime";
 import { useDiffPanelStore } from "../../diffPanelStore";
-import { type ThreadPanelPresentation } from "../../rightPanelLayout";
 import {
   selectActiveRightPanel,
   type RightPanelSurface,
@@ -40,7 +39,6 @@ interface RightPanelActionsInput {
   readonly deviceState: ReturnType<typeof useDeviceState>["state"];
   readonly deviceStateLoaded: boolean;
   readonly pullRequestPanelTarget: ReturnType<typeof threadPullRequestPanelTarget> | null;
-  readonly threadPanelPresentation: ThreadPanelPresentation;
   readonly isServerThread: boolean;
   readonly isGitRepo: boolean;
   readonly browserAvailable: boolean;
@@ -73,7 +71,6 @@ export function useRightPanelActions(input: RightPanelActionsInput) {
     deviceState,
     deviceStateLoaded,
     pullRequestPanelTarget,
-    threadPanelPresentation,
     isServerThread,
     isGitRepo,
     browserAvailable,
@@ -236,9 +233,8 @@ export function useRightPanelActions(input: RightPanelActionsInput) {
   const toggleRightPanelStable = useStableCallback(toggleRightPanel);
   const toggleThreadPanel = () => {
     if (!activeThreadRef) return;
-    useRightPanelStore.getState().toggleThreadPanel(activeThreadRef, threadPanelPresentation);
+    useRightPanelStore.getState().toggleThreadPanel(activeThreadRef);
   };
-  const toggleThreadPanelStable = useStableCallback(toggleThreadPanel);
   const toggleRightPanelMaximized = () => {
     if (!canMaximizeRightPanel || !activeThreadRef) return;
     useRightPanelStore.getState().setMaximized(activeThreadRef, !rightPanelMaximized);
@@ -344,6 +340,5 @@ export function useRightPanelActions(input: RightPanelActionsInput) {
     togglePullRequestsSurfaceStable,
     toggleRightPanelMaximizedStable,
     toggleRightPanelStable,
-    toggleThreadPanelStable,
   };
 }

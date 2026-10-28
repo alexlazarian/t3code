@@ -29,7 +29,7 @@ describe("resolveThreadHeaderTools", () => {
     ).toBe(false);
   });
 
-  it("disables surfaces that cannot open", () => {
+  it("hides surfaces that cannot open", () => {
     const tools = resolveThreadHeaderTools({
       ...everythingAvailable,
       isGitRepo: false,
@@ -37,13 +37,13 @@ describe("resolveThreadHeaderTools", () => {
       canOperatePreview: false,
       pullRequestsAvailable: false,
     });
-    expect(tools.diff.disabled).toBe(true);
-    expect(tools.preview.disabled).toBe(true);
-    expect(tools.files.disabled).toBe(true);
-    expect(tools.pullRequests.disabled).toBe(true);
+    expect(tools.diff.visible).toBe(false);
+    expect(tools.preview.visible).toBe(false);
+    expect(tools.files.visible).toBe(false);
+    expect(tools.pullRequests.visible).toBe(false);
   });
 
-  it("keeps an open surface pressable so it can close", () => {
+  it("keeps an open surface shown so it can close", () => {
     const unavailable = {
       ...everythingAvailable,
       isGitRepo: false,
@@ -51,15 +51,15 @@ describe("resolveThreadHeaderTools", () => {
       pullRequestsAvailable: false,
     };
     expect(
-      resolveThreadHeaderTools({ ...unavailable, activeSurfaceKind: "diff" }).diff.disabled,
-    ).toBe(false);
+      resolveThreadHeaderTools({ ...unavailable, activeSurfaceKind: "diff" }).diff.visible,
+    ).toBe(true);
     expect(
-      resolveThreadHeaderTools({ ...unavailable, activeSurfaceKind: "preview" }).preview.disabled,
-    ).toBe(false);
+      resolveThreadHeaderTools({ ...unavailable, activeSurfaceKind: "preview" }).preview.visible,
+    ).toBe(true);
     expect(
       resolveThreadHeaderTools({ ...unavailable, activeSurfaceKind: "pull-requests" }).pullRequests
-        .disabled,
-    ).toBe(false);
+        .visible,
+    ).toBe(true);
   });
 
   it("follows the toggles that do nothing without a server thread or browser", () => {
@@ -68,13 +68,13 @@ describe("resolveThreadHeaderTools", () => {
         ...everythingAvailable,
         isServerThread: false,
         activeSurfaceKind: "diff",
-      }).diff.disabled,
-    ).toBe(true);
+      }).diff.visible,
+    ).toBe(false);
     const noBrowser = resolveThreadHeaderTools({
       ...everythingAvailable,
       browserAvailable: false,
       activeSurfaceKind: "preview",
     });
-    expect(noBrowser.preview).toEqual({ on: false, disabled: true });
+    expect(noBrowser.preview).toEqual({ on: false, visible: false });
   });
 });
