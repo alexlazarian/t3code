@@ -12,10 +12,11 @@ import { partitionSidebarThreads } from "../Sidebar.logic";
 import {
   buildOverviewGrid,
   isOverviewThreadOffline,
-  overviewOfflineNote,
   moveOverviewFocus,
   NO_PROJECT_KEY,
+  overviewColumnMachines,
   overviewProjectKeyOf,
+  overviewStatusBlock,
 } from "./Overview.logic";
 
 const envA = EnvironmentId.make("env-a");
@@ -267,17 +268,41 @@ describe("overview offline machines", () => {
     expect(isOverviewThreadOffline("env-unknown", phases)).toBe(false);
   });
 
-  it("names offline machines, collapsing past two", () => {
+  it("lists each machine once and marks the offline ones", () => {
     const labels = new Map([
       [envA, "Laptop"],
       [envB, "Studio"],
-      ["env-c", "Server"],
-      ["env-d", "Desk"],
     ]);
-    const note = (ids: string[]) => overviewOfflineNote(ids, phases, labels);
-    expect(note([envA])).toBeNull();
-    expect(note([envA, envB, envB])).toBe("Studio offline");
-    expect(note([envB, "env-c"])).toBe("Studio, Server offline");
-    expect(note([envB, "env-c", "env-d"])).toBe("3 machines offline");
+    expect(overviewColumnMachines([envA, envB, envA, "env-x"], phases, labels)).toEqual([
+      { id: envA, label: "Laptop", offline: false },
+      { id: envB, label: "Studio", offline: true },
+      { id: "env-x", label: "Machine", offline: false },
+    ]);
+  });
+});
+
+describe("overviewStatusBlock", () => {
+  it("uses the prototype glyph for each status", () => {
+    const glyphs = (
+      [
+        "working",
+        "approval",
+        "input",
+        "request",
+        "plan",
+        "failed",
+        "waiting",
+        "done",
+        "woke",
+      ] as const
+    ).map((icon) => overviewStatusBlock(icon).glyph);
+    expect(glyphs).toEqual(["play", "!", "?", "?", "P", "x", "~", "", ""]);
+  });
+
+  it("colors the block by status group and leaves idle threads unlit", () => {
+    expect(overviewStatusBlock("working").className).toBe("bg-status-working");
+    expect(overviewStatusBlock("plan").className).toBe(overviewStatusBlock("approval").className);
+    expect(overviewStatusBlock("failed").className).toBe("bg-status-failed");
+    expect(overviewStatusBlock(null)).toEqual(overviewStatusBlock("done"));
   });
 });

@@ -2,6 +2,7 @@ import type { EnvironmentConnectionPhase } from "@t3tools/client-runtime/connect
 
 import type { SidebarThreadSummary } from "../../types";
 import type { SidebarProjectSnapshot } from "../../sidebarProjectGrouping";
+import type { SidebarStatusLabel } from "../sidebar/threadStatusLabel";
 import {
   matchesSidebarStatusFilter,
   resolveSidebarThreadStatus,
@@ -151,16 +152,41 @@ export function isOverviewThreadOffline(
   return phase !== undefined && phase !== "connected";
 }
 
-export function overviewOfflineNote(
+export type OverviewMachine = {
+  readonly id: string;
+  readonly label: string;
+  readonly offline: boolean;
+};
+
+export function overviewColumnMachines(
   environmentIds: Iterable<string>,
   phases: ReadonlyMap<string, EnvironmentConnectionPhase>,
   labelById: ReadonlyMap<string, string>,
-): string | null {
-  const offline = new Set<string>();
-  for (const id of environmentIds) {
-    if (isOverviewThreadOffline(id, phases)) offline.add(id);
-  }
-  if (offline.size === 0) return null;
-  if (offline.size > 2) return `${offline.size} machines offline`;
-  return `${[...offline].map((id) => labelById.get(id) ?? "Machine").join(", ")} offline`;
+): OverviewMachine[] {
+  return [...new Set(environmentIds)].map((id) => ({
+    id,
+    label: labelById.get(id) ?? "Machine",
+    offline: isOverviewThreadOffline(id, phases),
+  }));
+}
+
+export type OverviewStatusBlock = {
+  readonly glyph: "" | "play" | "!" | "?" | "P" | "x" | "~";
+  readonly className: string;
+};
+
+const IDLE_BLOCK: OverviewStatusBlock = { glyph: "", className: "bg-black/20" };
+const STATUS_BLOCKS: Partial<Record<SidebarStatusLabel["icon"], OverviewStatusBlock>> = {
+  working: { glyph: "play", className: "bg-status-working" },
+  approval: { glyph: "!", className: "bg-status-needs-you" },
+  input: { glyph: "?", className: "bg-status-needs-you" },
+  request: { glyph: "?", className: "bg-status-needs-you" },
+  plan: { glyph: "P", className: "bg-status-needs-you" },
+  failed: { glyph: "x", className: "bg-status-failed" },
+  waiting: { glyph: "~", className: "bg-overview-idle" },
+};
+
+/** Glyphs match the prototype's STATUS table; Done, Woke and unlabeled threads show an empty block. */
+export function overviewStatusBlock(icon: SidebarStatusLabel["icon"] | null): OverviewStatusBlock {
+  return (icon === null ? undefined : STATUS_BLOCKS[icon]) ?? IDLE_BLOCK;
 }

@@ -1,25 +1,26 @@
 import { FolderIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import { Fragment } from "react";
 
 import { useProjectAccentColor } from "../../hooks/useProjectAccentColor";
+import { projectFillColor } from "../../projectAccentColor.logic";
 import { ProjectFavicon } from "../ProjectFavicon";
-import type { OverviewColumn } from "./Overview.logic";
+import type { OverviewColumn, OverviewMachine } from "./Overview.logic";
 
 export function OverviewColumnHeader(props: {
   readonly column: OverviewColumn;
-  readonly note?: ReactNode;
+  readonly machines: ReadonlyArray<OverviewMachine>;
 }) {
   const { column } = props;
-  const stripColor = useProjectAccentColor(column.project);
+  const fill = projectFillColor(useProjectAccentColor(column.project));
   const { open, working, needsYou } = column.counts;
   return (
-    <div
-      className="sticky top-0 z-10 min-w-0 border-r border-b border-border bg-card"
-      style={stripColor ? { boxShadow: `inset 3px 0 0 ${stripColor}` } : undefined}
-    >
-      <div className="flex h-[22px] items-center gap-1.5 px-2 text-xs font-semibold text-foreground">
+    <div className="sticky top-0 z-10 min-w-0 border-r border-border bg-muted">
+      <div
+        className="flex h-[22px] items-center gap-1.5 px-2 text-xs font-semibold text-overview-ink"
+        style={{ backgroundColor: fill }}
+      >
         {column.project ? (
-          <span className="inline-flex shrink-0 items-center justify-center [&:has(img)]:bg-white [&:has(img)]:p-px">
+          <span className="inline-flex shrink-0 items-center justify-center bg-black/15 [&:has(img)]:bg-white [&:has(img)]:p-px">
             <ProjectFavicon project={column.project} className="size-3.5 shrink-0" />
           </span>
         ) : (
@@ -27,7 +28,15 @@ export function OverviewColumnHeader(props: {
         )}
         <span className="truncate">{column.displayName}</span>
       </div>
-      <div className="truncate px-2 pb-0.5 text-3xs text-muted-foreground">
+      <div className="truncate border-b border-border px-2 pt-0.5 pb-0.75 text-3xs text-muted-foreground">
+        {props.machines.map((machine, index) => (
+          <Fragment key={machine.id}>
+            {index > 0 ? " + " : null}
+            {machine.label}
+            {machine.offline ? <span className="text-status-failed"> offline</span> : null}
+          </Fragment>
+        ))}
+        {props.machines.length > 0 ? <> &middot; </> : null}
         {open} open
         {working > 0 ? (
           <>
@@ -39,7 +48,6 @@ export function OverviewColumnHeader(props: {
             , <span className="text-status-needs-you">{needsYou} need you</span>
           </>
         ) : null}
-        {props.note ? <> &middot; {props.note}</> : null}
       </div>
     </div>
   );

@@ -62,3 +62,10 @@ export function projectIconOverrideColor(
 ): string | null {
   return projectIcon?.color ? `var(--color-${projectIcon.color}-500)` : null;
 }
+
+const NEUTRAL_PROJECT_COLOR = "#8d867d";
+
+/** Pulled toward warm gray so a full grid of projects doesn't shout. A CSS string because the color may be a var. */
+export function projectFillColor(color: string | null): string {
+  return `color-mix(in oklab, ${color ?? NEUTRAL_PROJECT_COLOR} 74%, #8a857e)`;
+}

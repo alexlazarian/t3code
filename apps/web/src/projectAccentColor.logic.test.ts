@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { dominantColorFromPixels, projectIconOverrideColor } from "./projectAccentColor.logic";
+import {
+  dominantColorFromPixels,
+  projectFillColor,
+  projectIconOverrideColor,
+} from "./projectAccentColor.logic";
 
 function pixels(
   size: number,
@@ -96,5 +100,18 @@ describe("projectIconOverrideColor", () => {
   it("returns null without an icon color", () => {
     expect(projectIconOverrideColor(null)).toBeNull();
     expect(projectIconOverrideColor({})).toBeNull();
+  });
+});
+
+describe("projectFillColor", () => {
+  it("mixes the project color toward warm gray, keeping CSS vars intact", () => {
+    expect(projectFillColor("#f97316")).toBe("color-mix(in oklab, #f97316 74%, #8a857e)");
+    expect(projectFillColor("var(--color-blue-500)")).toBe(
+      "color-mix(in oklab, var(--color-blue-500) 74%, #8a857e)",
+    );
+  });
+
+  it("projects without a color get the neutral fill", () => {
+    expect(projectFillColor(null)).toBe("color-mix(in oklab, #8d867d 74%, #8a857e)");
   });
 });
