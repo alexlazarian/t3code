@@ -8,7 +8,7 @@ import { DraftId } from "../composerDraftStore";
 // Register extra font sizes so tailwind-merge does not treat text-2xs as a color.
 const twMerge = extendTailwindMerge({
   extend: {
-    theme: { text: ["2xs", "3xs", "4xs", "5xs"] },
+    theme: { text: ["control", "2xs", "3xs", "4xs", "5xs"] },
   },
 });
 

@@ -16,7 +16,7 @@ const buttonVariants = cva(
       size: {
         compact:
           "h-7 gap-1 rounded-md px-[calc(--spacing(2)-1px)] text-xs before:rounded-none [&_svg:not([class*='size-'])]:size-3.5",
-        default: "h-9 px-[calc(--spacing(3)-1px)] sm:h-6.5",
+        default: "h-9 px-[calc(--spacing(3)-1px)] sm:h-6.5 sm:text-control",
         icon: "size-9 sm:size-6.5",
         "icon-lg": "size-10 sm:size-7.5",
         "icon-micro":
@@ -38,7 +38,7 @@ const buttonVariants = cva(
       },
       variant: {
         default:
-          "border-primary bg-primary text-primary-foreground [:hover,[data-pressed]]:bg-primary/90",
+          "border-primary-edge bg-primary text-primary-foreground [:hover,[data-pressed]]:bg-primary/90",
         destructive:
           "border-destructive bg-destructive text-white [:hover,[data-pressed]]:bg-destructive/90",
         "destructive-outline":
@@ -57,7 +57,7 @@ const buttonVariants = cva(
         "media-navigation":
           "[--control-icon-color:currentColor] absolute top-1/2 z-20 -translate-y-1/2 border-transparent text-white/90 [:hover,[data-pressed]]:bg-white/10 [:hover,[data-pressed]]:text-white focus-visible:ring-white focus-visible:ring-offset-transparent",
         outline:
-          "[--control-icon-color:var(--contrast-muted-foreground)] border-input bg-popover not-dark:bg-clip-padding text-foreground shadow-xs/5 not-disabled:not-active:not-data-pressed:before:shadow-[0_1px_--theme(--color-black/4%)] dark:bg-input/32 dark:not-disabled:before:shadow-[0_-1px_--theme(--color-white/2%)] dark:not-disabled:not-active:not-data-pressed:before:shadow-[0_-1px_--theme(--color-white/6%)] [:disabled,:active,[data-pressed]]:shadow-none [:hover,[data-pressed]]:bg-accent/50 dark:[:hover,[data-pressed]]:bg-input/64",
+          "[--control-icon-color:var(--contrast-muted-foreground)] border-input bg-popover not-dark:bg-clip-padding text-foreground not-dark:shadow-xs/5 not-dark:not-disabled:not-active:not-data-pressed:before:shadow-[0_1px_--theme(--color-black/4%)] [:disabled,:active,[data-pressed]]:shadow-none [:hover,[data-pressed]]:bg-accent/50 dark:border-border dark:bg-secondary dark:[:hover,[data-pressed]]:bg-accent",
         overlay: "border-transparent bg-black/70 text-white/65 [:hover,[data-pressed]]:bg-black/90",
         secondary:
           "[--control-icon-color:currentColor] border-input bg-accent text-foreground [:hover,[data-pressed]]:bg-accent/80",
