@@ -461,7 +461,7 @@ describe("sidebar drag projection", () => {
     expect(result.get(sidebarMarkerId("settled-placeholder"))).toEqual({ ...stationary, y: -38 });
   });
 
-  it("previews a time-ordered inbox drop at its time slot, above the Working shelf", () => {
+  it("previews an Active drop at its send-order slot, above the Working shelf", () => {
     const items = [
       pinnedHeader,
       thread("p", "pinned"),

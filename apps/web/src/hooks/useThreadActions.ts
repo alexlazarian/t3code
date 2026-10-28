@@ -148,18 +148,6 @@ export class ThreadPinReorderUnsupportedError extends Schema.TaggedError<ThreadP
   }
 }
 
-export class ThreadActiveReorderUnsupportedError extends Schema.TaggedError<ThreadActiveReorderUnsupportedError>()(
-  "ThreadActiveReorderUnsupportedError",
-  {
-    environmentId: EnvironmentId,
-    threadId: ThreadId,
-  },
-) {
-  override get message(): string {
-    return "Update this environment's server to reorder active threads.";
-  }
-}
-
 async function requestThreadUnpinConfirmation(input: {
   enabled: boolean;
   title: string;
@@ -266,9 +254,6 @@ export function useThreadActions() {
     reportFailure: false,
   });
   const reorderPinnedThreadMutation = useOrchestrationCommand(threadEnvironment.reorderPin, {
-    reportFailure: false,
-  });
-  const reorderActiveThreadMutation = useOrchestrationCommand(threadEnvironment.reorderActive, {
     reportFailure: false,
   });
   const snoozeThreadMutation = useOrchestrationCommand(threadEnvironment.snooze, {
@@ -778,23 +763,6 @@ export function useThreadActions() {
     });
   };
 
-  const reorderActiveThread = async (target: ScopedThreadRef, orderKey: string) => {
-    if (!readEnvironmentServerConfigLoaded(target.environmentId)) {
-      return AsyncResult.failure(
-        Cause.fail(
-          new ThreadActiveReorderUnsupportedError({
-            environmentId: target.environmentId,
-            threadId: target.threadId,
-          }),
-        ),
-      );
-    }
-    return reorderActiveThreadMutation({
-      environmentId: target.environmentId,
-      input: { threadId: target.threadId, orderKey },
-    });
-  };
-
   const unsnoozeThread = async (target: ScopedThreadRef) => {
     if (!readEnvironmentServerConfigLoaded(target.environmentId)) {
       return AsyncResult.failure(
@@ -919,7 +887,6 @@ export function useThreadActions() {
     unpinThread,
     confirmAndUnpinThread,
     reorderPinnedThread,
-    reorderActiveThread,
     markThreadUnread,
     setThreadAutoSettle,
   };

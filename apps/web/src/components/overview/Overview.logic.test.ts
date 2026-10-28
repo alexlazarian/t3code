@@ -102,7 +102,6 @@ function partition(threads: ReadonlyArray<ReturnType<typeof makeThread>>, workin
     ]),
     optimisticDrop: null,
     workingShelfEnabled: workingShelf,
-    sortActiveBySend: false,
     statusFilter: "all",
     routeRowThreadKey: null,
     clockKey: "test",
@@ -129,6 +128,38 @@ describe("partitionSidebarThreads", () => {
     expect(result.snoozedThreads.map((thread) => thread.id)).toEqual(["pinned-snoozed"]);
     expect(result.activeThreads.map((thread) => thread.id)).toEqual(["plain"]);
   });
+
+  it.each([false, true])(
+    "sorts Active by the user's latest send, ignoring manual order (working shelf %s)",
+    (workingShelf) => {
+      const result = partition(
+        [
+          makeThread("new-quiet", {
+            createdAt: "2026-03-09T10:00:00.000Z",
+            latestUserAuthoredMessageAt: "2026-03-09T10:00:00.000Z",
+            activeOrderKey: "a",
+          }),
+          makeThread("old-sent", {
+            createdAt: "2026-03-01T10:00:00.000Z",
+            latestUserAuthoredMessageAt: "2026-03-09T12:00:00.000Z",
+            activeOrderKey: "b",
+          }),
+          makeThread("returned", {
+            createdAt: "2026-03-01T09:00:00.000Z",
+            latestUserAuthoredMessageAt: "2026-03-09T11:00:00.000Z",
+            unsettledAt: "2026-03-09T13:00:00.000Z",
+            activeOrderKey: "c",
+          }),
+        ],
+        workingShelf,
+      );
+      expect(result.activeThreads.map((thread) => thread.id)).toEqual([
+        "old-sent",
+        "returned",
+        "new-quiet",
+      ]);
+    },
+  );
 });
 
 describe("buildOverviewGrid", () => {

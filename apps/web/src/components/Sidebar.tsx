@@ -27,6 +27,7 @@ import {
   effectiveSnoozed,
   threadWokeAt,
 } from "@t3tools/client-runtime/state/thread-settled";
+import { sortWorkingThreadsBySend } from "@t3tools/client-runtime/state/thread-inbox";
 import { sortSettledThreads } from "@t3tools/client-runtime/state/thread-sort";
 import {
   nextShownOrder,
@@ -169,13 +170,11 @@ import {
   shouldNavigateAfterThreadPark,
   sidebarListItemId,
   sidebarThreadKeyAtY,
-  sortInboxThreadsByReturn,
   useThreadJumpHintsVisible,
   type SidebarDropTarget,
   type SidebarListItem,
   type SidebarSection,
   resolveSidebarRowThreadId,
-  inboxReturns,
   partitionSidebarThreads,
   threadShellKey,
   type SidebarOptimisticDrop,
@@ -266,9 +265,8 @@ function resolveDraggedOrders(input: {
   readonly threadByKey: ReadonlyMap<string, EnvironmentThreadShell>;
   readonly settledThreads: readonly EnvironmentThreadShell[];
   readonly activeThreads: readonly EnvironmentThreadShell[];
-  readonly workingShelfEnabled: boolean;
 }): typeof NO_DRAGGED_ORDERS {
-  const { drag, threadByKey, settledThreads, activeThreads, workingShelfEnabled } = input;
+  const { drag, threadByKey, settledThreads, activeThreads } = input;
   const thread = threadByKey.get(drag.activeKey);
   if (thread === undefined) return NO_DRAGGED_ORDERS;
   const others = (list: readonly EnvironmentThreadShell[]) =>
@@ -278,12 +276,10 @@ function resolveDraggedOrders(input: {
       ...others(settledThreads),
       applySidebarThreadDrop(thread, "settled", drag.occurredAt),
     ]).map(threadShellKey),
-    activeOrder: workingShelfEnabled
-      ? sortInboxThreadsByReturn(
-          [...others(activeThreads), applySidebarThreadDrop(thread, "active", drag.occurredAt)],
-          inboxReturns.returnedAt,
-        ).map(threadShellKey)
-      : undefined,
+    activeOrder: sortWorkingThreadsBySend([
+      ...others(activeThreads),
+      applySidebarThreadDrop(thread, "active", drag.occurredAt),
+    ]).map(threadShellKey),
   };
 }
 
@@ -380,7 +376,6 @@ function useSidebarThreads(input: {
     serverConfigs,
     optimisticDrop,
     workingShelfEnabled,
-    sortActiveBySend: folderGroups !== null,
     statusFilter,
     routeRowThreadKey,
     clockKey,
@@ -470,7 +465,6 @@ function useSidebarThreads(input: {
   return {
     ...partition,
     threads,
-    workingShelfEnabled,
     searchableThreads: [
       ...pinnedThreads,
       ...activeThreads,
@@ -514,12 +508,8 @@ function useSidebarThreads(input: {
     snoozedThreadKeys: new Set(snoozedThreads.map(threadShellKey)),
     sectionByThreadKey,
     pinnedKeys: pinnedThreads.map(threadShellKey),
-    activeKeys: activeThreads.map(threadShellKey),
     pinnedKeysById: new Map(
       threads.map((thread) => [threadShellKey(thread), thread.pinOrderKey ?? null] as const),
-    ),
-    activeKeysById: new Map(
-      threads.map((thread) => [threadShellKey(thread), thread.activeOrderKey ?? null] as const),
     ),
   };
 }
@@ -545,10 +535,9 @@ function isOptimisticDropReleased(input: {
   readonly optimisticDrop: SidebarOptimisticDrop;
   readonly threads: readonly EnvironmentThreadShell[];
   readonly pinnedKeys: readonly string[];
-  readonly activeKeys: readonly string[];
   readonly now: string;
 }): boolean {
-  const { optimisticDrop, threads, pinnedKeys, activeKeys, now } = input;
+  const { optimisticDrop, threads, pinnedKeys, now } = input;
   const canonicalByKey = new Map(
     threads.map((thread) => [
       scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id)),
@@ -585,23 +574,21 @@ function isOptimisticDropReleased(input: {
   }
   if (canonicalSection !== optimisticDrop.section) return false;
   if (optimisticDrop.clearsSnooze && thread.snoozedUntil != null) return false;
-  const destinationKeys = optimisticDrop.section === "pinned" ? pinnedKeys : activeKeys;
-  const canonicalDestination = destinationKeys.flatMap((key) => {
+  const canonicalDestination = pinnedKeys.flatMap((key) => {
     const canonical = canonicalByKey.get(key);
     return canonical === undefined ? [] : [canonical];
   });
   const keyByThread = new Map(
     canonicalDestination.map((thread) => [
       scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id)),
-      (optimisticDrop.section === "pinned" ? thread.pinOrderKey : thread.activeOrderKey) ?? null,
+      thread.pinOrderKey ?? null,
     ]),
   );
   const heldOrder = optimisticDrop.order;
   const heldKeys = new Set(heldOrder);
   const membershipChanged =
-    destinationKeys.length !== heldOrder.length ||
-    destinationKeys.some((key) => !heldKeys.has(key));
-  const foreignKeyLanded = destinationKeys.some((threadKey) => {
+    pinnedKeys.length !== heldOrder.length || pinnedKeys.some((key) => !heldKeys.has(key));
+  const foreignKeyLanded = pinnedKeys.some((threadKey) => {
     const currentKey = keyByThread.get(threadKey) ?? null;
     if (currentKey === (optimisticDrop.keysAtDrop.get(threadKey) ?? null)) return false;
     return currentKey !== optimisticDrop.assignedKeys.get(threadKey);
@@ -730,7 +717,6 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     confirmAndUnpinThread,
     setThreadAutoSettle,
     reorderPinnedThread,
-    reorderActiveThread,
     markThreadUnread,
     archiveThread,
     deleteThread,
@@ -1081,10 +1067,8 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   );
 
   const {
-    workingShelfEnabled,
     pinnedThreads,
     draggableThreadKeys,
-    activeReorderableThreadKeys,
     activeThreads,
     workingThreads,
     snoozedThreads,
@@ -1120,9 +1104,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     snoozedThreadKeys,
     sectionByThreadKey,
     pinnedKeys,
-    activeKeys,
     pinnedKeysById,
-    activeKeysById,
     statusCounts,
   } = useSidebarThreads({
     projectScopeKey,
@@ -1637,7 +1619,6 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
       optimisticDrop,
       threads,
       pinnedKeys,
-      activeKeys,
       now: snoozeNow,
     })
   ) {
@@ -1785,7 +1766,6 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
           threadByKey,
           settledThreads,
           activeThreads,
-          workingShelfEnabled,
         });
   const sidebarSortingStrategy = createSidebarSortingStrategy({
     items: sidebarListItems,
@@ -1820,10 +1800,6 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
             pinnedOrder: pinnedKeys,
             pinnedKeysById,
             reorderableKeys: draggableThreadKeys,
-            activeOrder: activeKeys,
-            activeKeysById,
-            activeReorderableKeys: activeReorderableThreadKeys,
-            activeTimeOrdered: workingShelfEnabled,
           }).kind !== "none"
         );
       },
@@ -1859,10 +1835,6 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
       pinnedOrder: pinnedKeys,
       pinnedKeysById,
       reorderableKeys: draggableThreadKeys,
-      activeOrder: activeKeys,
-      activeKeysById,
-      activeReorderableKeys: activeReorderableThreadKeys,
-      activeTimeOrdered: workingShelfEnabled,
     });
     if (plan.kind === "none") return;
     if (plan.kind === "settle" && settlingThreadKeysRef.current.has(activeKey)) return;
@@ -1872,7 +1844,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
             ...(plan.orderKey === undefined ? [] : [{ id: activeKey, orderKey: plan.orderKey }]),
             ...plan.extraAssignments,
           ]
-        : plan.kind === "reorder-pinned" || plan.kind === "move-active"
+        : plan.kind === "reorder-pinned"
           ? plan.assignments
           : [];
     if (
@@ -1893,8 +1865,8 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
         plan.kind === "pin" ||
         plan.kind === "settle" ||
         (plan.kind === "move-active" && plan.unsnooze),
-      order: plan.kind === "settle" ? null : plan.order,
-      keysAtDrop: target.section === "active" ? activeKeysById : pinnedKeysById,
+      order: plan.kind === "settle" || plan.kind === "move-active" ? null : plan.order,
+      keysAtDrop: pinnedKeysById,
       assignedKeys: new Map(assignments.map(({ id, orderKey }) => [id, orderKey])),
     };
     setOptimisticDrop(drop);
@@ -1945,9 +1917,8 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
             !(await run(unsettleThread(threadRef), "Failed to un-settle thread"))
           )
             return;
-          if (plan.unsnooze && !(await run(unsnoozeThread(threadRef), "Failed to wake thread")))
-            return;
-          break;
+          if (plan.unsnooze) await run(unsnoozeThread(threadRef), "Failed to wake thread");
+          return;
         case "pin":
           if (
             !(await run(
@@ -1966,13 +1937,11 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
         if (thread === undefined) continue;
         if (
           !(await run(
-            (plan.kind === "move-active" ? reorderActiveThread : reorderPinnedThread)(
+            reorderPinnedThread(
               scopeThreadRef(thread.environmentId, thread.id),
               assignment.orderKey,
             ),
-            plan.kind === "move-active"
-              ? "Failed to reorder active threads"
-              : "Failed to reorder pinned threads",
+            "Failed to reorder pinned threads",
           ))
         )
           return;

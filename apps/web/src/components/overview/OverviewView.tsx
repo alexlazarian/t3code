@@ -200,7 +200,6 @@ export function OverviewView() {
     serverConfigs,
     optimisticDrop: null,
     workingShelfEnabled,
-    sortActiveBySend: false,
     statusFilter,
     routeRowThreadKey: null,
     clockKey,

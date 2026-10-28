@@ -93,8 +93,11 @@ thread keeps its pin only while it stays in the pinned section; once it leaves, 
 over. Reordering within the same section shows no badge. The header of the section the thread
 is over takes the accent color.
 
-Drag within the pinned or active section to change its order. Other rows slide aside to show the
-spot where the thread will land. Drops into either section keep the position you choose. On
+On web and desktop, drag within the pinned section to change its order. Other rows slide aside to
+show the spot where the thread will land, and a drop keeps the position you choose. The active
+section is always ordered by when you last sent a message to each thread, newest first, so sending
+to a thread moves it to the top. Dragging a thread into the active section changes only its state;
+it lands at its place in that order, and you cannot reorder threads within it. On
 mobile, open a thread's menu and choose **Arrange threads**. Drag a handle within or between
 **Pinned** and **Active** to reorder, pin, or unpin. Drop onto the **Settled** divider to
 settle a thread. The dragged card shows the action before you release it. Expand **Snoozed**
@@ -107,13 +110,14 @@ On web and desktop, the list also animates section changes made with thread acti
 preference. While dragging, rows follow the insertion gap without replaying a second transition
 after the drop.
 
-New threads appear above the active threads you have arranged. Settling clears a thread's active
-position, so using **Un-settle** returns it to the top. Pinning and snoozing preserve its active
-position until you move it again. Thread activity does not change the order. The settled shelf
-continues to use settlement time.
+On iOS and Android, new threads appear above the active threads you have arranged. Settling
+clears a thread's active position, so using **Un-settle** returns it to the top. Pinning and
+snoozing preserve its active position until you move it again.
+
+The settled shelf orders threads by settlement time.
 
 If dragging is unavailable for one environment, update the T3 Code server running in that
-environment. Pinned and active reordering require server support. Threads from older servers keep
+environment. Pinned reordering requires server support. Threads from older servers keep
 their default order until the server is updated.
 
 To generate a fresh title from the conversation, open a thread's menu and choose
@@ -143,8 +147,8 @@ This is on by default. Turn it off with **Settings → General → Working secti
 or **Settings → General → Working section** on iOS and Android. Each device keeps its own
 choice.
 
-While this is on, the active list is ordered by when each thread last came back to you, so you
-cannot drag or move threads within it. Your saved order returns when you turn it off.
+On iOS and Android, while this is on, the active list is ordered by when each thread last came
+back to you, so you cannot move threads within it. Your saved order returns when you turn it off.
 
 ### Group threads by project (beta)
 

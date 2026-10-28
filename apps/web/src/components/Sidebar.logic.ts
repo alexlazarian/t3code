@@ -19,12 +19,10 @@ import { scopedThreadKey, scopeThreadRef } from "@t3tools/client-runtime/environ
 import {
   createInboxReturnTracker,
   isThreadWorking,
-  sortInboxThreadsByReturn,
   sortWorkingThreadsBySend,
 } from "@t3tools/client-runtime/state/thread-inbox";
 import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/models";
 import {
-  sortActiveThreadsByOrderKey,
   sortPinnedThreadsByOrderKey,
   sortSettledThreads,
 } from "@t3tools/client-runtime/state/thread-sort";
@@ -309,8 +307,6 @@ type SidebarThreadDropPlan =
     }
   | {
       readonly kind: "move-active";
-      readonly order: readonly string[] | null;
-      readonly assignments: ReadonlyArray<{ readonly id: string; readonly orderKey: string }>;
       readonly unpin: boolean;
       readonly unsettle: boolean;
       readonly unsnooze: boolean;
@@ -364,10 +360,6 @@ export function planSidebarThreadDrop(input: {
   readonly pinnedOrder: readonly string[];
   readonly pinnedKeysById: ReadonlyMap<string, string | null | undefined>;
   readonly reorderableKeys?: ReadonlySet<string>;
-  readonly activeOrder: readonly string[];
-  readonly activeKeysById: ReadonlyMap<string, string | null | undefined>;
-  readonly activeReorderableKeys?: ReadonlySet<string>;
-  readonly activeTimeOrdered?: boolean;
 }): SidebarThreadDropPlan {
   const {
     activeKey,
@@ -378,9 +370,6 @@ export function planSidebarThreadDrop(input: {
     pinnedOrder,
     pinnedKeysById,
     reorderableKeys,
-    activeOrder,
-    activeKeysById,
-    activeReorderableKeys,
   } = input;
   if (activeSection === "working") return { kind: "none" };
   if (input.supportsSettlement === false && (target.section === "settled" || activeSettled)) {
@@ -401,38 +390,16 @@ export function planSidebarThreadDrop(input: {
     return assignments.every(({ id }) => writable.has(id)) ? assignments : null;
   };
   switch (target.section) {
-    case "active": {
-      if (input.activeTimeOrdered) {
-        return activeSection === "active"
-          ? { kind: "none" }
-          : {
-              kind: "move-active",
-              order: null,
-              assignments: [],
-              unpin: activePinned,
-              unsettle: activeSettled,
-              unsnooze: activeSection === "snoozed",
-            };
-      }
-      const order = target.activeOrder;
-      if (
-        activeSection === "active" &&
-        order.length === activeOrder.length &&
-        order.every((key, index) => key === activeOrder[index])
-      ) {
-        return { kind: "none" };
-      }
-      const assignments = arrange(order, activeKeysById, activeReorderableKeys);
-      if (assignments === null) return { kind: "none" };
-      return {
-        kind: "move-active",
-        order,
-        assignments,
-        unpin: activePinned,
-        unsettle: activeSettled,
-        unsnooze: activeSection === "snoozed",
-      };
-    }
+    case "active":
+      // Active is ordered by the user's latest send, so a drop only changes lifecycle.
+      return activeSection === "active"
+        ? { kind: "none" }
+        : {
+            kind: "move-active",
+            unpin: activePinned,
+            unsettle: activeSettled,
+            unsnooze: activeSection === "snoozed",
+          };
     case "settled":
       return activeSection === "settled" ? { kind: "none" } : { kind: "settle" };
     case "pinned": {
@@ -496,7 +463,6 @@ export function applySidebarThreadDrop<
     ...resumed,
     pinnedAt: section === "pinned" ? (thread.pinnedAt ?? now) : null,
     pinOrderKey: section === "pinned" ? (orderKey ?? thread.pinOrderKey) : null,
-    ...(section === "active" && orderKey !== undefined ? { activeOrderKey: orderKey } : {}),
   };
 }
 
@@ -1049,8 +1015,6 @@ function firstValidTimestampMs(...candidates: ReadonlyArray<string | null | unde
   return 0;
 }
 
-export { sortInboxThreadsByReturn } from "@t3tools/client-runtime/state/thread-inbox";
-
 export { pinOrderKeyBetween } from "@t3tools/client-runtime/state/thread-sort";
 export { sortPinnedThreadsByOrderKey as sortPinnedThreadsForSidebar } from "@t3tools/client-runtime/state/thread-sort";
 
@@ -1466,8 +1430,6 @@ export interface SidebarThreadPartitionInput {
   readonly serverConfigs: ReadonlyMap<EnvironmentId, EnvironmentServerConfig>;
   readonly optimisticDrop: SidebarOptimisticDrop | null;
   readonly workingShelfEnabled: boolean;
-  /** Boring mode: folders list active threads by the user's latest message. */
-  readonly sortActiveBySend: boolean;
   readonly statusFilter: SidebarStatusFilter;
   readonly routeRowThreadKey: string | null;
   // Snooze wakes, the queued-turn grace and the Working shelf's exit grace depend
@@ -1488,7 +1450,6 @@ export function partitionSidebarThreads(input: SidebarThreadPartitionInput) {
     serverConfigs,
     optimisticDrop,
     workingShelfEnabled,
-    sortActiveBySend,
     statusFilter,
     routeRowThreadKey,
   } = input;
@@ -1511,14 +1472,10 @@ export function partitionSidebarThreads(input: SidebarThreadPartitionInput) {
   const snoozed: EnvironmentThreadShell[] = [];
   const settled: EnvironmentThreadShell[] = [];
   const draggable = new Set<string>();
-  const activeReorderable = new Set<string>();
   for (const thread of visible) {
     const configLoaded = serverConfigs.has(thread.environmentId);
     const threadKey = scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id));
-    if (configLoaded) {
-      activeReorderable.add(threadKey);
-      draggable.add(threadKey);
-    }
+    if (configLoaded) draggable.add(threadKey);
     if (optimisticDrop?.key === threadKey) {
       const projected = applySidebarThreadDrop(
         thread,
@@ -1554,11 +1511,6 @@ export function partitionSidebarThreads(input: SidebarThreadPartitionInput) {
   }
   // A loaded config gates dragging only; the sort must not depend on it, so web and mobile agree.
   const sortedPinned = sortPinnedThreadsByOrderKey(pinned);
-  const sortedActive = sortActiveBySend
-    ? sortWorkingThreadsBySend(active)
-    : workingShelfEnabled
-      ? sortInboxThreadsByReturn(active, inboxObservation.returnedAt)
-      : sortActiveThreadsByOrderKey(active);
   return {
     pinnedThreads:
       optimisticDrop?.section !== "pinned" || optimisticDrop.order === null
@@ -1569,15 +1521,7 @@ export function partitionSidebarThreads(input: SidebarThreadPartitionInput) {
             getId: (thread) => scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id)),
           }),
     draggableThreadKeys: draggable,
-    activeReorderableThreadKeys: activeReorderable,
-    activeThreads:
-      optimisticDrop?.section !== "active" || optimisticDrop.order === null
-        ? sortedActive
-        : orderItemsByPreferredIds({
-            items: sortedActive,
-            preferredIds: optimisticDrop.order,
-            getId: (thread) => scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id)),
-          }),
+    activeThreads: sortWorkingThreadsBySend(active),
     workingThreads: sortWorkingThreadsBySend(working),
     snoozedThreads: snoozed.toSorted(
       (left, right) =>
