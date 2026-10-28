@@ -93,7 +93,9 @@ export function useUpdateEverything(localUpdateVersion: string | null) {
   });
 
   return {
-    hasUpdates: servers.length > 0 || providers.machines.length > 0,
+    // Provider updates alone live in Library > Providers; they only ride along with an app or server update.
+    hasUpdates:
+      servers.length > 0 || (localUpdateVersion !== null && providers.machines.length > 0),
     ...view,
     restarts,
     run: async ({
