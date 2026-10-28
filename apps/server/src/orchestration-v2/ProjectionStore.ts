@@ -938,6 +938,7 @@ type ShellThreadRow = {
   readonly latest_run_stop_requested: number;
   readonly active_run_id: string | null;
   readonly active_run_status: string | null;
+  readonly activity_run_id: string | null;
   readonly activity_run_status: string | null;
   readonly activity_run_started_at: string | null;
   readonly last_error: string | null;
@@ -1615,6 +1616,7 @@ type ShellThreadState = {
   readonly latestRunStopRequested: boolean;
   readonly activeRunId: RunId | null;
   readonly blockedOnThreadWait: boolean;
+  readonly activityRunId: RunId | null;
   readonly activityRunStatus: ShellActivityRunStatus | null;
   readonly activityRunStartedAt: DateTime.Utc | null;
   readonly lastError: string | null;
@@ -1788,9 +1790,9 @@ function shellFromState(input: {
     pendingGuestMessageCount: pendingGuestMessageCount(input.state.thread.guestShare),
     latestVisibleMessage: null,
     activity:
-      input.state.latestRunId === null
+      input.state.activityRunId === null
         ? null
-        : (input.activityByRunId.get(input.state.latestRunId) ?? null),
+        : (input.activityByRunId.get(input.state.activityRunId) ?? null),
     latestUserMessageAt: input.state.latestUserMessageAt,
     latestUserAuthoredMessageAt: input.state.latestUserAuthoredMessageAt,
     hasActionableProposedPlan: input.state.hasActionableProposedPlan,
@@ -5774,6 +5776,20 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
               active.run_id AS active_run_id,
               active.status AS active_run_status,
               (
+                -- The run doing the work: the active one, else the newest that ran.
+                SELECT r.run_id
+                FROM orchestration_v2_projection_runs r
+                WHERE r.thread_id = t.thread_id
+                  AND r.status <> 'queued'
+                  AND NOT (
+                    r.status = 'cancelled' AND json_extract(r.payload_json, '$.startedAt') IS NULL
+                  )
+                  AND NOT ${isSilentShellRun("r")}
+                ORDER BY r.status IN ('preparing', 'starting', 'running', 'waiting') DESC,
+                  r.ordinal DESC, r.run_id DESC
+                LIMIT 1
+              ) AS activity_run_id,
+              (
                 SELECT r.status
                 FROM orchestration_v2_projection_runs r
                 WHERE r.thread_id = t.thread_id
@@ -5903,7 +5919,7 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
               ORDER BY r.ordinal DESC, r.run_id DESC
               LIMIT 1
             )
-            -- The newest run not waiting in a held queue, matching latestUnheldRun.
+            -- The newest run not waiting in a held queue or cancelled unstarted, matching latestUnheldRun.
             LEFT JOIN orchestration_v2_projection_runs presented ON presented.run_id = (
               SELECT candidate.run_id
               FROM orchestration_v2_projection_runs candidate
@@ -5911,6 +5927,10 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
                 AND NOT (
                   candidate.status = 'queued'
                   AND json_extract(candidate.payload_json, '$.queueHeld') IS 1
+                )
+                AND NOT (
+                  candidate.status = 'cancelled'
+                  AND json_extract(candidate.payload_json, '$.startedAt') IS NULL
                 )
                 AND NOT ${isSilentShellRun("candidate")}
               ORDER BY candidate.ordinal DESC, candidate.run_id DESC
@@ -6122,9 +6142,7 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
     ) {
       const runIds = [
         ...new Set(
-          rows.flatMap((row) =>
-            [row.latest_run_id, row.blocking_run_id].filter((id) => id !== null),
-          ),
+          rows.flatMap((row) => (row.activity_run_id === null ? [] : [row.activity_run_id])),
         ),
       ];
       if (runIds.length === 0) return new Map<RunId, OrchestrationV2ShellActivity>();
@@ -6539,6 +6557,7 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
                 : { id: RunId.make(row.active_run_id), status: "running" },
             turnItems: pendingTurnItemsByThreadId.get(thread.id) ?? [],
           }),
+          activityRunId: row.activity_run_id === null ? null : RunId.make(row.activity_run_id),
           activityRunStartedAt:
             row.activity_run_started_at === null
               ? null

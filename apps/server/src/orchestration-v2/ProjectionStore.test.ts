@@ -591,6 +591,39 @@ it.effect("SQL shells summarize the presented run's step, stats and subagents", 
       status: "completed",
     });
     assert.equal(ended?.subagents[0]?.step, null);
+
+    // A queued follow-up, then its cancellation, leave the card on the working run.
+    const queued = {
+      ...run,
+      id: RunId.make("run:card-activity:queued"),
+      ordinal: 3,
+      status: "queued" as const,
+      startedAt: null,
+    };
+    yield* store.apply({
+      id: EventId.make("event:card-activity:queued"),
+      type: "run.created",
+      threadId,
+      occurredAt: at,
+      payload: queued,
+    });
+    assert.deepEqual(yield* activity, ended);
+    yield* store.apply({
+      id: EventId.make("event:card-activity:queued-cancelled"),
+      type: "run.updated",
+      threadId,
+      occurredAt: at,
+      payload: { ...queued, status: "cancelled", completedAt: at },
+    });
+    assert.deepEqual(yield* activity, ended);
+    const afterCancel = yield* store.getThreadShell(threadId);
+    assert.equal(afterCancel?.status, "running");
+    assert.equal(afterCancel?.latestRunId, run.id);
+    assert.equal(
+      ProjectionStore.threadShellFromProjection(yield* store.getThreadProjection(threadId))
+        .latestRunId,
+      run.id,
+    );
   }).pipe(Effect.provide(layerTest)),
 );
 
@@ -3994,7 +4027,10 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
             value == null ? null : DateTime.toEpochMillis(value);
           assert.equal(timestamp(sqlShell.activityRunStartedAt), expected);
           assert.equal(timestamp(memoryShell.activityRunStartedAt), expected);
-          assert.equal(sqlShell.latestRunId, "run:clock:newer");
+          // A queued message cancelled before it started never presents.
+          const presented = status === "queued" ? "run:clock:newer" : runId;
+          assert.equal(sqlShell.latestRunId, presented);
+          assert.equal(memoryShell.latestRunId, presented);
         }
       }
 
