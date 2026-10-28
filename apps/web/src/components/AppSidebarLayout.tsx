@@ -443,7 +443,7 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
             info={newThreadLabel}
             render={<span className="inline-flex [-webkit-app-region:no-drag]" />}
           >
-            <Button variant="outline" size="xs" disabled={!hasProjects} onClick={startNewThread}>
+            <Button variant="outline" disabled={!hasProjects} onClick={startNewThread}>
               + New thread
               {newThreadShortcutLabel ? <TopBarShortcut label={newThreadShortcutLabel} /> : null}
             </Button>
@@ -455,7 +455,6 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
       <div className="border-r">
         <Button
           variant="ghost"
-          size="xs"
           aria-label="Search and commands"
           onClick={() => openCommandPalette()}
           data-info={`Search and commands${paletteShortcutLabel ? ` (${paletteShortcutLabel})` : ""}`}
@@ -468,7 +467,6 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
       <div className="pr-0!">
         <Button
           variant="ghost"
-          size="xs"
           aria-label="Usage"
           onClick={() => void router.navigate({ to: "/usage" })}
           data-info={`Open usage${usageShortcutLabel ? ` (${usageShortcutLabel})` : ""}`}
@@ -477,12 +475,7 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
           <span className="max-md:hidden">Usage</span>
           {usageShortcutLabel ? <TopBarShortcut label={usageShortcutLabel} /> : null}
         </Button>
-        <Button
-          variant="ghost"
-          size="xs"
-          onClick={() => openSettings(router)}
-          data-info="Open settings"
-        >
+        <Button variant="ghost" onClick={() => openSettings(router)} data-info="Open settings">
           Settings
         </Button>
       </div>

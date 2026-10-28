@@ -19,12 +19,8 @@ function ToggleGroup({
   children,
   ...props
 }: ToggleGroupPrimitive.Props & VariantProps<typeof toggleVariants>) {
-  const size =
-    sizeProp === undefined
-      ? variant === "segmented" || variant === "mode"
-        ? "segmented"
-        : "default"
-      : sizeProp;
+  // Mode groups are as tall as a default button; segmented groups as an `sm` one.
+  const size = sizeProp ?? (variant === "segmented" ? "segmented" : "default");
   const value = { size, variant };
   return (
     <ToggleGroupPrimitive
