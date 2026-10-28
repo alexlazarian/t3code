@@ -211,7 +211,7 @@ describe("ClientSettings interface font size", () => {
 describe("ClientSettings reading spacing", () => {
   it("defaults to the prototype's tight spacing when never set", () => {
     const settings = decodeClientSettings({});
-    expect(settings.messageLineHeight).toBe(140);
+    expect(settings.messageLineHeight).toBe(155);
     expect(settings.messageParagraphSpacing).toBe(40);
   });
 
@@ -219,10 +219,6 @@ describe("ClientSettings reading spacing", () => {
     const settings = decodeClientSettings({ messageLineHeight: 163, messageParagraphSpacing: 65 });
     expect(settings.messageLineHeight).toBe(163);
     expect(settings.messageParagraphSpacing).toBe(65);
-  });
-
-  it("accepts a line height tighter than the default", () => {
-    expect(decodeClientSettings({ messageLineHeight: 120 }).messageLineHeight).toBe(120);
   });
 });
 

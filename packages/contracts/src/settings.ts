@@ -293,9 +293,9 @@ export const ChatWidth = Schema.Literals(["comfortable", "wide", "full"]);
 export type ChatWidth = typeof ChatWidth.Type;
 
 /** Line height of agent messages in hundredths; the default leaves the built-in spacing alone. */
-export const MIN_MESSAGE_LINE_HEIGHT = 120;
+export const MIN_MESSAGE_LINE_HEIGHT = 140;
 export const MAX_MESSAGE_LINE_HEIGHT = 240;
-export const DEFAULT_MESSAGE_LINE_HEIGHT = 140;
+export const DEFAULT_MESSAGE_LINE_HEIGHT = 155;
 export const MessageLineHeight = Schema.Int.check(
   Schema.isBetween({ minimum: MIN_MESSAGE_LINE_HEIGHT, maximum: MAX_MESSAGE_LINE_HEIGHT }),
 );

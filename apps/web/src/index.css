@@ -1865,11 +1865,8 @@ code {
 /* Message spacing reaches prose in the thread (and its settings preview) only;
    code keeps its own rhythm. The built-in values match the setting defaults. */
 :is([data-chat-column], [data-reading-preview]) .chat-markdown {
-  --chat-reading-leading: 1.4;
+  --chat-reading-leading: 1.55;
   --chat-reading-gap: 0.4rem;
-}
-:is([data-chat-column], [data-reading-preview]) .chat-markdown :is(h1, h2, h3, h4, h5, h6) {
-  margin: 0.75rem 0 0.25rem;
 }
 html[data-message-line-height] :is([data-chat-column], [data-reading-preview]) .chat-markdown {
   --chat-reading-leading: var(--message-line-height);
@@ -1948,6 +1945,12 @@ html[data-focus-dimming]:has([data-chat-composer-form]:focus-within):not(
 
 :is(.chat-markdown, .composer-tiptap) h6 {
   color: var(--contrast-muted-foreground);
+}
+
+/* Same specificity as the base heading rule and later, so it wins over it but the
+   first/last-child margin resets still win over both. */
+:where([data-chat-column], [data-reading-preview]) .chat-markdown :is(h1, h2, h3, h4, h5, h6) {
+  margin: 0.75rem 0 0.25rem;
 }
 
 :is(.chat-markdown, .composer-tiptap) ul {
