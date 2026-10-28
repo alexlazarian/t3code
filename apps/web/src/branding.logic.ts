@@ -1,5 +1,4 @@
-const NIGHTLY_SERVER_VERSION_PATTERN =
-  /^[^-+]+-(?:(?:nightly|preview)\.\d{8}\.\d+|fork\.\d{8}\.[0-9a-f]+)$/;
+const NIGHTLY_SERVER_VERSION_PATTERN = /^[^-+]+-(?:nightly|preview)\.\d{8}\.\d+$/;
 
 export function formatAppDisplayName(input: {
   readonly baseName: string;
