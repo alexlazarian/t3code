@@ -1518,7 +1518,7 @@ function OpenCommandPaletteDialog(props: {
       kind: "action",
       value: "action:view-list",
       searchTerms: viewSearchTerms,
-      title: "Switch to List",
+      title: "Back to threads",
       icon: <ListIcon className={ITEM_ICON_CLASS} />,
       shortcutCommand: "view.toggleOverview",
       run: async () => {

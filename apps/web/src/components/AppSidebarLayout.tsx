@@ -8,7 +8,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
-import { useLocation, useParams, useRouter, type AnyRouter } from "@tanstack/react-router";
+import { useLocation, useRouter, type AnyRouter } from "@tanstack/react-router";
 
 import { moveWorkspaceFocus, workspaceAreaProps } from "../lib/workspaceFocus";
 import { isCommandPaletteOpen, openCommandPalette } from "../commandPaletteBus";
@@ -141,11 +141,11 @@ function readUsagePageOpen(router: AnyRouter) {
   return router.state.location.pathname === "/settings/usage";
 }
 
-type TopBarView = "list" | "overview" | "pull-requests";
+type TopBarView = "overview" | "pull-requests";
 
-function topBarViewForPathname(pathname: string): TopBarView {
+function topBarViewForPathname(pathname: string): TopBarView | null {
   if (isOverviewPathname(pathname)) return "overview";
-  return pathname === "/pull-requests" ? "pull-requests" : "list";
+  return pathname === "/pull-requests" ? "pull-requests" : null;
 }
 
 function isKeybindingCaptureTarget(event: KeyboardEvent) {
@@ -502,10 +502,6 @@ function MainViewHeader() {
   const router = useRouter();
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
   const routeView = useLocation({ select: (location) => topBarViewForPathname(location.pathname) });
-  const onThreadRoute = useParams({
-    strict: false,
-    select: (params) => "threadId" in params || "draftId" in params,
-  });
   const setThreadView = useSwitchThreadView();
   const settingsRouteOpen = useLocation({
     select: (location) => isSettingsPath(location.pathname),
@@ -525,7 +521,7 @@ function MainViewHeader() {
     setThreadView(view);
   };
   const viewShortcutLabel = shortcutLabelForCommand(keybindings, "view.toggleOverview");
-  const viewSwitchLabel = `Switch to ${shownView === "overview" ? "List" : "Overview"}${viewShortcutLabel ? ` (${viewShortcutLabel})` : ""}`;
+  const viewSwitchLabel = `${shownView === "overview" ? "Back to threads" : "Switch to Overview"}${viewShortcutLabel ? ` (${viewShortcutLabel})` : ""}`;
 
   return (
     <div className="flex h-(--main-header-height) shrink-0 items-stretch overflow-x-auto border-b border-sidebar-border bg-sidebar">
@@ -536,16 +532,6 @@ function MainViewHeader() {
             render={<div className="h-full [-webkit-app-region:no-drag]" />}
           >
             <div role="group" aria-label="Thread view" className="flex h-full">
-              <PanelTab
-                on={shownView === "list"}
-                aria-pressed={shownView === "list"}
-                onClick={() => {
-                  if (shownView !== "list") pickView("list");
-                  else if (!onThreadRoute && !settingsRouteOpen) setThreadView("list");
-                }}
-              >
-                List
-              </PanelTab>
               <PanelTab
                 on={shownView === "overview"}
                 aria-pressed={shownView === "overview"}

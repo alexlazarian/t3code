@@ -232,11 +232,12 @@ same choice.
 
 On web and desktop, **Overview** lays out each project as a column of thread cards.
 A card's left edge shows its status: green while working, amber when it needs you,
-and red when it failed or hit a usage limit. Switch between List and Overview with
-the switch above the main area, **Switch to Overview** or **Switch to List** in the command
-palette, or **Settings → General → Thread view**. T3 Code opens in the view you last
-chose. **Switch between List and Overview** has no default shortcut; assign one in
-**Settings → Keybindings**.
+and red when it failed or hit a usage limit. Open it with **Overview** above the main area
+or **Switch to Overview** in the command palette. To get back to a single thread, pick one
+in the sidebar, double-click a card, or use **Back to threads** in the command palette.
+**Settings → General → Thread view** chooses which view T3 Code opens in; it also opens in
+the view you last chose. **Switch between List and Overview** has no default shortcut;
+assign one in **Settings → Keybindings**.
 
 Click a card, or focus it and press `Space`, to open the thread below the grid. Click
 another card to switch threads. Drag the divider to resize the split. To close the thread
@@ -244,7 +245,7 @@ and get the full grid back, click an empty spot in the grid, press `Esc`, or dra
 divider all the way down. A double-click or `Enter` opens the thread in List view at
 full size.
 
-**Settings** in the **List | Overview | Pull requests | Settings** switch above the
+**Settings** in the **Overview | Pull requests | Settings** switch above the
 main area, the gear button in the top bar, **Settings** at the bottom of the Library,
 the command palette, and the app menu open Settings as a page; `Esc` or **Back**
 returns to where you were.
