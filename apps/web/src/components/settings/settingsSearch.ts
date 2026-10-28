@@ -355,13 +355,6 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["image picture photo svg wallpaper pattern hex overlay tile theme"],
   },
   {
-    id: "environment-identification",
-    title: "Environment identification",
-    to: "/settings/appearance",
-    searchTerms: ["dev nightly artwork pill label hide none"],
-    targetId: "appearance-interface",
-  },
-  {
     id: "interface-font",
     title: "Interface font",
     to: "/settings/appearance",

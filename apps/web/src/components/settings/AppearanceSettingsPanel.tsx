@@ -1,10 +1,8 @@
 import type { CSSProperties } from "react";
 import { useState } from "react";
 import {
-  DEFAULT_ENVIRONMENT_IDENTIFICATION_MODE,
   DEFAULT_UNIFIED_SETTINGS,
   type ChatWidth,
-  type EnvironmentIdentificationMode,
   MAX_APPEARANCE_CONTRAST,
   MAX_MESSAGE_LINE_HEIGHT,
   MAX_MESSAGE_PARAGRAPH_SPACING,
@@ -16,10 +14,6 @@ import {
   MIN_GLASS_OPACITY,
   MIN_PANEL_ANIMATION_DURATION_MS,
 } from "@t3tools/contracts/settings";
-import {
-  resolveEnvironmentIdentificationPillLabel,
-  useEnvironmentStageLabel,
-} from "../SidebarStageBackdrop";
 import { useCustomThemes } from "../../hooks/useCustomThemes";
 import { useTheme } from "../../hooks/useTheme";
 import { useScopedSettings, useUpdateScopedSettings } from "./useScopedSettings";
@@ -38,12 +32,6 @@ import { AdvancedSettings } from "./AdvancedSettings";
 import { PanelAnimationsPreview } from "./PanelAnimationsPreview";
 import { useReadingPreview } from "./ReadingPreview";
 import { TypographySection } from "./TypographySettings";
-
-const ENVIRONMENT_IDENTIFICATION_LABELS: Record<EnvironmentIdentificationMode, string> = {
-  artwork: "Artwork",
-  pill: "Version pill",
-  none: "None",
-};
 
 function RangeControl(props: {
   readonly id: string;
@@ -121,9 +109,6 @@ export function AppearanceSettingsPanel() {
   const [isImportThemeOpen, setIsImportThemeOpen] = useState(false);
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
-  const environmentStageLabel = useEnvironmentStageLabel();
-  const showEnvironmentIdentification =
-    resolveEnvironmentIdentificationPillLabel(environmentStageLabel) !== null;
   const glassOpacityRatio =
     (settings.glassOpacity - MIN_GLASS_OPACITY) / (MAX_GLASS_OPACITY - MIN_GLASS_OPACITY);
   const glassOpacitySliderStyle = {
@@ -364,9 +349,6 @@ export function AppearanceSettingsPanel() {
         <AdvancedSettings
           targetIds={[
             searchableSetting("panel-animations").id,
-            searchableSetting("environment-identification").id,
-            // Environment identification's search result lands on this section.
-            "appearance-interface",
             searchableSetting("composer-context").id,
           ]}
         >
@@ -421,52 +403,6 @@ export function AppearanceSettingsPanel() {
               ) : null
             }
           />
-          {showEnvironmentIdentification ? (
-            <SettingsRow
-              {...searchableSetting("environment-identification")}
-              description="Choose how Dev and Nightly environments are identified."
-              resetAction={
-                settings.environmentIdentificationMode !==
-                DEFAULT_ENVIRONMENT_IDENTIFICATION_MODE ? (
-                  <SettingResetButton
-                    label="environment identification"
-                    onClick={() =>
-                      updateSettings({
-                        environmentIdentificationMode: DEFAULT_ENVIRONMENT_IDENTIFICATION_MODE,
-                      })
-                    }
-                  />
-                ) : null
-              }
-              control={
-                <Select
-                  value={settings.environmentIdentificationMode}
-                  onValueChange={(value) => {
-                    if (value === "artwork" || value === "pill" || value === "none") {
-                      updateSettings({ environmentIdentificationMode: value });
-                    }
-                  }}
-                >
-                  <SelectTrigger
-                    size="sm"
-                    className="w-full sm:w-40"
-                    aria-label="Environment identification"
-                  >
-                    <SelectValue>
-                      {ENVIRONMENT_IDENTIFICATION_LABELS[settings.environmentIdentificationMode]}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectPopup align="end" alignItemWithTrigger={false}>
-                    {Object.entries(ENVIRONMENT_IDENTIFICATION_LABELS).map(([value, label]) => (
-                      <SelectItem hideIndicator key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectPopup>
-                </Select>
-              }
-            />
-          ) : null}
           <SettingsRow
             {...searchableSetting("composer-context")}
             description="Keep branch and worktree controls below the composer after a thread starts."
