@@ -106,6 +106,19 @@ export const threadTitleEvaluationCases = [
     ],
     rubric: "Keep title generation as the subject. Do not focus on filing the PR.",
   },
+  {
+    id: "wordy-prototype",
+    source: 'Fork thread titled "Ableton-Inspired T3 UI Prototype"',
+    request: "Prototype an Ableton-style Session View layout for the app.",
+    previousTitle: "Ableton-Inspired T3 UI Prototype",
+    messages: [
+      {
+        role: "user",
+        text: "Build a prototype of a Session View for T3 Code, inspired by Ableton Live: a grid of threads per project with clip-slot style cards, a dense square palette, and a List/Overview switch in the top bar.",
+      },
+    ],
+    rubric: '2-4 words starting with a verb, like "Prototype Session View". No stacked qualifiers.',
+  },
 ] satisfies ReadonlyArray<{
   id: string;
   source: string;
