@@ -460,14 +460,14 @@ const PairingLinkListRow = memo(function PairingLinkListRow({
               </Tooltip>
               <Button
                 size="xs"
-                variant="ghost"
+                variant="outline"
                 className="shrink-0"
                 onClick={() => copyPairingValue(qrPairingUrl, copyKindForUrl(qrPairingUrl))}
               >
                 Copy link
               </Button>
             </div>
-            <Button size="xs" variant="ghost" onClick={handleCopyCode}>
+            <Button size="xs" variant="outline" onClick={handleCopyCode}>
               Copy code only
             </Button>
           </div>

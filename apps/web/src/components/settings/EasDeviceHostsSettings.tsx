@@ -120,7 +120,7 @@ export function EasDeviceHostsSettings(props: { environmentId: EnvironmentId | n
                 <div className="flex shrink-0 gap-1">
                   <Button
                     size="sm"
-                    variant="ghost"
+                    variant="outline"
                     disabled={disabled}
                     onClick={() => setEditing({ host, isNew: false })}
                   >

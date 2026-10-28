@@ -831,7 +831,7 @@ function ConnectedAgentsStep({
           provider.driver === "codex" && getOnboardingProviderState(provider) === "ready",
       ) ? (
         <div className="mt-3">
-          <Button size="xs" variant="ghost-muted" onClick={() => setAddingAccount(true)}>
+          <Button size="xs" variant="outline" onClick={() => setAddingAccount(true)}>
             Connect another ChatGPT account
           </Button>
         </div>
@@ -992,7 +992,7 @@ function AgentCard({
         ) : (
           <Button
             size="xs"
-            variant="ghost"
+            variant="outline"
             onClick={onOpenTerminal}
             disabled={terminalOpen || !terminalAvailable}
           >
@@ -1128,7 +1128,7 @@ function AgentInstallTerminal({
           {setupState === "openFailed" ? (
             <Button
               size="xs"
-              variant="ghost"
+              variant="outline"
               disabled={!canOperateTerminal}
               onClick={() => {
                 if (readEnvironmentScope(environmentId, AuthTerminalOperateScope)) {
@@ -1468,7 +1468,7 @@ function ImportStep({
                     className="flex items-center justify-between gap-3 text-sm text-muted-foreground"
                   >
                     <span>Could not check projects. {scan.error}</span>
-                    <Button variant="ghost" size="sm" onClick={scan.refresh}>
+                    <Button variant="outline" size="sm" onClick={scan.refresh}>
                       Retry
                     </Button>
                   </div>

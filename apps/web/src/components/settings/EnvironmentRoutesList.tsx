@@ -116,8 +116,8 @@ export function EnvironmentRoutesList({
           </ol>
         </SortableContext>
       </DndContext>
-      <div className="-ml-1.5 pt-1">
-        <Button size="xs" variant="ghost-muted" onClick={onAddRoute}>
+      <div className="pt-1">
+        <Button size="xs" variant="outline" onClick={onAddRoute}>
           <PlusIcon className="size-3" />
           Add route
         </Button>

@@ -1009,7 +1009,7 @@ export function EnvironmentProviderSettings({
                 render={
                   <Button
                     size="xs"
-                    variant="ghost-muted"
+                    variant="outline"
                     disabled={isRefreshingProviders || !canRefreshProviders}
                     aria-busy={isRefreshingProviders}
                     onClick={() => void refreshProviders()}

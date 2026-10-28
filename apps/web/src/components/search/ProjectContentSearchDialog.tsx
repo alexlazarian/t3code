@@ -65,8 +65,8 @@ function SearchOptionButton(props: {
             aria-label={props.label}
             disabled={props.disabled}
             pressed={props.active}
-            size="segmented"
-            variant="segmented"
+            size="xs"
+            variant="outline"
             onClick={props.onClick}
           />
         }
@@ -167,7 +167,7 @@ function OpenContentSearchDialog(props: {
       escapeLabel="Back"
       footerActionLabel="Open file"
       inputAccessory={
-        <div className="absolute inset-e-2.5 top-1/2 flex shrink-0 -translate-y-1/2 items-center gap-0.5 rounded-lg border bg-muted/30 p-0.5">
+        <div className="absolute inset-e-2.5 top-1/2 flex shrink-0 -translate-y-1/2 items-center gap-0.5">
           <SearchOptionButton
             active={caseSensitive}
             disabled={!search.canReadFiles}

@@ -516,7 +516,7 @@ function LocationSection(props: {
         {props.canClear ? (
           <Button
             size="xs"
-            variant="ghost"
+            variant="outline"
             disabled={props.disabled}
             onClick={() => {
               setLatitude("");
@@ -588,7 +588,7 @@ function PermissionsSection(props: {
         {props.canReset ? (
           <Button
             size="xs"
-            variant="ghost"
+            variant="outline"
             disabled={props.disabled || !resolvedAppId}
             onClick={() => decide("reset")}
           >

@@ -64,7 +64,7 @@ export function LibraryItemList(props: {
                       <Button
                         key={action.label}
                         size="xs"
-                        variant="ghost"
+                        variant="outline"
                         disabled={action.disabled}
                         onClick={action.onSelect}
                       >

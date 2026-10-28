@@ -35,7 +35,7 @@ function RestoreDeviceDefaultsButton({ onRestored }: { onRestored: () => void })
   return (
     <Button
       size="xs"
-      variant="ghost"
+      variant="outline"
       disabled={changedSettingLabels.length === 0}
       onClick={() => void restoreDefaults()}
     >

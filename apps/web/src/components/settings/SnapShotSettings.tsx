@@ -460,7 +460,7 @@ export function SnapShotSettings() {
                         !isModifierPairShortcut(savedShortcut) ? (
                         <Button
                           size="xs"
-                          variant="ghost"
+                          variant="outline"
                           disabled={setupBusy || state.shortcutPending}
                           onClick={() => void setup("retry-shortcut")}
                         >
