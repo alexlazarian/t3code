@@ -9,7 +9,7 @@ import {
 } from "react";
 import { useLocation, useParams, useRouter, type AnyRouter } from "@tanstack/react-router";
 
-import { isCommandPaletteOpen } from "../commandPaletteBus";
+import { isCommandPaletteOpen, openCommandPalette } from "../commandPaletteBus";
 import { onOpenSidebarRequest } from "../sidebarOpenRequest";
 import { isElectron } from "../env";
 import {
@@ -31,11 +31,7 @@ import { selectActiveRightPanel, useRightPanelStore } from "../rightPanelStore";
 import { selectThreadTerminalUiState, useTerminalUiStateStore } from "../terminalUiStateStore";
 import { cn, isMacPlatform } from "../lib/utils";
 import { primaryServerKeybindingsAtom } from "../state/server";
-import {
-  useClientSettings,
-  useEnvironmentIdentificationMode,
-  useLegacySidebarEnabled,
-} from "../hooks/useSettings";
+import { useClientSettings, useLegacySidebarEnabled } from "../hooks/useSettings";
 import {
   PanelAnimationSuppressionProvider,
   usePanelAnimationSettings,
@@ -48,7 +44,6 @@ import ThreadSidebar from "./Sidebar";
 import { SidebarBrandWidthProbe } from "./sidebar/SidebarChrome";
 import { isAppModalPage } from "./sidebar/mainAppLocation";
 import type { SidebarRouteReveal } from "./sidebar/routeReveal";
-import { useSidebarStageBackdropVariant } from "./SidebarStageBackdrop";
 import { SidebarBackgroundLayer } from "./sidebar/SidebarBackgroundLayer";
 import {
   clampThreadSidebarWidth,
@@ -58,16 +53,12 @@ import {
   THREAD_MAIN_CONTENT_MIN_WIDTH,
   THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
 } from "./threadSidebarWidth";
-import {
-  Sidebar,
-  SidebarProvider,
-  SidebarRail,
-  SidebarTrigger,
-  useSidebar,
-  useSidebarVisibility,
-} from "./ui/sidebar";
+import { Sidebar, SidebarProvider, SidebarRail, SidebarTrigger, useSidebar } from "./ui/sidebar";
+import { Button } from "./ui/button";
+import { Kbd } from "./ui/kbd";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 import { appAtomRegistry } from "../rpc/atomRegistry";
+import { createStartNewThread } from "../shortcuts/chatRouteCommands";
 import { registerCommands, registerMenuAction } from "../shortcuts/dispatcher";
 import { resolveThreadRouteRef } from "../threadRoutes";
 import { isOverviewPathname, switchThreadView, useSwitchThreadView } from "../threadView";
@@ -287,6 +278,11 @@ function registerThreadUndoCommands(
   };
 }
 
+function openSettings(router: AnyRouter) {
+  if (!/^\/settings(\/|$)/.test(router.state.location.pathname))
+    void router.navigate({ to: "/settings" });
+}
+
 /** Keyboard and menu commands that live as long as the app shell. */
 function registerAppShellCommands(router: AnyRouter, shellElement: Element): () => void {
   // The provider mirrors the visibility it renders onto its wrapper, so the
@@ -299,26 +295,19 @@ function registerAppShellCommands(router: AnyRouter, shellElement: Element): () 
     registerNavigationHistoryCommands(router),
     registerPullRequestsEscapeCommand(router),
     registerThreadViewCommand(router),
-    registerMenuAction("open-settings", () => {
-      if (!/^\/settings(\/|$)/.test(router.state.location.pathname))
-        void router.navigate({ to: "/settings" });
-    }),
+    registerMenuAction("open-settings", () => openSettings(router)),
   ];
   return () => {
     for (const dispose of disposers) dispose();
   };
 }
 
-function SidebarControl() {
+/** The full-width bar above the sidebar and main area. On desktop it is the window's drag region. */
+function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSSProperties }) {
   const router = useRouter();
   const usagePageOpen = useLocation({ select: (location) => location.pathname === "/usage" });
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
-  const { toggleSidebar, setOpen, setOpenMobile, isMobile, mobileSheetMounted } = useSidebar();
-  const isSidebarVisible = useSidebarVisibility();
-  const environmentIdentificationMode = useEnvironmentIdentificationMode();
-  const stageBackdropVariant = useSidebarStageBackdropVariant(
-    environmentIdentificationMode === "artwork",
-  );
+  const { toggleSidebar, setOpen, setOpenMobile, isMobile } = useSidebar();
   const shortcutLabel = shortcutLabelForCommand(keybindings, "sidebar.toggle", {
     context: { usagePageOpen },
   });
@@ -331,6 +320,16 @@ function SidebarControl() {
   const viewShortcutLabel = shortcutLabelForCommand(keybindings, "view.toggleOverview");
   const sidebarToggleLabel = `Toggle main sidebar${shortcutLabel ? ` (${shortcutLabel})` : ""}`;
   const viewSwitchLabel = `Switch to ${overviewOpen ? "List" : "Overview"}${viewShortcutLabel ? ` (${viewShortcutLabel})` : ""}`;
+  const newThreadShortcutLabel = shortcutLabelForCommand(keybindings, "chat.new", {
+    context: { terminalFocus: false },
+  });
+  const paletteShortcutLabel = shortcutLabelForCommand(keybindings, "commandPalette.toggle", {
+    context: { terminalFocus: false },
+  });
+  const usageShortcutLabel = shortcutLabelForCommand(keybindings, "usage.open", {
+    context: { terminalFocus: false, usagePageOpen },
+  });
+  const [startNewThread] = useState(() => createStartNewThread(router));
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -377,68 +376,113 @@ function SidebarControl() {
     [isMobile, setOpen, setOpenMobile],
   );
 
-  // The control lives as long as the shell, so it carries the shell's commands. Created
+  // The bar lives as long as the shell, so it carries the shell's commands. Created
   // once so re-renders never re-register them.
   const [appShellCommandsRef] = useState(
-    () => (node: HTMLDivElement | null) =>
+    () => (node: HTMLElement | null) =>
       node === null ? undefined : registerAppShellCommands(router, node),
   );
 
   return (
-    <div
+    <header
       ref={appShellCommandsRef}
       className={cn(
-        "pointer-events-none fixed left-[var(--workspace-controls-left)] top-[var(--workspace-controls-top)] z-50 ml-px flex h-[var(--workspace-topbar-height)] items-center",
-        isMobile && mobileSheetMounted && "hidden",
+        "fixed inset-x-0 top-0 z-20 flex h-(--workspace-topbar-height) items-center border-b border-border bg-background pl-(--workspace-controls-left) pr-(--workspace-controls-right) text-xs wco:pr-(--workspace-native-controls-inset) [&>*]:flex [&>*]:h-full [&>*]:items-center [&>*]:gap-1 [&>*]:border-border [&>*]:px-2",
+        isElectron && "drag-region",
       )}
-      data-sidebar-control=""
+      style={windowControlsInsetStyle}
+      data-app-top-bar=""
     >
-      <Tooltip>
-        <TooltipTrigger
-          info={sidebarToggleLabel}
-          render={
-            <SidebarTrigger
-              variant={isSidebarVisible && stageBackdropVariant ? "media-navigation" : "ghost"}
-              className={cn(
-                "pointer-events-auto",
-                isSidebarVisible && stageBackdropVariant && "relative top-auto translate-y-0",
-              )}
-              aria-label="Toggle main sidebar"
-            />
-          }
-        />
-        <TooltipPopup side="bottom">{sidebarToggleLabel}</TooltipPopup>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger
-          info={viewSwitchLabel}
-          render={
-            <div className="pointer-events-auto ml-2 max-md:hidden [-webkit-app-region:no-drag]" />
-          }
-        >
-          <ToggleGroup
-            aria-label="Thread view"
-            variant="mode"
-            value={[overviewOpen ? "overview" : "list"]}
-            onValueChange={(next) => {
-              const view = next[0];
-              if (view === "list" || view === "overview") setThreadView(view);
-            }}
+      <div className="border-r pl-0!">
+        <Tooltip>
+          <TooltipTrigger
+            info={sidebarToggleLabel}
+            render={<SidebarTrigger aria-label="Toggle main sidebar" />}
+          />
+          <TooltipPopup side="bottom">{sidebarToggleLabel}</TooltipPopup>
+        </Tooltip>
+      </div>
+      <div className="border-r max-md:hidden">
+        <Tooltip>
+          <TooltipTrigger
+            info={viewSwitchLabel}
+            render={<div className="[-webkit-app-region:no-drag]" />}
           >
-            <Toggle
-              value="list"
-              onClick={() => {
-                if (!overviewOpen && !onThreadRoute) setThreadView("list");
+            <ToggleGroup
+              aria-label="Thread view"
+              variant="mode"
+              value={[overviewOpen ? "overview" : "list"]}
+              onValueChange={(next) => {
+                const view = next[0];
+                if (view === "list" || view === "overview") setThreadView(view);
               }}
             >
-              List
-            </Toggle>
-            <Toggle value="overview">Overview</Toggle>
-          </ToggleGroup>
-        </TooltipTrigger>
-        <TooltipPopup side="bottom">{viewSwitchLabel}</TooltipPopup>
-      </Tooltip>
-    </div>
+              <Toggle
+                value="list"
+                onClick={() => {
+                  if (!overviewOpen && !onThreadRoute) setThreadView("list");
+                }}
+              >
+                List
+              </Toggle>
+              <Toggle value="overview">Overview</Toggle>
+            </ToggleGroup>
+          </TooltipTrigger>
+          <TooltipPopup side="bottom">{viewSwitchLabel}</TooltipPopup>
+        </Tooltip>
+      </div>
+      <div className="border-r">
+        <Button
+          variant="outline"
+          size="xs"
+          onClick={startNewThread}
+          data-info={`New thread${newThreadShortcutLabel ? ` (${newThreadShortcutLabel})` : ""}`}
+        >
+          + New thread
+          {newThreadShortcutLabel ? <TopBarShortcut label={newThreadShortcutLabel} /> : null}
+        </Button>
+      </div>
+      <div className="min-w-0 flex-1 px-0!" />
+      <div className="border-r max-md:hidden">
+        <Button
+          variant="ghost"
+          size="xs"
+          onClick={() => openCommandPalette()}
+          data-info={`Search and commands${paletteShortcutLabel ? ` (${paletteShortcutLabel})` : ""}`}
+        >
+          Search and commands
+          {paletteShortcutLabel ? <TopBarShortcut label={paletteShortcutLabel} /> : null}
+        </Button>
+      </div>
+      <div className="pr-0!">
+        <Button
+          variant="ghost"
+          size="xs"
+          className="max-md:hidden"
+          onClick={() => void router.navigate({ to: "/usage" })}
+          data-info={`Open usage${usageShortcutLabel ? ` (${usageShortcutLabel})` : ""}`}
+        >
+          Usage
+          {usageShortcutLabel ? <TopBarShortcut label={usageShortcutLabel} /> : null}
+        </Button>
+        <Button
+          variant="ghost"
+          size="xs"
+          onClick={() => openSettings(router)}
+          data-info="Open settings"
+        >
+          Settings
+        </Button>
+      </div>
+    </header>
+  );
+}
+
+function TopBarShortcut({ label }: { label: string }) {
+  return (
+    <span className="max-md:hidden">
+      <Kbd>{label}</Kbd>
+    </span>
   );
 }
 
@@ -447,7 +491,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
   const infoBarEnabled = useClientSettings((s) => s.infoBarEnabled);
   const infoBarHeightStyle = {
     "--info-bar-height": infoBarEnabled ? "20px" : "0px",
-    "--app-height": "calc(100dvh - var(--info-bar-height))",
+    "--app-height": "calc(100dvh - var(--info-bar-height) - var(--workspace-topbar-height))",
   } as CSSProperties;
   const [sidebarRouteReveal] = useState<SidebarRouteReveal>(() => ({
     observedKey: null,
@@ -487,14 +531,14 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
   const sidebarProviderStyle = {
     "--sidebar-width": `${clampThreadSidebarWidth(sidebarWidth, sidebarMinimumWidth, sidebarMaximumWidth)}px`,
     "--panel-animation-duration": `${panelAnimationDurationMs}ms`,
-    ...windowControlsInsetStyle,
+    "--sidebar-top": "var(--workspace-topbar-height)",
   } as CSSProperties;
 
   return (
     <PanelAnimationSuppressionProvider value={panelAnimationsSuppressed}>
       <div style={infoBarHeightStyle}>
         <SidebarProvider
-          className="h-(--app-height)! min-h-0!"
+          className="mt-(--workspace-topbar-height) h-(--app-height)! min-h-0!"
           data-panel-animations={routePanelAnimationsActive ? "true" : "false"}
           defaultOpen
           style={sidebarProviderStyle}
@@ -515,7 +559,6 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
               storageKey: THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
               onResize: setSidebarWidth,
             }}
-            style={windowControlsInsetStyle}
           >
             <SidebarBackgroundLayer />
             <div className="relative flex min-h-0 flex-1 flex-col">
@@ -529,7 +572,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
           </Sidebar>
           {children}
           <BackgroundThreadAnnouncer />
-          <SidebarControl />
+          <AppTopBar windowControlsInsetStyle={windowControlsInsetStyle} />
         </SidebarProvider>
         {infoBarEnabled ? <InfoBar /> : null}
       </div>

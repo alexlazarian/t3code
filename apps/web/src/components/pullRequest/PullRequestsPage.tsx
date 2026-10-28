@@ -1341,7 +1341,6 @@ export function PullRequestsPage() {
           openPanelControls
         )
       ) : null,
-    rightPanelOpen: rightPanelState.isOpen,
     maximizedAway: rightPanelMaximized,
     listBody,
     scrollRef,
