@@ -220,6 +220,10 @@ shows how many threads match; **All** shows every thread again. The thread you h
 open stays listed even when it stops matching. **Show threads that need you** in the
 command palette applies the filter and opens the sidebar.
 
+The **All projects** menu beside the search narrows the list to one project. **Shift-click**
+another project, or press **Shift+Enter** on it, to show several at once. Overview follows the
+same choice.
+
 ## See every project at once
 
 On web and desktop, **Overview** lays out each project as a column of thread cards.
