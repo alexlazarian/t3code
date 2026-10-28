@@ -55,6 +55,8 @@ describe("resolveComposerSendHint", () => {
     prompt: "",
     modEnterLabel: "\u2318Enter",
     isRunning: false,
+    isAnsweringQuestion: false,
+    isEditingQueuedMessage: false,
     followUpBehavior: "steer" as const,
     canSteer: true,
     alternateShortcutLabel: "\u2318Enter",
@@ -85,6 +87,18 @@ describe("resolveComposerSendHint", () => {
     expect(
       resolveComposerSendHint({ ...base, isRunning: true, alternateShortcutLabel: null }),
     ).toBe("Enter steers");
+  });
+
+  it("sends an answer to a pending question while the turn waits", () => {
+    expect(resolveComposerSendHint({ ...base, isRunning: true, isAnsweringQuestion: true })).toBe(
+      "Enter sends",
+    );
+  });
+
+  it("sends a queued-message edit during a run", () => {
+    expect(
+      resolveComposerSendHint({ ...base, isRunning: true, isEditingQueuedMessage: true }),
+    ).toBe("Enter sends");
   });
 
   it("only queues while steering is unavailable", () => {

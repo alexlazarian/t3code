@@ -41,6 +41,7 @@ interface ComposerPrimaryActionsProps {
   canResume?: boolean;
   preserveComposerFocusOnPointerDown?: boolean;
   isEditingQueuedMessage?: boolean;
+  isApprovalPending?: boolean;
   onSubmitMessage?: MouseEventHandler<HTMLButtonElement>;
   onResume?: () => void;
   onPreviousPendingQuestion: () => void;
@@ -93,6 +94,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
   canResume = false,
   preserveComposerFocusOnPointerDown = false,
   isEditingQueuedMessage = false,
+  isApprovalPending = false,
   onSubmitMessage,
   onResume,
   onPreviousPendingQuestion,
@@ -298,6 +300,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
   const sendButton = (
     <Button
       type={showResume ? "button" : "submit"}
+      variant={isApprovalPending ? "outline" : "default"}
       {...pointerFocusProps}
       onClick={showResume ? onResume : onSubmitMessage}
       disabled={
@@ -307,7 +310,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
         isEnvironmentUnavailable ||
         (!hasSendableContent && !showResume)
       }
-      aria-label={submitStatus ?? submitLabel}
+      aria-label={submitStatus ? `${sendText}, ${submitStatus}` : undefined}
     >
       {isConnecting || isSendBusy ? <Spinner size="sm" aria-hidden="true" /> : null}
       {sendText}

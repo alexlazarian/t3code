@@ -63,6 +63,8 @@ export function resolveComposerSendHint(input: {
   prompt: string;
   modEnterLabel: string;
   isRunning: boolean;
+  isAnsweringQuestion: boolean;
+  isEditingQueuedMessage: boolean;
   followUpBehavior: "queue" | "steer";
   canSteer: boolean;
   alternateShortcutLabel: string | null;
@@ -70,7 +72,10 @@ export function resolveComposerSendHint(input: {
   const key = composerRequiresModifier(input.sendShortcut, input.prompt)
     ? input.modEnterLabel
     : "Enter";
-  if (!input.isRunning) return `${key} sends`;
+  // A pending question's answer or a queued-message edit is submitted, not steered or queued.
+  if (!input.isRunning || input.isAnsweringQuestion || input.isEditingQueuedMessage) {
+    return `${key} sends`;
+  }
   if (!input.canSteer) return `${key} queues`;
   const alternate = input.followUpBehavior === "queue" ? "steer" : "queue";
   const primary = `${key} ${FOLLOW_UP_VERB[input.followUpBehavior]}`;

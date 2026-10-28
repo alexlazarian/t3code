@@ -3795,7 +3795,9 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                     canSteer={!isCompacting}
                     alternateShortcutLabel={alternateSendShortcutLabel}
                     sendHint={
-                      isComposerResting || isComposerPrimaryActionsCompact
+                      isComposerResting ||
+                      isComposerPrimaryActionsCompact ||
+                      isComposerFooterCompact
                         ? null
                         : resolveComposerSendHint({
                             sendShortcut: settings.sendShortcut,
@@ -3809,6 +3811,8 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                               modKey: true,
                             }),
                             isRunning: phase === "running",
+                            isAnsweringQuestion: activePendingProgress !== null,
+                            isEditingQueuedMessage,
                             followUpBehavior,
                             canSteer: !isCompacting,
                             alternateShortcutLabel: alternateSendShortcutLabel,
@@ -3831,6 +3835,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                     canResume={showResumeAction}
                     preserveComposerFocusOnPointerDown={isMobileViewport || isComposerResting}
                     isEditingQueuedMessage={isEditingQueuedMessage}
+                    isApprovalPending={isComposerApprovalState}
                     onSubmitMessage={handleSubmitMessageStable}
                     onResume={onResume}
                     onPreviousPendingQuestion={onPreviousActivePendingUserInputQuestion}

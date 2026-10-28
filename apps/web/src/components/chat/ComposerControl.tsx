@@ -23,6 +23,8 @@ function composerControlClassName(
       : "h-7 gap-1.5 px-2 font-medium text-foreground/80 [&_svg:not([class*='text-'])]:text-muted-foreground hover:text-foreground sm:text-sm [&_svg:not([class*='size-'])]:size-4.5 sm:[&_svg:not([class*='size-'])]:size-4",
     "aria-pressed:bg-accent aria-pressed:text-accent-foreground aria-pressed:hover:bg-accent/80",
     variant === "boxed" && "rounded-none border-border bg-background",
+    // Same height as the default Button so pickers line up with Send.
+    variant === "boxed" && size === "sm" && "h-9 sm:h-6.5",
     className,
   );
 }
