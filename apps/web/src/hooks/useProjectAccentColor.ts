@@ -109,19 +109,23 @@ const faviconUrlsAtom = Atom.family((key: string) =>
 
 const listSubscribers = new Map<string, (listener: () => void) => () => void>();
 
+// Cached only while subscribed, so each column set's entry goes away with its last subscriber.
 function subscriberForUrls(urls: ReadonlyArray<string>) {
   const key = urls.join("\n");
-  let subscribe = listSubscribers.get(key);
-  if (!subscribe) {
-    subscribe = (listener) => {
-      for (const url of urls) ensureSampled(url);
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    };
+  const cached = listSubscribers.get(key);
+  if (cached) return cached;
+  let count = 0;
+  const subscribe = (listener: () => void) => {
+    for (const url of urls) ensureSampled(url);
+    listeners.add(listener);
+    count += 1;
     listSubscribers.set(key, subscribe);
-  }
+    return () => {
+      listeners.delete(listener);
+      count -= 1;
+      if (count === 0 && listSubscribers.get(key) === subscribe) listSubscribers.delete(key);
+    };
+  };
   return subscribe;
 }
 

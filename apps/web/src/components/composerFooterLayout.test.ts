@@ -13,12 +13,14 @@ describe("resolveComposerTimelineInset", () => {
       currentInset: 0,
       overlayHeight: 172,
       isResting: false,
+      remPx: 13,
     });
     const collapsed = resolveComposerTimelineInset({
       currentInset: expanded,
       overlayHeight: 110,
       isResting: true,
       restingOnlyHeight: 32,
+      remPx: 13,
     });
     expect(collapsed).toBe(expanded);
     expect(
@@ -26,8 +28,16 @@ describe("resolveComposerTimelineInset", () => {
         currentInset: collapsed,
         overlayHeight: 172,
         isResting: false,
+        remPx: 13,
       }),
     ).toBe(expanded);
+  });
+
+  it("reserves the resting composer's expansion in root-relative units", () => {
+    const resting = (remPx: number) =>
+      resolveComposerTimelineInset({ currentInset: 0, overlayHeight: 100, isResting: true, remPx });
+    expect(resting(16)).toBe(100 + 71);
+    expect(resting(13)).toBe(100 + 58);
   });
 });
 

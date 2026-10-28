@@ -33,6 +33,7 @@ import { selectThreadTerminalUiState, useTerminalUiStateStore } from "../termina
 import { cn, isMacPlatform } from "../lib/utils";
 import { primaryServerKeybindingsAtom } from "../state/server";
 import { useClientSettings, useLegacySidebarEnabled } from "../hooks/useSettings";
+import { useProjects } from "../state/entities";
 import {
   PanelAnimationSuppressionProvider,
   usePanelAnimationSettings,
@@ -331,6 +332,10 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
     context: { terminalFocus: false, usagePageOpen },
   });
   const [startNewThread] = useState(() => createStartNewThread(router));
+  const hasProjects = useProjects().length > 0;
+  const newThreadLabel = hasProjects
+    ? `New thread${newThreadShortcutLabel ? ` (${newThreadShortcutLabel})` : ""}`
+    : "Add a project first";
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -433,15 +438,18 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
         </Tooltip>
       </div>
       <div className="border-r">
-        <Button
-          variant="outline"
-          size="xs"
-          onClick={startNewThread}
-          data-info={`New thread${newThreadShortcutLabel ? ` (${newThreadShortcutLabel})` : ""}`}
-        >
-          + New thread
-          {newThreadShortcutLabel ? <TopBarShortcut label={newThreadShortcutLabel} /> : null}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger
+            info={newThreadLabel}
+            render={<span className="inline-flex [-webkit-app-region:no-drag]" />}
+          >
+            <Button variant="outline" size="xs" disabled={!hasProjects} onClick={startNewThread}>
+              + New thread
+              {newThreadShortcutLabel ? <TopBarShortcut label={newThreadShortcutLabel} /> : null}
+            </Button>
+          </TooltipTrigger>
+          <TooltipPopup side="bottom">{newThreadLabel}</TooltipPopup>
+        </Tooltip>
       </div>
       <div className="min-w-0 flex-1 px-0!" />
       <div className="border-r">

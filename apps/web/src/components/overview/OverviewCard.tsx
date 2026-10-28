@@ -3,6 +3,7 @@ import { resolveSettledThreadTimestamp } from "@t3tools/client-runtime/state/thr
 import { memo, type KeyboardEvent, type MouseEvent } from "react";
 
 import { readLocalApi } from "../../localApi";
+import { OVERVIEW_INK } from "../../projectAccentColor.logic";
 import { cn } from "~/lib/utils";
 import type { SidebarThreadSummary } from "../../types";
 import { RelativeTimeLabel, threadTimeTimestamp } from "../sidebar/RelativeTimeLabel";
@@ -90,9 +91,9 @@ export const OverviewCard = memo(function OverviewCard(props: {
       onDoubleClick={() => props.onOpen(threadKey)}
       onKeyDown={handleKeyDown}
       onContextMenu={handleContextMenu}
-      style={{ backgroundColor: props.fill }}
+      style={{ backgroundColor: props.fill, color: OVERVIEW_INK }}
       className={cn(
-        "grid min-h-9 cursor-pointer grid-cols-[20px_minmax(0,1fr)] border border-border text-overview-ink outline-0 -outline-offset-1 outline-ring select-none focus-visible:outline-2",
+        "grid min-h-9 cursor-pointer grid-cols-[20px_minmax(0,1fr)] border border-border outline-0 -outline-offset-1 outline-ring select-none focus-visible:outline-2",
         status?.icon === "working" && "bg-overview-working",
         props.selected && "outline-2 outline-primary",
         props.offline
@@ -116,8 +117,8 @@ export const OverviewCard = memo(function OverviewCard(props: {
       </span>
       <span className="min-w-0 px-1.5 py-0.75">
         <span className="block truncate text-xs font-semibold">{thread.title}</span>
-        <span className="flex gap-1.5 overflow-hidden text-3xs whitespace-nowrap text-overview-ink/80">
-          <span className="font-semibold text-overview-ink">
+        <span className="flex gap-1.5 overflow-hidden text-3xs whitespace-nowrap">
+          <span className="font-semibold">
             {status ? (
               status.label
             ) : (

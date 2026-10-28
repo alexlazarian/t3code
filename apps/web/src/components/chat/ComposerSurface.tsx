@@ -15,7 +15,7 @@ function Shell({
       data-with-context={contextStrip || undefined}
       className={cn(
         "@container/composer-surface group/composer-surface relative isolate mx-auto w-full max-w-(--chat-content-max-width)",
-        "[--chat-composer-drawer-inset:0rem] [--chat-composer-glass-surface:var(--background)] [--chat-composer-outline:var(--border)]",
+        "[--chat-composer-drawer-inset:0rem] [--chat-composer-glass-surface:var(--background)]",
         className,
       )}
       {...props}

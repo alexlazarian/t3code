@@ -97,7 +97,8 @@ function mixOklab(a: Oklab, b: Oklab, share: number): Oklab {
 const NEUTRAL_PROJECT_COLOR = "#8d867d";
 const FILL_BASE = "#8a857e";
 const FILL_SHARE = 0.74;
-const INK = "#16130f";
+/** Dark ink on every overview fill, in both themes, as in the prototype. */
+export const OVERVIEW_INK = "#16130f";
 const MIN_INK_CONTRAST = 4.5;
 // The prototype lifts sampled favicon colors at least this far toward white.
 const SAMPLE_LIFT = 0.32;
@@ -111,7 +112,10 @@ export function fillInkContrast(hex: string, whiteShare = 0): number {
     [1, 0, 0],
     1 - whiteShare,
   );
-  return (relativeLuminance(fill) + 0.05) / (relativeLuminance(oklab(...hexChannels(INK))) + 0.05);
+  return (
+    (relativeLuminance(fill) + 0.05) /
+    (relativeLuminance(oklab(...hexChannels(OVERVIEW_INK))) + 0.05)
+  );
 }
 
 function liftSample(hex: string): string {

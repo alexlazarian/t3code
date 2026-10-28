@@ -50,16 +50,20 @@ export const SidebarChromeHeader = memo(function SidebarChromeHeader({
       ? resolveEnvironmentIdentificationPillLabel(stageLabel)
       : null;
 
+  // On desktop the tabs lead; the row stays only for the sheet's close trigger, brand, artwork or pill.
+  const desktopRow = !showPanelTabs || backdropVariant !== null || pillLabel !== null;
+
   return (
     <>
       <div
         className={cn(
           "relative flex h-[var(--workspace-topbar-height)] shrink-0 flex-row items-center gap-2 pr-3",
           isElectron && "drag-region",
+          !desktopRow && "md:hidden",
         )}
       >
         {backdropVariant ? <SidebarStageBackdrop variant={backdropVariant} /> : null}
-        <div className="relative top-[calc(var(--workspace-controls-top)-env(safe-area-inset-top))] z-10 ml-[calc(var(--workspace-controls-left)+1px-env(safe-area-inset-left))] flex shrink-0 items-center md:hidden">
+        <div className="relative top-[calc(-1*env(safe-area-inset-top))] z-10 ml-[calc(var(--workspace-controls-left)+1px-env(safe-area-inset-left))] flex shrink-0 items-center md:hidden">
           <SidebarTrigger
             variant={backdropVariant ? "media-navigation" : "ghost"}
             className="relative top-auto translate-y-0"

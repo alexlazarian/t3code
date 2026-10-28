@@ -94,7 +94,6 @@ export function createSidebarSortingStrategy(input: {
   snoozedThreadCount?: number;
   cardHeight?: number;
   slimHeight?: number;
-  boundaryLabelHeight?: number;
 }): SortingStrategy {
   if (input.enabled === false) return () => stationary;
   const { items } = input;
@@ -128,7 +127,6 @@ export function createSidebarSortingStrategy(input: {
     // Card and slim rows share one look, so a measured row of either kind sizes the other.
     cardHeight ??= slimHeight ?? 82 * scale;
     slimHeight ??= cardHeight;
-    const labelHeight = (input.boundaryLabelHeight ?? 0) * scale;
     const group = groups[target.section];
     const order =
       target.section === "pinned"
@@ -189,15 +187,15 @@ export function createSidebarSortingStrategy(input: {
           : slimHeight;
       const moved = item.kind === "thread" && item.key === active.key;
       return item.kind === "marker" &&
-        (item.marker === "pinned-header" || item.marker === "pinned-divider")
-        ? rect?.height || labelHeight
-        : item.kind === "marker" && item.marker === "pinned-placeholder"
-          ? (rect?.height ?? 0)
-          : item.kind === "marker" && item.marker.endsWith("placeholder")
-            ? rect?.height || slimHeight
-            : moved
-              ? fallback
-              : (rect?.height ?? fallback);
+        (item.marker === "pinned-header" ||
+          item.marker === "pinned-divider" ||
+          item.marker === "pinned-placeholder")
+        ? (rect?.height ?? 0)
+        : item.kind === "marker" && item.marker.endsWith("placeholder")
+          ? rect?.height || slimHeight
+          : moved
+            ? fallback
+            : (rect?.height ?? fallback);
     });
     const result = items.map(() => hidden);
     let top = rects[0].top;

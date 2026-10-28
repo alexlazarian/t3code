@@ -853,5 +853,4 @@ export {
   SidebarRail,
   SidebarTrigger,
   useSidebar,
-  useSidebarVisibility,
 };

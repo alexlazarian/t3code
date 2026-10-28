@@ -274,13 +274,10 @@ import { useRemoteOpenState } from "~/remoteOpen";
 import { shouldShowOpenInPicker } from "./chat/OpenInPicker.logic";
 import { useOpenFavoriteEditorShortcut } from "./chat/OpenInPickerShortcut";
 import {
+  FloatingRightPanelMaximizeControl,
   PanelLayoutControls,
-  type PanelLayoutControlsProps,
   RightPanelMaximizeControl,
-  ThreadHeaderTools,
-  WorkspaceTitlebarControls,
 } from "./chat/PanelLayoutControls";
-import { resolveThreadHeaderTools } from "./chat/threadHeaderTools.logic";
 import type { ExpandedImagePreview } from "./chat/ExpandedImagePreview";
 import { ThreadDetailsPanel } from "./chat/ThreadDetailsPanel";
 import { NoActiveThreadState } from "./NoActiveThreadState";
@@ -2134,6 +2131,7 @@ export default function ChatView(props: ChatViewProps) {
       overlayHeight: height,
       isResting,
       restingOnlyHeight,
+      remPx: Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16,
     });
     if (composerTimelineInsetRef.current !== nextInset) {
       composerTimelineInsetRef.current = nextInset;
@@ -3066,66 +3064,19 @@ export default function ChatView(props: ChatViewProps) {
       }}
     />
   ) : null;
-  const panelToggleControlProps = {
-    terminalAvailable: activeProject !== null,
-    terminalOpen: terminalUiState.terminalOpen,
-    terminalShortcutLabel: shortcutLabelForCommand(keybindings, "terminal.toggle"),
-    threadPanelOpen,
-    threadPanelPresentation,
-    threadPanelPopoverHandle,
-    threadPanelShortcutLabel: shortcutLabelForCommand(keybindings, "threadPanel.toggle"),
-    rightPanelAvailable: activeProject !== null,
-    rightPanelOpen,
-    rightPanelShortcutLabel: shortcutLabelForCommand(keybindings, "rightPanel.toggle"),
-    onToggleTerminal: toggleTerminalVisibilityStable,
-    onToggleThreadPanel: toggleThreadPanelStable,
-    onToggleRightPanel: toggleRightPanelStable,
-  } satisfies PanelLayoutControlsProps;
+  const terminalShortcutLabel = shortcutLabelForCommand(keybindings, "terminal.toggle");
+  const threadPanelShortcutLabel = shortcutLabelForCommand(keybindings, "threadPanel.toggle");
+  const rightPanelShortcutLabel = shortcutLabelForCommand(keybindings, "rightPanel.toggle");
   const panelToggleControls = (
     <PanelLayoutControls
-      {...panelToggleControlProps}
-      showThreadPanelControl={false}
-      showTerminalControl={false}
-    />
-  );
-  const threadHeaderToolStates = resolveThreadHeaderTools({
-    activeSurfaceKind: activeRightPanelKind,
-    isServerThread,
-    isGitRepo,
-    hasProject: activeProject !== null,
-    browserAvailable,
-    canOperatePreview,
-    pullRequestsAvailable: pullRequestsSurfaceAvailable,
-  });
-  const threadHeaderTools = (
-    <ThreadHeaderTools
-      threadPanelOpen={threadPanelOpen}
-      threadPanelPresentation={threadPanelPresentation}
-      threadPanelPopoverHandle={threadPanelPopoverHandle}
-      threadPanelShortcutLabel={panelToggleControlProps.threadPanelShortcutLabel}
-      onToggleThreadPanel={toggleThreadPanelStable}
-      diff={threadHeaderToolStates.diff}
-      diffShortcutLabel={shortcutLabelForCommand(keybindings, "diff.toggle")}
-      onToggleDiff={onToggleDiffStable}
-      preview={threadHeaderToolStates.preview}
-      previewShortcutLabel={shortcutLabelForCommand(keybindings, "preview.toggle")}
-      onTogglePreview={togglePreviewPanelStable}
-      files={threadHeaderToolStates.files}
-      onToggleFiles={toggleFilesSurfaceStable}
-      pullRequests={threadHeaderToolStates.pullRequests}
-      onTogglePullRequests={togglePullRequestsSurfaceStable}
-      terminalAvailable={panelToggleControlProps.terminalAvailable}
-      terminalOpen={panelToggleControlProps.terminalOpen}
-      terminalShortcutLabel={panelToggleControlProps.terminalShortcutLabel}
-      onToggleTerminal={toggleTerminalVisibilityStable}
-      rightPanelAvailable={panelToggleControlProps.rightPanelAvailable}
+      rightPanelAvailable={activeProject !== null}
       rightPanelOpen={rightPanelOpen}
-      rightPanelShortcutLabel={panelToggleControlProps.rightPanelShortcutLabel}
+      rightPanelShortcutLabel={rightPanelShortcutLabel}
       onToggleRightPanel={toggleRightPanelStable}
     />
   );
   const panelLayoutControls = (
-    <WorkspaceTitlebarControls
+    <FloatingRightPanelMaximizeControl
       showMaximizeControl={!shouldUsePlanSidebarSheet}
       rightPanelOpen={rightPanelOpen}
       animationsActive={panelAnimationsActive}
@@ -3168,12 +3119,6 @@ export default function ChatView(props: ChatViewProps) {
               : "flex h-[var(--workspace-topbar-height)] min-h-[var(--workspace-topbar-height)] shrink-0 items-center pl-(--workspace-gutter-start) pr-(--workspace-gutter-end)",
           )}
         >
-          {isElectron && rightPanelControlsAtRoot ? (
-            <span
-              aria-hidden
-              className="pointer-events-none fixed top-(--app-top-bar-bottom) right-[var(--workspace-controls-right)] h-[var(--workspace-topbar-height)] w-28 [-webkit-app-region:no-drag]"
-            />
-          ) : null}
           <ChatHeader
             activeThreadEnvironmentId={activeThread.environmentId}
             activeThreadId={activeThread.id}
@@ -3187,7 +3132,31 @@ export default function ChatView(props: ChatViewProps) {
             {...(activeDraftLogicalProjectKey
               ? { onOpenProjectSettings: handleOpenDraftProjectSettingsStable }
               : {})}
-            tools={threadHeaderTools}
+            threadPanelOpen={threadPanelOpen}
+            threadPanelPresentation={threadPanelPresentation}
+            threadPanelPopoverHandle={threadPanelPopoverHandle}
+            threadPanelShortcutLabel={threadPanelShortcutLabel}
+            onToggleThreadPanel={toggleThreadPanelStable}
+            activeSurfaceKind={activeRightPanelKind}
+            isGitRepo={isGitRepo}
+            hasProject={activeProject !== null}
+            browserAvailable={browserAvailable}
+            canOperatePreview={canOperatePreview}
+            pullRequestsAvailable={pullRequestsSurfaceAvailable}
+            diffShortcutLabel={shortcutLabelForCommand(keybindings, "diff.toggle")}
+            onToggleDiff={onToggleDiffStable}
+            previewShortcutLabel={shortcutLabelForCommand(keybindings, "preview.toggle")}
+            onTogglePreview={togglePreviewPanelStable}
+            onToggleFiles={toggleFilesSurfaceStable}
+            onTogglePullRequests={togglePullRequestsSurfaceStable}
+            terminalAvailable={activeProject !== null}
+            terminalOpen={terminalUiState.terminalOpen}
+            terminalShortcutLabel={terminalShortcutLabel}
+            onToggleTerminal={toggleTerminalVisibilityStable}
+            rightPanelAvailable={activeProject !== null}
+            rightPanelOpen={rightPanelOpen}
+            rightPanelShortcutLabel={rightPanelShortcutLabel}
+            onToggleRightPanel={toggleRightPanelStable}
           />
         </header>
 

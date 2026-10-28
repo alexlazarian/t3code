@@ -19,7 +19,6 @@ import {
   useEffect,
   useRef,
   useState,
-  type ReactNode,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
 } from "react";
@@ -57,6 +56,7 @@ import { cn } from "~/lib/utils";
 import { textDirection } from "~/textDirection";
 import { useClientSettings } from "../../hooks/useSettings";
 import { GuestShareIndicator } from "./GuestShareControls";
+import { ThreadHeaderTools, type ThreadHeaderToolsProps } from "./PanelLayoutControls";
 
 interface ChatHeaderProps {
   activeThreadEnvironmentId: EnvironmentId;
@@ -69,10 +69,8 @@ interface ChatHeaderProps {
   onOpenThread: (threadId: ThreadId) => void;
   onNewThreadInProject: () => void;
   onOpenProjectSettings?: (() => void) | undefined;
-  tools: ReactNode;
 }
 
-/** The status word the thread's sidebar row shows. */
 function ThreadHeaderStatus({ thread }: { thread: EnvironmentThreadShell }) {
   const localLastVisitedAt = useUiStateStore(
     (state) =>
@@ -123,8 +121,8 @@ export const ChatHeader = memo(function ChatHeader({
   onOpenThread,
   onNewThreadInProject,
   onOpenProjectSettings,
-  tools,
-}: ChatHeaderProps) {
+  ...tools
+}: ChatHeaderProps & Omit<ThreadHeaderToolsProps, "isServerThread">) {
   const activeProjectName = activeProject?.isScratch ? "No project" : activeProject?.title;
   const activeProjectCwd = activeProject?.workspaceRoot ?? null;
   const interfaceFont = useClientSettings((settings) => settings.fontFamilySans);
@@ -454,7 +452,7 @@ export const ChatHeader = memo(function ChatHeader({
         </WorkspaceBreadcrumbItem>
       </WorkspaceBreadcrumb>
       {isServerThread ? <GuestShareIndicator threadRef={activeThreadRef} /> : null}
-      {tools}
+      <ThreadHeaderTools {...tools} isServerThread={isServerThread} />
     </div>
   );
 });

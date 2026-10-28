@@ -44,10 +44,12 @@ export function shouldUseRestingComposerLayout(input: {
 /**
  * How much taller the empty expanded composer is than its resting row on
  * desktop widths, from the layout classes in ChatComposer: the body's bottom
- * padding grows 2px (pb-1.5 to py-2), the prompt clamps from min-h-17.5 (70px)
- * to 32px, and the 35px docked footer (26px controls, p-1, border-t) leaves flow.
+ * padding grows 0.125rem (pb-1.5 to py-2), the prompt clamps from min-h-17.5
+ * to min-h-8, and the docked footer (h-6.5 controls, p-1, 1px border-t) leaves flow.
  */
-const COMPOSER_RESTING_EXPANSION_MIN_PX = 71;
+function composerRestingExpansionPx(remPx: number): number {
+  return Math.ceil((4.375 - 2 + 2.125 - 0.125) * remPx + 1);
+}
 
 /** Reserve expansion height because the timeline does not move when footer growth covers its last rows. */
 export function resolveComposerTimelineInset(input: {
@@ -55,6 +57,8 @@ export function resolveComposerTimelineInset(input: {
   overlayHeight: number;
   isResting: boolean;
   restingOnlyHeight?: number;
+  /** The root font size in pixels. */
+  remPx: number;
 }): number {
   const overlayHeight = Math.ceil(input.overlayHeight);
   return input.isResting
@@ -62,7 +66,7 @@ export function resolveComposerTimelineInset(input: {
         input.currentInset,
         overlayHeight +
           (input.currentInset === 0
-            ? COMPOSER_RESTING_EXPANSION_MIN_PX - (input.restingOnlyHeight ?? 0)
+            ? composerRestingExpansionPx(input.remPx) - (input.restingOnlyHeight ?? 0)
             : 0),
       )
     : overlayHeight;

@@ -1096,26 +1096,16 @@ export function PullRequestsPage() {
   );
   const panelToggleControls = (
     <PanelLayoutControls
-      showTerminalControl={false}
-      showThreadPanelControl={false}
-      terminalAvailable={false}
-      terminalOpen={false}
-      terminalShortcutLabel={null}
-      threadPanelOpen={false}
-      threadPanelPresentation="inline"
-      threadPanelShortcutLabel={null}
-      onToggleThreadPanel={() => undefined}
       rightPanelAvailable={rightPanelAvailable}
       rightPanelOpen={rightPanelState.isOpen}
       rightPanelShortcutLabel={shortcutLabelForCommand(keybindings, "rightPanel.toggle")}
       rightPanelUnavailableLabel="Select a pull request first"
-      onToggleTerminal={() => undefined}
       onToggleRightPanel={toggleRightPanel}
     />
   );
   const openPanelControls = (
     <div
-      className="absolute top-[var(--workspace-controls-top)] right-[var(--workspace-controls-right)] z-50 mr-px flex h-[var(--workspace-topbar-height)] items-center gap-1 [-webkit-app-region:no-drag]"
+      className="absolute top-0 right-[var(--workspace-controls-right)] z-50 mr-px flex h-[var(--workspace-topbar-height)] items-center gap-1 [-webkit-app-region:no-drag]"
       data-workspace-titlebar-controls
     >
       {rightPanelState.isOpen ? (
@@ -1449,6 +1439,7 @@ export function PullRequestsPage() {
         {rightPanelPresent && renderedPullRequestSurface && panelEnvironmentId !== null ? (
           <RightPanelTabs
             mode="inline"
+            floatingPanelToggle
             open={rightPanelState.isOpen}
             maximized={rightPanelMaximized}
             keybindings={keybindings}
