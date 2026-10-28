@@ -131,6 +131,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
   const renderStopGenerationButton = (insidePendingAction: boolean) => (
     <Tooltip key="interrupt">
       <TooltipTrigger
+        info="Interrupt"
         render={
           <button
             type="button"
@@ -355,7 +356,9 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
 
   const submit = (
     <Tooltip key="submit">
-      <TooltipTrigger render={<span className="inline-flex" />}>{sendButton}</TooltipTrigger>
+      <TooltipTrigger info={submitTooltip} render={<span className="inline-flex" />}>
+        {sendButton}
+      </TooltipTrigger>
       <TooltipPopup>{submitTooltip}</TooltipPopup>
     </Tooltip>
   );
@@ -365,6 +368,11 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
     <div data-chat-composer-compact-send="true" className="flex items-center gap-2">
       <Tooltip>
         <TooltipTrigger
+          info={`${
+            keepFullHistory
+              ? `Next send keeps all ${compactTokens} tokens.`
+              : `Next send compacts ${compactTokens} tokens first.`
+          } ${keepFullHistory ? "Click to compact first" : "Click to keep full history"}`}
           render={
             <button
               type="button"

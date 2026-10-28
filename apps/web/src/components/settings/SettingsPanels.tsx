@@ -445,6 +445,7 @@ export function useSettingsRestore(onRestored?: () => void) {
       ? ["Project order"]
       : []),
     ...(settings.threadView !== DEFAULT_UNIFIED_SETTINGS.threadView ? ["Thread view"] : []),
+    ...(settings.infoBarEnabled !== DEFAULT_UNIFIED_SETTINGS.infoBarEnabled ? ["Info bar"] : []),
     ...(settings.sidebarWorkingShelfEnabled !== DEFAULT_UNIFIED_SETTINGS.sidebarWorkingShelfEnabled
       ? ["Working section"]
       : []),
@@ -619,6 +620,7 @@ export function useSettingsRestore(onRestored?: () => void) {
       sidebarProjectGroupingMode: DEFAULT_UNIFIED_SETTINGS.sidebarProjectGroupingMode,
       sidebarProjectSortOrder: DEFAULT_UNIFIED_SETTINGS.sidebarProjectSortOrder,
       threadView: DEFAULT_UNIFIED_SETTINGS.threadView,
+      infoBarEnabled: DEFAULT_UNIFIED_SETTINGS.infoBarEnabled,
       sidebarWorkingShelfEnabled: DEFAULT_UNIFIED_SETTINGS.sidebarWorkingShelfEnabled,
       sidebarAutoSettleAfterDays: DEFAULT_UNIFIED_SETTINGS.sidebarAutoSettleAfterDays,
       sidebarAutoSettleKeepPullRequests: DEFAULT_UNIFIED_SETTINGS.sidebarAutoSettleKeepPullRequests,

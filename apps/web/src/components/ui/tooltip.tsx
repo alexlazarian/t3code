@@ -81,15 +81,17 @@ function Tooltip<Payload>(props: TooltipPrimitive.Root.Props<Payload>) {
   );
 }
 
-function TooltipTrigger(props: TooltipPrimitive.Trigger.Props) {
+/** `info` is the popup's text, mirrored to the bottom info bar through `data-info`. */
+function TooltipTrigger({ info, ...props }: TooltipPrimitive.Trigger.Props & { info?: string }) {
   const tracker = use(TooltipScrollContext);
   const actionsRef = use(TooltipHoverContext);
   if (!tracker || !actionsRef) {
-    return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
+    return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" data-info={info} {...props} />;
   }
   return (
     <TooltipPrimitive.Trigger
       data-slot="tooltip-trigger"
+      data-info={info}
       {...props}
       onMouseEnter={(event) => {
         props.onMouseEnter?.(event);

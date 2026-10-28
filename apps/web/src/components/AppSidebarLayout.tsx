@@ -31,12 +31,17 @@ import { selectActiveRightPanel, useRightPanelStore } from "../rightPanelStore";
 import { selectThreadTerminalUiState, useTerminalUiStateStore } from "../terminalUiStateStore";
 import { cn, isMacPlatform } from "../lib/utils";
 import { primaryServerKeybindingsAtom } from "../state/server";
-import { useEnvironmentIdentificationMode, useLegacySidebarEnabled } from "../hooks/useSettings";
+import {
+  useClientSettings,
+  useEnvironmentIdentificationMode,
+  useLegacySidebarEnabled,
+} from "../hooks/useSettings";
 import {
   PanelAnimationSuppressionProvider,
   usePanelAnimationSettings,
   usePanelNavigationSuppression,
 } from "../panelAnimations";
+import { InfoBar } from "./InfoBar";
 import { BackgroundThreadAnnouncer } from "./BackgroundThreadAnnouncer";
 import LegacyThreadSidebar from "./LegacySidebar";
 import ThreadSidebar from "./Sidebar";
@@ -324,6 +329,8 @@ function SidebarControl() {
   });
   const setThreadView = useSwitchThreadView();
   const viewShortcutLabel = shortcutLabelForCommand(keybindings, "view.toggleOverview");
+  const sidebarToggleLabel = `Toggle main sidebar${shortcutLabel ? ` (${shortcutLabel})` : ""}`;
+  const viewSwitchLabel = `Switch to ${overviewOpen ? "List" : "Overview"}${viewShortcutLabel ? ` (${viewShortcutLabel})` : ""}`;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -388,6 +395,7 @@ function SidebarControl() {
     >
       <Tooltip>
         <TooltipTrigger
+          info={sidebarToggleLabel}
           render={
             <SidebarTrigger
               variant={isSidebarVisible && stageBackdropVariant ? "media-navigation" : "ghost"}
@@ -399,12 +407,11 @@ function SidebarControl() {
             />
           }
         />
-        <TooltipPopup side="bottom">
-          Toggle main sidebar{shortcutLabel ? ` (${shortcutLabel})` : ""}
-        </TooltipPopup>
+        <TooltipPopup side="bottom">{sidebarToggleLabel}</TooltipPopup>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger
+          info={viewSwitchLabel}
           render={
             <div className="pointer-events-auto ml-2 max-md:hidden [-webkit-app-region:no-drag]" />
           }
@@ -429,10 +436,7 @@ function SidebarControl() {
             <Toggle value="overview">Overview</Toggle>
           </ToggleGroup>
         </TooltipTrigger>
-        <TooltipPopup side="bottom">
-          Switch to {overviewOpen ? "List" : "Overview"}
-          {viewShortcutLabel ? ` (${viewShortcutLabel})` : ""}
-        </TooltipPopup>
+        <TooltipPopup side="bottom">{viewSwitchLabel}</TooltipPopup>
       </Tooltip>
     </div>
   );
@@ -440,6 +444,10 @@ function SidebarControl() {
 
 export function AppSidebarLayout({ children }: { children: ReactNode }) {
   const legacySidebarEnabled = useLegacySidebarEnabled();
+  const infoBarEnabled = useClientSettings((s) => s.infoBarEnabled);
+  const infoBarHeightStyle = {
+    "--info-bar-height": infoBarEnabled ? "20px" : "0px",
+  } as CSSProperties;
   const [sidebarRouteReveal] = useState<SidebarRouteReveal>(() => ({
     observedKey: null,
     pendingKey: null,
@@ -481,44 +489,47 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
 
   return (
     <PanelAnimationSuppressionProvider value={panelAnimationsSuppressed}>
-      <SidebarProvider
-        className="h-dvh! min-h-0!"
-        data-panel-animations={routePanelAnimationsActive ? "true" : "false"}
-        defaultOpen
-        style={sidebarProviderStyle}
-      >
-        <SidebarBrandWidthProbe onWidthChange={setBrandWidth} />
-        <Sidebar
-          side="left"
-          collapsible="offcanvas"
-          data-app-sidebar=""
-          role="navigation"
-          aria-label="Threads"
-          resizable={{
-            maxWidth: sidebarMaximumWidth,
-            minWidth: sidebarMinimumWidth,
-            shouldAcceptWidth: ({ currentWidth, nextWidth, wrapper }) =>
-              nextWidth <= currentWidth ||
-              wrapper.clientWidth - nextWidth >= THREAD_MAIN_CONTENT_MIN_WIDTH,
-            storageKey: THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
-            onResize: setSidebarWidth,
-          }}
-          style={windowControlsInsetStyle}
+      <div style={infoBarHeightStyle}>
+        <SidebarProvider
+          className="h-[calc(100dvh-var(--info-bar-height,0px))]! min-h-0!"
+          data-panel-animations={routePanelAnimationsActive ? "true" : "false"}
+          defaultOpen
+          style={sidebarProviderStyle}
         >
-          <SidebarBackgroundLayer />
-          <div className="relative flex min-h-0 flex-1 flex-col">
-            {legacySidebarEnabled ? (
-              <LegacyThreadSidebar routeReveal={sidebarRouteReveal} />
-            ) : (
-              <ThreadSidebar routeReveal={sidebarRouteReveal} />
-            )}
-          </div>
-          <SidebarRail onDoubleClick={resetSidebarWidth} />
-        </Sidebar>
-        {children}
-        <BackgroundThreadAnnouncer />
-        <SidebarControl />
-      </SidebarProvider>
+          <SidebarBrandWidthProbe onWidthChange={setBrandWidth} />
+          <Sidebar
+            side="left"
+            collapsible="offcanvas"
+            data-app-sidebar=""
+            role="navigation"
+            aria-label="Threads"
+            resizable={{
+              maxWidth: sidebarMaximumWidth,
+              minWidth: sidebarMinimumWidth,
+              shouldAcceptWidth: ({ currentWidth, nextWidth, wrapper }) =>
+                nextWidth <= currentWidth ||
+                wrapper.clientWidth - nextWidth >= THREAD_MAIN_CONTENT_MIN_WIDTH,
+              storageKey: THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
+              onResize: setSidebarWidth,
+            }}
+            style={windowControlsInsetStyle}
+          >
+            <SidebarBackgroundLayer />
+            <div className="relative flex min-h-0 flex-1 flex-col">
+              {legacySidebarEnabled ? (
+                <LegacyThreadSidebar routeReveal={sidebarRouteReveal} />
+              ) : (
+                <ThreadSidebar routeReveal={sidebarRouteReveal} />
+              )}
+            </div>
+            <SidebarRail onDoubleClick={resetSidebarWidth} />
+          </Sidebar>
+          {children}
+          <BackgroundThreadAnnouncer />
+          <SidebarControl />
+        </SidebarProvider>
+        {infoBarEnabled ? <InfoBar /> : null}
+      </div>
     </PanelAnimationSuppressionProvider>
   );
 }

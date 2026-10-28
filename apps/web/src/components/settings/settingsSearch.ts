@@ -440,6 +440,12 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["list overview columns board projects sidebar layout"],
   },
   {
+    id: "info-bar",
+    title: "Info bar",
+    to: "/settings/appearance",
+    searchTerms: ["bottom status tooltip hint shortcut hover help"],
+  },
+  {
     id: "working-shelf",
     title: "Working section",
     to: "/settings/general",

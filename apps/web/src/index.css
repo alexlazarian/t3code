@@ -372,6 +372,11 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   }
 }
 
+/* The app shell height: the viewport minus the bottom info bar. */
+@utility h-app {
+  height: calc(100dvh - var(--info-bar-height, 0px));
+}
+
 @utility surface-glass {
   background: color-mix(in srgb, var(--background) var(--glass-opacity), transparent);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
