@@ -245,8 +245,9 @@ divider all the way down. A double-click or `Enter` opens the thread in List vie
 full size.
 
 **Settings** in the **List | Overview | Pull requests | Settings** switch above the
-main area, the command palette, and the app menu open Settings as a page; `Esc` or
-**Back** returns to where you were.
+main area, the gear button in the top bar, **Settings** at the bottom of the Library,
+the command palette, and the app menu open Settings as a page; `Esc` or **Back**
+returns to where you were.
 
 ## Use the Library
 

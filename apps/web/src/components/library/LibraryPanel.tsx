@@ -1,6 +1,10 @@
+import { useRouter } from "@tanstack/react-router";
+import { SettingsIcon } from "lucide-react";
+
 import { cn } from "../../lib/utils";
 import { ProviderUpdateIndicator } from "../ProviderUpdateIndicator";
 import { useUiStateStore } from "../../uiStateStore";
+import { openSettings } from "../sidebar/mainAppLocation";
 import { LIBRARY_CATEGORIES, LIBRARY_GROUPS, type LibraryCategory } from "./Library.logic";
 import { LibraryAccess } from "./LibraryAccess";
 import { LibraryMachines } from "./LibraryMachines";
@@ -13,6 +17,7 @@ import { LibraryStash } from "./LibraryStash";
 import { useLibraryContext } from "./useLibrary";
 
 export function LibraryPanel() {
+  const router = useRouter();
   const category = useUiStateStore((store) => store.libraryCategory);
   const setCategory = useUiStateStore((store) => store.setLibraryCategory);
   const active = LIBRARY_CATEGORIES.find((entry) => entry.id === category) ?? LIBRARY_CATEGORIES[0];
@@ -46,6 +51,16 @@ export function LibraryPanel() {
             ))}
           </div>
         ))}
+        <div className="flex flex-col pt-2">
+          <button
+            type="button"
+            onClick={() => openSettings(router)}
+            className="flex h-6 cursor-pointer items-center gap-1.5 px-2 text-left text-xs text-sidebar-foreground outline-none hover:bg-sidebar-row-hover/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+          >
+            <SettingsIcon className="size-3.5 text-sidebar-muted-foreground" />
+            Settings
+          </button>
+        </div>
       </nav>
       {active ? (
         <section aria-label={active.name} className="border-t border-sidebar-border px-2 pt-2">

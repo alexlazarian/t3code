@@ -40,6 +40,15 @@ export function appModalReturnLocation() {
   return appModalReturnHref ?? mainAppHref ?? "/";
 }
 
+/** Opens Settings; from Settings itself it goes back. */
+export function openSettings(router: AnyRouter) {
+  if (isSettingsPath(router.state.location.pathname)) {
+    void router.navigate({ href: appModalReturnLocation() });
+    return;
+  }
+  void router.navigate({ to: "/settings" });
+}
+
 export function appModalReturnPathname() {
   return new URL(appModalReturnLocation(), "http://t3.invalid").pathname;
 }

@@ -1,5 +1,5 @@
 import { useAtomValue } from "@effect/atom-react";
-import { SearchIcon } from "lucide-react";
+import { SearchIcon, SettingsIcon } from "lucide-react";
 import * as Schema from "effect/Schema";
 import {
   useEffect,
@@ -21,6 +21,7 @@ import {
 } from "../hooks/showThreadUndoNotice";
 import { getLocalStorageItem, removeLocalStorageItem } from "../hooks/useLocalStorage";
 import {
+  formatShortcutLabel,
   isRichTextBoldShortcut,
   resolveShortcutCommand,
   shortcutLabelForCommand,
@@ -54,6 +55,7 @@ import {
   appModalReturnLocation,
   appModalReturnPathname,
   isSettingsPath,
+  openSettings,
 } from "./sidebar/mainAppLocation";
 import type { SidebarRouteReveal } from "./sidebar/routeReveal";
 import { SidebarBackgroundLayer } from "./sidebar/SidebarBackgroundLayer";
@@ -323,15 +325,6 @@ function registerThreadUndoCommands(
   };
 }
 
-// Pressing it on the Settings page goes back.
-function openSettings(router: AnyRouter) {
-  if (isSettingsPath(router.state.location.pathname)) {
-    void router.navigate({ href: appModalReturnLocation() });
-    return;
-  }
-  void router.navigate({ to: "/settings" });
-}
-
 /** Keyboard and menu commands that live as long as the app shell. */
 function registerAppShellCommands(router: AnyRouter, shellElement: Element): () => void {
   // The provider mirrors the visibility it renders onto its wrapper, so the
@@ -352,6 +345,16 @@ function registerAppShellCommands(router: AnyRouter, shellElement: Element): () 
   };
 }
 
+// The desktop app menu's accelerator; Settings has no keybinding command.
+const DESKTOP_SETTINGS_SHORTCUT = {
+  key: ",",
+  modKey: true,
+  metaKey: false,
+  ctrlKey: false,
+  shiftKey: false,
+  altKey: false,
+};
+
 /** The full-width bar above the sidebar and main area. On desktop it is the window's drag region. */
 function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSSProperties }) {
   const router = useRouter();
@@ -371,6 +374,9 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
   const paletteShortcutLabel = shortcutLabelForCommand(keybindings, "commandPalette.toggle", {
     context: { terminalFocus: false },
   });
+  const settingsLabel = isElectron
+    ? `Settings (${formatShortcutLabel(DESKTOP_SETTINGS_SHORTCUT)})`
+    : "Settings";
   const [startNewThread] = useState(() => createStartNewThread(router));
   const hasProjects = useProjects().length > 0;
   const newThreadLabel = hasProjects
@@ -477,6 +483,14 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
         </Button>
       </div>
       <div className="pr-0! [-webkit-app-region:no-drag]">
+        <Button
+          variant="ghost"
+          aria-label="Settings"
+          onClick={() => openSettings(router)}
+          data-info={settingsLabel}
+        >
+          <SettingsIcon />
+        </Button>
         <SidebarUpdatePill />
       </div>
     </header>
