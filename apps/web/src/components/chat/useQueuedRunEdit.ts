@@ -4,6 +4,7 @@ import {
   makeQueuedRunsAtom,
 } from "@t3tools/client-runtime/queued-run-edit";
 import type { ThreadStructure } from "@t3tools/client-runtime/state/shell";
+import { resolveActiveThreadRun } from "@t3tools/client-runtime/state/thread-workflows";
 import {
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   type ChatAttachment,
@@ -303,7 +304,10 @@ export function useQueuedRunEdit(input: {
   const cancelEdit = useStableCallback(() => {
     if (editing === null) return;
     clearEditDraft(editing.runId);
-    if (editing.heldForEdit) setRunHeld(editing, false);
+    // Once the turn has ended, releasing would send the message at once; it stays paused for Send now.
+    const turnActive =
+      serverProjection !== null && resolveActiveThreadRun(serverProjection) !== null;
+    if (editing.heldForEdit && turnActive) setRunHeld(editing, false);
     queuedRunEdits.end(editKey);
     focusComposerSoon();
   });

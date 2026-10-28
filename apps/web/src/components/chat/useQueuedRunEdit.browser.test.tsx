@@ -81,6 +81,7 @@ function Harness(props: {
   readonly threadRef: ScopedThreadRef;
   readonly runStatus: string;
   readonly queueHeld?: boolean;
+  readonly turnActive?: boolean;
   readonly hookRef: RefObject<HookResult | null>;
 }) {
   const result = useQueuedRunEdit({
@@ -89,6 +90,7 @@ function Harness(props: {
     threadDraftTarget: props.threadRef,
     activeThreadId: props.threadRef.threadId,
     serverProjection: projection([
+      ...(props.turnActive ? [{ id: RunId.make("run-active"), status: "running" }] : []),
       { id: RUN, status: props.runStatus, queueHeld: props.queueHeld ?? false },
     ]),
     promptRef: { current: "" },
@@ -103,10 +105,17 @@ function view(
   runStatus: string,
   hook: { current: HookResult | null },
   queueHeld = false,
+  turnActive = false,
 ) {
   return (
     <AppAtomRegistryProvider>
-      <Harness threadRef={threadRef} runStatus={runStatus} queueHeld={queueHeld} hookRef={hook} />
+      <Harness
+        threadRef={threadRef}
+        runStatus={runStatus}
+        queueHeld={queueHeld}
+        turnActive={turnActive}
+        hookRef={hook}
+      />
     </AppAtomRegistryProvider>
   );
 }
@@ -160,16 +169,18 @@ const holdCalls = () =>
 
 describe("useQueuedRunEdit", () => {
   it.each([
-    { exit: "cancel", alreadyHeld: false, holds: [true, false] },
-    { exit: "cancel", alreadyHeld: true, holds: [] },
-    { exit: "save", alreadyHeld: false, holds: [true] },
-    { exit: "save", alreadyHeld: true, holds: [] },
+    { exit: "cancel", alreadyHeld: false, turnActive: true, holds: [true, false] },
+    // With no turn to wait for, releasing would send the message the user just declined to edit.
+    { exit: "cancel", alreadyHeld: false, turnActive: false, holds: [true] },
+    { exit: "cancel", alreadyHeld: true, turnActive: true, holds: [] },
+    { exit: "save", alreadyHeld: false, turnActive: false, holds: [true] },
+    { exit: "save", alreadyHeld: true, turnActive: false, holds: [] },
   ] as const)(
-    "releases only a hold it took ($exit, already held: $alreadyHeld)",
-    async ({ exit, alreadyHeld, holds }) => {
+    "releases only a hold it took ($exit, already held: $alreadyHeld, turn active: $turnActive)",
+    async ({ exit, alreadyHeld, turnActive, holds }) => {
       const { hook } = setup();
       mocks.editQueuedRun.mockResolvedValue({ _tag: "Success" });
-      await using _screen = await render(view(THREAD_A, "queued", hook, alreadyHeld));
+      await using _screen = await render(view(THREAD_A, "queued", hook, alreadyHeld, turnActive));
       await beginChangedEdit(hook);
 
       if (exit === "cancel") {

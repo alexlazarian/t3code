@@ -220,8 +220,9 @@ stays in the queue until you save, and it is highlighted while you edit. The mes
 attachments appear above the text with a remove control, and new images can be added the usual way.
 The checkmark saves the queued message in place; **Cancel** next to it leaves it unchanged. Whatever
 you had typed in the composer before starting the edit is restored afterwards. A message you are
-editing waits, even if the turn ahead of it ends, and is sent once you save or cancel; messages
-queued behind it can go first. An edit left open when the app closes keeps the message held. If
+editing waits, even if the turn ahead of it ends, and is sent once you save. Cancel returns it to
+the queue while a turn is running; if the turn already ended, it stays **Paused** until you press
+**Send now**. Messages queued behind it can go first. An edit left open when the app closes keeps the message held. If
 the message starts or is removed another way, such as from another device, the edit ends: changed
 content moves into the composer when it is empty, and is discarded otherwise.
 
