@@ -18,6 +18,7 @@ import type { Project } from "../../types";
 import { partitionSidebarThreads } from "../Sidebar.logic";
 import {
   buildOverviewGrid,
+  overviewStrobeDelay,
   isOverviewThreadOffline,
   moveOverviewFocus,
   NO_PROJECT_KEY,
@@ -480,5 +481,20 @@ describe("overview split", () => {
     expect(resolveOverviewSplitRelease(100 / 600, 600)).toBeNull();
     expect(resolveOverviewSplitRelease(130 / 600, 600)).toBe(160 / 600);
     expect(resolveOverviewSplitRelease(0.5, 600)).toBe(0.5);
+  });
+});
+
+describe("overviewStrobeDelay", () => {
+  it("keeps a card's lights off each other's beat", () => {
+    // The card light, the lead, and four subagents; a flash lasts 5% of the 1200ms cycle.
+    const delays = [0, 1, 2, 3, 4, 5].map((slot) =>
+      Number(overviewStrobeDelay("env-1:thread-1", slot).replace("ms", "")),
+    );
+    for (const [i, a] of delays.entries()) {
+      for (const b of delays.slice(i + 1)) {
+        const apart = Math.abs(a - b) % 1200;
+        expect(Math.min(apart, 1200 - apart)).toBeGreaterThan(60);
+      }
+    }
   });
 });

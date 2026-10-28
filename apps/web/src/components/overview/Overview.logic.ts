@@ -234,13 +234,17 @@ export function overviewLight(icon: SidebarStatusLabel["icon"] | null): Overview
 
 const STROBE_PERIOD_MS = 1200;
 
-/** A negative delay from the key, so each light strobes on its own beat and keeps it. */
-export function overviewStrobeDelay(key: string): string {
+/**
+ * A negative delay from the card's key, so each card strobes on its own beat and keeps it.
+ * Slots within a card step by the golden ratio, which keeps nearby lights well apart.
+ */
+export function overviewStrobeDelay(key: string, slot = 0): string {
   let hash = 0;
   for (let index = 0; index < key.length; index += 1) {
     hash = (hash * 31 + key.charCodeAt(index)) | 0;
   }
-  return `-${Math.abs(hash) % STROBE_PERIOD_MS}ms`;
+  const offset = Math.round(slot * 0.618034 * STROBE_PERIOD_MS);
+  return `-${(Math.abs(hash) + offset) % STROBE_PERIOD_MS}ms`;
 }
 
 export type OverviewSubagentState = "running" | "failed" | "done";

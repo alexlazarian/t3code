@@ -315,7 +315,7 @@ export const OverviewCard = memo(function OverviewCard(props: {
         <div className="border-t border-border bg-card px-1.75 pt-0.5 pb-0.75 text-3xs leading-relaxed">
           <div
             className="mb-px flex min-w-0 items-center gap-1.25 border-b border-border pb-px"
-            style={{ "--strobe-delay": overviewStrobeDelay(`${threadKey}:lead`) } as CSSProperties}
+            style={{ "--strobe-delay": overviewStrobeDelay(threadKey, 1) } as CSSProperties}
           >
             <StatusLight
               size="small"
@@ -346,7 +346,7 @@ export const OverviewCard = memo(function OverviewCard(props: {
                 data-info={subagent.threadId === null ? undefined : "Open this subagent's thread"}
                 style={
                   {
-                    "--strobe-delay": overviewStrobeDelay(`${threadKey}:${index}`),
+                    "--strobe-delay": overviewStrobeDelay(threadKey, index + 2),
                   } as CSSProperties
                 }
                 className="flex w-full min-w-0 cursor-pointer items-center gap-1.25 text-left outline-0 outline-ring hover:bg-accent focus-visible:outline-2 disabled:cursor-default disabled:hover:bg-transparent"
