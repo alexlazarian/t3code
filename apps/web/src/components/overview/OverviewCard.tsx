@@ -6,7 +6,6 @@ import { BotIcon, EyeIcon, ListIcon, RowsIcon, SquareTerminalIcon } from "lucide
 import { memo, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
 
 import { readLocalApi } from "../../localApi";
-import { observeVisibleAnimation } from "~/lib/visibleAnimation";
 import { deriveActiveWorkStartedAt } from "../../session-logic";
 import { cn } from "~/lib/utils";
 import type { SidebarThreadSummary } from "../../types";
@@ -27,6 +26,7 @@ import { UnsentDraftLabel } from "../sidebar/UnsentDraftLabel";
 import { useThreadHasUnsentDraft } from "../../composerDraftStore";
 import { AgentElapsed } from "../chat/AgentElapsed";
 import { ProviderInstanceIcon } from "../chat/ProviderInstanceIcon";
+import { StatusLight } from "../StatusLight";
 import { PullRequestGlyph } from "../pullRequest/pullRequestIcons";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import {
@@ -42,14 +42,6 @@ import {
   type OverviewWaitStrip,
 } from "./Overview.logic";
 
-const LIGHT_CLASS: Record<OverviewLight, string> = {
-  working: "bg-status-working",
-  "needs-you": "bg-status-needs-you",
-  failed: "bg-status-failed",
-  waiting: "bg-status-waiting",
-  done: "border border-muted-foreground/45",
-};
-
 // Like a clip's name bar: tinted while there is something to see, plain once it is quiet.
 const HEADER_CLASS: Record<OverviewLight, string> = {
   working: "bg-[color-mix(in_oklab,var(--status-working)_16%,var(--muted))]",
@@ -57,6 +49,7 @@ const HEADER_CLASS: Record<OverviewLight, string> = {
   failed: "bg-[color-mix(in_oklab,var(--status-failed)_16%,var(--muted))]",
   waiting: "bg-[color-mix(in_oklab,var(--status-waiting)_16%,var(--muted))]",
   done: "bg-secondary",
+  idle: "bg-secondary",
 };
 
 const STEP_TONE_CLASS: Record<OverviewStepLine["tone"], string> = {
@@ -69,6 +62,7 @@ const STEP_TONE_CLASS: Record<OverviewStepLine["tone"], string> = {
 const SUBAGENT_LIGHT: Record<OverviewSubagentState, OverviewLight> = {
   running: "working",
   failed: "failed",
+  stopped: "idle",
   done: "done",
 };
 
@@ -95,9 +89,11 @@ const WAIT_ICON: Record<
   many: RowsIcon,
 };
 
+// A check is unreadable at 5px, so finished and stopped subagents both stay plain gray squares.
 const SQUARE_CLASS: Record<OverviewSubagentState, string> = {
   running: "bg-status-working",
   failed: "bg-status-failed",
+  stopped: "bg-muted-foreground/45",
   done: "bg-muted-foreground/45",
 };
 
@@ -213,11 +209,11 @@ export const OverviewCard = memo(function OverviewCard(props: {
           HEADER_CLASS[light],
         )}
       >
-        <StatusLight light={light} strobe={working || runningSubagents > 0} />
+        <StatusLight tone={light} strobe={working || runningSubagents > 0} />
         <span
           className={cn(
             "min-w-0 flex-1 truncate text-xs",
-            light === "done" ? "text-muted-foreground" : "font-semibold",
+            light === "done" || light === "idle" ? "text-muted-foreground" : "font-semibold",
           )}
         >
           {thread.title}
@@ -325,7 +321,7 @@ export const OverviewCard = memo(function OverviewCard(props: {
           >
             <StatusLight
               size="small"
-              light={leadWaiting ? "done" : light}
+              tone={leadWaiting ? "idle" : light}
               strobe={working && !leadWaiting}
             />
             <span className="shrink-0 font-semibold">Lead</span>
@@ -359,7 +355,7 @@ export const OverviewCard = memo(function OverviewCard(props: {
               >
                 <StatusLight
                   size="small"
-                  light={SUBAGENT_LIGHT[state]}
+                  tone={SUBAGENT_LIGHT[state]}
                   strobe={state === "running"}
                 />
                 <span className="max-w-[48%] shrink-0 truncate text-foreground">
@@ -398,26 +394,6 @@ export const OverviewCard = memo(function OverviewCard(props: {
 
 function isoOrNull(value: DateTime.Utc | null): string | null {
   return value === null ? null : DateTime.formatIso(value);
-}
-
-function StatusLight(props: {
-  readonly light: OverviewLight;
-  readonly strobe: boolean;
-  readonly size?: "small";
-}) {
-  return (
-    <span
-      aria-hidden
-      ref={props.strobe ? observeVisibleAnimation : undefined}
-      className={cn(
-        "relative shrink-0",
-        props.size === "small" ? "size-1.25" : "size-1.75",
-        LIGHT_CLASS[props.light],
-        props.light !== "done" && "ring-1 ring-black/50",
-        props.strobe && "overview-strobe",
-      )}
-    />
-  );
 }
 
 function StepText(props: { readonly step: OverviewStepLine; readonly className?: string }) {

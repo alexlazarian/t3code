@@ -11,6 +11,7 @@ import {
 import type { SidebarThreadSummary } from "../../types";
 import type { SidebarProjectSnapshot } from "../../sidebarProjectGrouping";
 import type { SidebarStatusLabel } from "../sidebar/threadStatusLabel";
+import type { StatusLightTone } from "../StatusLight";
 import {
   matchesSidebarStatusFilter,
   resolveSidebarThreadStatus,
@@ -215,7 +216,7 @@ export function overviewColumnMachines(
   }));
 }
 
-export type OverviewLight = "working" | "needs-you" | "failed" | "waiting" | "done";
+export type OverviewLight = StatusLightTone;
 
 const LIGHTS: Partial<Record<SidebarStatusLabel["icon"], OverviewLight>> = {
   working: "working",
@@ -225,11 +226,12 @@ const LIGHTS: Partial<Record<SidebarStatusLabel["icon"], OverviewLight>> = {
   plan: "needs-you",
   failed: "failed",
   waiting: "waiting",
+  done: "done",
 };
 
-/** The card's status light; Done, Woke and unlabeled threads show a hollow one. */
+/** The card's status light; a Done thread shows a check, Woke and unlabeled ones a hollow light. */
 export function overviewLight(icon: SidebarStatusLabel["icon"] | null): OverviewLight {
-  return (icon === null ? undefined : LIGHTS[icon]) ?? "done";
+  return (icon === null ? undefined : LIGHTS[icon]) ?? "idle";
 }
 
 const STROBE_PERIOD_MS = 1200;
@@ -247,13 +249,14 @@ export function overviewStrobeDelay(key: string, slot = 0): string {
   return `-${(Math.abs(hash) + offset) % STROBE_PERIOD_MS}ms`;
 }
 
-export type OverviewSubagentState = "running" | "failed" | "done";
+export type OverviewSubagentState = "running" | "failed" | "stopped" | "done";
 
 export function overviewSubagentState(
   status: OrchestrationV2ShellSubagent["status"],
 ): OverviewSubagentState {
   if (isOrchestrationV2WorkActive(status)) return "running";
-  return status === "failed" ? "failed" : "done";
+  if (status === "failed") return "failed";
+  return status === "cancelled" || status === "interrupted" ? "stopped" : "done";
 }
 
 export type OverviewStepLine = {
@@ -322,7 +325,8 @@ export function overviewStepLine(input: {
   }
   if (input.icon === "plan") return { tone: "needs-you", text: "Plan ready to review" };
   if (step === null) return light === "working" ? { tone: "dim", text: "Thinking" } : null;
-  const tone = light === "needs-you" ? "needs-you" : light === "done" ? "dim" : "normal";
+  const tone =
+    light === "needs-you" ? "needs-you" : light === "done" || light === "idle" ? "dim" : "normal";
   return { tone, ...describeStep(step) };
 }
 

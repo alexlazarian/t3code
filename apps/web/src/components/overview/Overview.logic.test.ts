@@ -19,6 +19,7 @@ import { partitionSidebarThreads } from "../Sidebar.logic";
 import {
   buildOverviewGrid,
   overviewStrobeDelay,
+  overviewSubagentState,
   isOverviewThreadOffline,
   moveOverviewFocus,
   NO_PROJECT_KEY,
@@ -328,7 +329,7 @@ describe("overview offline machines", () => {
 });
 
 describe("overviewLight", () => {
-  it("maps each status to its light color", () => {
+  it("maps each status to its light, keeping Done apart from Woke and unlabeled", () => {
     const lights = (
       [
         "working",
@@ -352,8 +353,35 @@ describe("overviewLight", () => {
       "failed",
       "waiting",
       "done",
+      "idle",
+      "idle",
+    ]);
+  });
+});
+
+describe("overviewSubagentState", () => {
+  it("shows a stopped subagent apart from a finished one", () => {
+    const states = (
+      [
+        "pending",
+        "running",
+        "waiting",
+        "idle",
+        "completed",
+        "failed",
+        "cancelled",
+        "interrupted",
+      ] as const
+    ).map(overviewSubagentState);
+    expect(states).toEqual([
+      "running",
+      "running",
+      "running",
       "done",
       "done",
+      "failed",
+      "stopped",
+      "stopped",
     ]);
   });
 });

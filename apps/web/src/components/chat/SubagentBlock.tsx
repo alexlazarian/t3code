@@ -10,6 +10,8 @@ import { memo, use, useState } from "react";
 import { buildThreadRouteParams } from "../../threadRoutes";
 import { useEnvironment } from "../../state/environments";
 import { environmentThreadDetails } from "../../state/threads";
+import { overviewStrobeDelay } from "../overview/Overview.logic";
+import { StatusLight } from "../StatusLight";
 import { ThreadHoverCardPopup } from "../ThreadHoverCard";
 import { Tooltip, TooltipTrigger } from "../ui/tooltip";
 import { cn } from "~/lib/utils";
@@ -199,7 +201,7 @@ function SubagentBlockRow(props: {
         ) : (
           <span aria-hidden />
         )}
-        <SubagentStateGlyph state={state} />
+        <SubagentStateGlyph state={state} strobeKey={item.id} />
         <Tooltip>
           <TooltipTrigger
             delay={200}
@@ -301,23 +303,27 @@ function LiveSubagentElapsed({ agent }: { agent: OrchestrationV2Subagent }) {
   return <AgentElapsed agent={projectedSubagentsToRuntime([agent])[0]!} />;
 }
 
-/** Static shape plus color; never animated. */
-function SubagentStateGlyph({ state }: { state: SubagentRowState }) {
+/** The Overview's stepped strobe while running; static shape plus color otherwise. */
+function SubagentStateGlyph({ state, strobeKey }: { state: SubagentRowState; strobeKey: string }) {
+  if (state === "running") {
+    return (
+      <span aria-hidden className="flex size-4.25 items-center justify-center">
+        <StatusLight tone="working" strobe strobeDelay={overviewStrobeDelay(strobeKey)} />
+      </span>
+    );
+  }
   return (
     <span
       aria-hidden
       className={cn(
         "flex size-4.25 items-center justify-center text-2xs leading-none font-bold",
-        state === "running" && "bg-status-working text-background",
         state === "failed" && "bg-status-failed text-background",
         (state === "done" || state === "stopped") &&
           "border border-muted-foreground/50 text-muted-foreground",
         state === "idle" && "border border-muted-foreground/30",
       )}
     >
-      {state === "running" ? (
-        <span className="ms-px size-0 border-y-4 border-l-6 border-y-transparent border-l-current" />
-      ) : state === "done" ? (
+      {state === "done" ? (
         "✓"
       ) : state === "failed" ? (
         "×"
