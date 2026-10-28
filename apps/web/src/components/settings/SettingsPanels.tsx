@@ -280,7 +280,7 @@ function AboutVersionSection() {
   const description =
     action === "download" || action === "install"
       ? "Update available."
-      : (getDesktopUpdateDisabledReason(updateState) ?? "Current version of the application.");
+      : (getDesktopUpdateDisabledReason(updateState) ?? "The version you are running.");
 
   return (
     <>
@@ -341,7 +341,7 @@ function AboutVersionSection() {
       ) : selectedHostedAppChannel ? (
         <SettingsRow
           {...searchableSetting("update-track")}
-          description="Switches the hosted app release channel."
+          description="Switch which release the hosted app uses."
           control={
             <Select
               value={selectedHostedAppChannel}
@@ -714,7 +714,7 @@ export function LegacyFeaturesSection() {
     <SettingsSection id="legacy-features" title="Legacy">
       <SettingsRow
         {...searchableSetting("legacy-plan-mode")}
-        description="Restore Build/Plan, /plan, /default, and Shift+Tab. Off uses build mode."
+        description="Bring back Build/Plan, /plan, /default, and Shift+Tab. When off, threads use build mode."
         control={
           <Switch
             checked={settings.planModeEnabled}
@@ -727,7 +727,7 @@ export function LegacyFeaturesSection() {
       />
       <SettingsRow
         {...searchableSetting("legacy-context-window-indicator")}
-        description="Shows context window usage as a circular indicator in the composer."
+        description="Show how much of the context window is used, as a ring in the composer."
         control={
           <Switch
             checked={settings.contextWindowMeterEnabled}
@@ -755,7 +755,7 @@ export function GeneralSettingsPanel() {
         <NotificationSettings />
         <SettingsRow
           {...searchableSetting("in-app-notifications")}
-          description="Show a toast when another thread finishes, fails, or needs input or approval while this app has focus."
+          description="While you are using the app, show a notice when another thread finishes, fails, or needs your input or approval."
           control={
             <Switch
               checked={settings.inAppNotificationsEnabled}
@@ -795,7 +795,7 @@ export function GeneralSettingsPanel() {
         />
         <SettingsRow
           {...searchableSetting("project-grouping")}
-          description="Combine matching repositories across environments."
+          description="Show the same repository on different environments as one project."
           resetAction={
             settings.sidebarProjectGroupingMode !==
             DEFAULT_UNIFIED_SETTINGS.sidebarProjectGroupingMode ? (
@@ -870,7 +870,7 @@ export function GeneralSettingsPanel() {
         />
         <SettingsRow
           {...searchableSetting("working-shelf")}
-          description="Fold working and monitoring threads into a Working section. They return to the top of the inbox when they need you. The boring sidebar in Labs has no Working section."
+          description="Collect threads that are working or monitoring into a Working section. They move back to the top of the inbox when they need you. The boring sidebar in Labs doesn't have this section."
           resetAction={
             settings.sidebarWorkingShelfEnabled !==
             DEFAULT_UNIFIED_SETTINGS.sidebarWorkingShelfEnabled ? (
@@ -924,7 +924,7 @@ export function GeneralSettingsPanel() {
         />
         <SettingsRow
           {...searchableSetting("archive-confirmation")}
-          description="Require a second click on the inline archive action before a thread is archived."
+          description="Click the archive button twice to archive a thread."
           resetAction={
             settings.confirmThreadArchive !== DEFAULT_UNIFIED_SETTINGS.confirmThreadArchive ? (
               <SettingResetButton
@@ -975,7 +975,7 @@ export function GeneralSettingsPanel() {
         {isElectron ? (
           <SettingsRow
             {...searchableSetting("quit-confirmation")}
-            description="Hold mode also quits on two quick presses."
+            description="In hold mode, pressing twice quickly also quits."
             resetAction={
               settings.confirmQuit !== DEFAULT_UNIFIED_SETTINGS.confirmQuit ? (
                 <SettingResetButton
@@ -1018,7 +1018,7 @@ export function GeneralSettingsPanel() {
       <SettingsSection id="display" title="Display">
         <SettingsRow
           {...searchableSetting("time-format")}
-          description="System default follows your browser or OS clock preference."
+          description="System default matches your browser or OS clock setting."
           resetAction={
             settings.timestampFormat !== DEFAULT_UNIFIED_SETTINGS.timestampFormat ? (
               <SettingResetButton
@@ -1103,7 +1103,7 @@ export function ChatSettingsPanel() {
         />
         <SettingsRow
           {...searchableSetting("send-shortcut")}
-          description="Choose when Enter sends a prompt or inserts a new line"
+          description="Choose whether Enter sends your prompt or adds a new line."
           resetAction={
             settings.sendShortcut !== DEFAULT_UNIFIED_SETTINGS.sendShortcut ? (
               <SettingResetButton
@@ -1150,7 +1150,7 @@ export function ChatSettingsPanel() {
         <AdvancedSettings targetIds={[searchableSetting("skills-in-slash-menu").id]}>
           <SettingsRow
             {...searchableSetting("skills-in-slash-menu")}
-            description="Also include skills in the / command menu. Skills always appear when you type $."
+            description="Show skills in the / menu too. Skills always show when you type $."
             resetAction={
               settings.showSkillsInSlashMenu !== DEFAULT_UNIFIED_SETTINGS.showSkillsInSlashMenu ? (
                 <SettingResetButton
@@ -1180,7 +1180,7 @@ export function ChatSettingsPanel() {
         <SettingsRow
           {...searchableSetting("follow-up-behavior")}
           description={
-            "Queue follow-ups while the agent runs or steer the current run. " +
+            "While the agent works, queue follow-ups or use them to steer the current run. " +
             (settings.sendShortcut === "mod-enter-multiline"
               ? `Press ${modifierLabel} + Enter for single-line prompts or ${modifierLabel} + Shift + Enter for multiline prompts to do the opposite for one message.`
               : `Press ${modifierLabel}${settings.sendShortcut === "mod-enter" ? " + Shift" : ""} + Enter to do the opposite for one message.`)
@@ -1319,7 +1319,7 @@ export function DiffsSettingsPanel() {
         />
         <SettingsRow
           {...searchableSetting("hide-whitespace-changes")}
-          description="Set whether the diff panel ignores whitespace-only edits by default."
+          description="Hide changes that only touch whitespace in the diff panel by default."
           resetAction={
             settings.diffIgnoreWhitespace !== DEFAULT_UNIFIED_SETTINGS.diffIgnoreWhitespace ? (
               <SettingResetButton
@@ -1390,7 +1390,7 @@ export function DiffsSettingsPanel() {
       <SettingsSection id="pull-requests" title="Pull requests">
         <SettingsRow
           {...searchableSetting("proactive-panels")}
-          description="Open linked pull requests first. Otherwise, open Changes for edits to at least 3 files or 50 lines."
+          description="Open the linked pull request first. If there isn't one, open Changes when at least 3 files or 50 lines changed."
           resetAction={
             settings.proactivePanelsEnabled !== DEFAULT_UNIFIED_SETTINGS.proactivePanelsEnabled ? (
               <SettingResetButton
@@ -1436,7 +1436,7 @@ function ScopedCompactIdleThreadsRow() {
       settingKeys={["idleCompaction", "compactIdleThreads"]}
       mixed={idleCompaction.mixed}
       {...searchableSetting("compact-idle-threads")}
-      description="When to compact an idle Claude thread over 200,000 tokens: after you return, just before its prompt cache expires, or never. Each Claude provider can override this."
+      description="When to compact an idle Claude thread that is over 200,000 tokens: when you come back, just before its cache expires, or never. Each Claude provider can change this."
       resetAction={
         globalIdleCompaction(settings) !== globalIdleCompaction(DEFAULT_UNIFIED_SETTINGS) ? (
           <SettingResetButton
@@ -1588,7 +1588,7 @@ export function ThreadsSettingsPanel() {
         <SettingsRow
           serverScoped
           {...searchableSetting("auto-resume-limited-threads")}
-          description="Resume usage-limit stops at the reported reset time. Each thread can cancel its scheduled continuation."
+          description="When a thread stops at a usage limit, continue it once the limit resets. You can cancel this in each thread."
           settingKeys={["autoResumeLimitedThreads"]}
           control={
             <ScopedSwitch
@@ -1604,7 +1604,7 @@ export function ThreadsSettingsPanel() {
         <SettingsRow
           serverScoped
           {...searchableSetting("snooze-limited-threads")}
-          description="Snooze usage-limit stops until reset. Pair with resume to continue on wake."
+          description="Snooze threads that hit a usage limit until it resets. Turn on resume too, so they continue when they wake up."
           settingKeys={["snoozeLimitedThreads"]}
           control={
             <ScopedSwitch
@@ -1625,7 +1625,7 @@ export function ThreadsSettingsPanel() {
             serverScoped
             settingKeys={["sidebarAutoSettleOnMerge"]}
             {...searchableSetting("auto-settle-merged-threads")}
-            description="Settle a thread when its pull request merges. Closed pull requests still settle automatically."
+            description="Settle a thread when its pull request merges. A closed pull request settles its thread either way."
             resetAction={
               settings.sidebarAutoSettleOnMerge !==
               DEFAULT_UNIFIED_SETTINGS.sidebarAutoSettleOnMerge ? (
@@ -1655,7 +1655,7 @@ export function ThreadsSettingsPanel() {
             serverScoped
             settingKeys={["sidebarAutoSettleAfterDays"]}
             {...searchableSetting("auto-settle-inactive-threads")}
-            description="Sidebar threads with no activity for this long settle automatically."
+            description="Threads with no activity for this long settle on their own."
             resetAction={
               settings.sidebarAutoSettleAfterDays !==
               DEFAULT_UNIFIED_SETTINGS.sidebarAutoSettleAfterDays ? (
@@ -1688,7 +1688,7 @@ export function ThreadsSettingsPanel() {
               serverScoped
               settingKeys={["sidebarAutoSettleAfterDays"]}
               title={searchableSetting("days-before-auto-settle").title}
-              description="Any new activity un-settles a thread automatically."
+              description="New activity brings a settled thread back."
               control={
                 <AutoSettleDaysInput
                   value={settings.sidebarAutoSettleAfterDays}
@@ -1702,7 +1702,7 @@ export function ThreadsSettingsPanel() {
               serverScoped
               settingKeys={["sidebarAutoSettleKeepPullRequests"]}
               title="Keep threads with a PR"
-              description="Inactivity does not settle threads with a pull request. Merge and close still do."
+              description="Threads with a pull request don't settle from inactivity. Merging or closing the pull request still settles them."
               control={
                 <ScopedSwitch
                   settingKeys={["sidebarAutoSettleKeepPullRequests"]}
@@ -1723,7 +1723,7 @@ export function ThreadsSettingsPanel() {
           serverScoped
           settingKeys={["textGenerationModelSelection"]}
           {...searchableSetting("text-generation-model")}
-          description="Used for thread titles and other generated text on connected devices with this provider. Source control can override it."
+          description="Writes thread titles and other generated text on connected devices with this provider. Source control settings can override it."
           resetAction={
             hasServerTargets && isTextGenerationModelDirty ? (
               <SettingResetButton
@@ -1897,7 +1897,7 @@ export function MaintenanceSettingsPanel() {
           serverScoped
           settingKeys={["enableProviderUpdateChecks"]}
           {...searchableSetting("provider-update-checks")}
-          description="Check installed provider CLIs for newer available versions and fetch model catalog updates. When off, new models may not appear."
+          description="Check for new versions of installed provider CLIs and for new models. When off, new models may not show up."
           resetAction={
             settings.enableProviderUpdateChecks !==
             DEFAULT_UNIFIED_SETTINGS.enableProviderUpdateChecks ? (
@@ -1926,7 +1926,7 @@ export function MaintenanceSettingsPanel() {
           {...searchableSetting("continue-threads-after-server-update")}
           serverScoped
           settingKeys={["continueThreadsAfterServerUpdate"]}
-          description="Automatically resume interrupted threads after an update, crash, or machine restart on the selected environments."
+          description="Pick interrupted threads back up after an update, crash, or restart on the selected environments."
           status={
             !hasServerTargets
               ? "All selected connected environments must support restart continuation."
@@ -2003,7 +2003,7 @@ export function AboutSettingsPanel() {
             <SettingsRow
               id={searchableSetting("app-version").id}
               title={<AboutVersionTitle />}
-              description="Current version of the application."
+              description="The version you are running."
             />
           </>
         )}
@@ -2013,7 +2013,7 @@ export function AboutSettingsPanel() {
       <SettingsSection id="legal" title="Legal">
         <SettingsRow
           {...searchableSetting("privacy-policy")}
-          description="How we handle your data, including the anonymous usage data T3 Code collects."
+          description="How T3 Code handles your data, including anonymous usage data."
           control={
             <Button
               render={<a href={PRIVACY_POLICY_URL} target="_blank" rel="noreferrer noopener" />}
@@ -2026,7 +2026,7 @@ export function AboutSettingsPanel() {
         />
         <SettingsRow
           {...searchableSetting("open-source-licenses")}
-          description="Notices for dependencies, assets, and optional tools used by T3 Code."
+          description="Licenses for the libraries, assets, and optional tools T3 Code uses."
           control={
             <Button
               render={<Link to="/settings/open-source-licenses" />}

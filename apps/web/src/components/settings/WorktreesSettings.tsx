@@ -23,7 +23,7 @@ function StartFromRemoteRow() {
       serverScoped
       settingKeys={["newWorktreesStartFromOrigin"]}
       {...searchableSetting("start-from-origin")}
-      description="Uses the latest commit of the base branch’s tracked remote branch, even if its name differs. Otherwise uses the same-named branch on origin. Uses your local branch if that remote branch is missing."
+      description="Starts from the latest commit on the remote branch your base branch tracks, even if the names differ. If there is none, uses the branch with the same name on origin, then your local branch."
       resetAction={
         settings.newWorktreesStartFromOrigin !==
         DEFAULT_UNIFIED_SETTINGS.newWorktreesStartFromOrigin ? (

@@ -488,7 +488,7 @@ function ProjectDetail({
           ) : null}
           <SettingsRow
             title="Name"
-            description="The shared name for this project group in the sidebar and thread lists."
+            description="The name this project group shows in the sidebar and thread lists."
             control={
               <Input
                 key={`${group.projectKey}:${group.displayName}`}

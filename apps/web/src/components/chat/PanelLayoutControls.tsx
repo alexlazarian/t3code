@@ -51,7 +51,7 @@ export const PanelLayoutControls = memo(function PanelLayoutControls({
             className="shrink-0 [-webkit-app-region:no-drag]"
             pressed={rightPanelOpen}
             onPressedChange={onToggleRightPanel}
-            aria-label="Toggle right panel"
+            aria-label="Show or hide the side panel"
             data-right-panel-toggle
             variant="ghost"
             size="sm"
@@ -234,7 +234,7 @@ export const ThreadHeaderTools = memo(function ThreadHeaderTools({
         <HeaderToolButton
           icon={FileDiff}
           label="Diff"
-          info={withShortcut("Toggle diff panel", props.diffShortcutLabel)}
+          info={withShortcut("Show or hide the diff", props.diffShortcutLabel)}
           on={diff.on}
           onToggle={props.onToggleDiff}
         />
@@ -243,7 +243,7 @@ export const ThreadHeaderTools = memo(function ThreadHeaderTools({
         <HeaderToolButton
           icon={Globe2}
           label="Preview"
-          info={withShortcut("Toggle preview panel", props.previewShortcutLabel)}
+          info={withShortcut("Show or hide the preview", props.previewShortcutLabel)}
           on={preview.on}
           onToggle={props.onTogglePreview}
         />
@@ -252,7 +252,7 @@ export const ThreadHeaderTools = memo(function ThreadHeaderTools({
         <HeaderToolButton
           icon={Files}
           label="Files"
-          info="Workspace files"
+          info="Files in this workspace"
           on={files.on}
           onToggle={props.onToggleFiles}
         />
@@ -261,7 +261,7 @@ export const ThreadHeaderTools = memo(function ThreadHeaderTools({
         <HeaderToolButton
           icon={PullRequestGlyph.link}
           label="Pull requests"
-          info="Linked pull requests"
+          info="Pull requests linked to this thread"
           on={pullRequests.on}
           onToggle={props.onTogglePullRequests}
         />
@@ -270,7 +270,7 @@ export const ThreadHeaderTools = memo(function ThreadHeaderTools({
         <HeaderToolButton
           icon={TerminalSquare}
           label="Terminal"
-          info={withShortcut("Toggle terminal", props.terminalShortcutLabel)}
+          info={withShortcut("Show or hide the terminal", props.terminalShortcutLabel)}
           on={props.terminalOpen}
           onToggle={props.onToggleTerminal}
         />
@@ -279,7 +279,7 @@ export const ThreadHeaderTools = memo(function ThreadHeaderTools({
         <HeaderToolButton
           icon={PanelRightIcon}
           label="Panel"
-          info={withShortcut("Toggle right panel", props.rightPanelShortcutLabel)}
+          info={withShortcut("Show or hide the side panel", props.rightPanelShortcutLabel)}
           on={props.rightPanelOpen}
           onToggle={props.onToggleRightPanel}
           rightPanelToggle

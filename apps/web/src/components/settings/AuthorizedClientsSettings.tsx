@@ -294,7 +294,8 @@ const PairingLinkListRow = memo(function PairingLinkListRow({
             </p>
           ) : shareablePairingUrl === null ? (
             <p className="text-2xs text-muted-foreground/70">
-              Copy the token and pair from another client using this backend&apos;s reachable host.
+              Copy the token, then pair from another client using an address that can reach this
+              environment.
             </p>
           ) : null}
         </div>
@@ -341,9 +342,9 @@ const PairingLinkListRow = memo(function PairingLinkListRow({
                 <DialogDescription>
                   {isRevealValueUrl
                     ? isRevealValueHostedAppPairingUrl
-                      ? "Clipboard copy is unavailable here. Open or manually copy this hosted app link on the device you want to connect."
-                      : "Clipboard copy is unavailable here. Open or manually copy this full pairing URL on the device you want to connect."
-                    : "Clipboard copy is unavailable here. Manually copy this code into another client."}
+                      ? "Can't copy to the clipboard here. Open this hosted app link on the device you want to connect, or copy it by hand."
+                      : "Can't copy to the clipboard here. Open this pairing URL on the device you want to connect, or copy it by hand."
+                    : "Can't copy to the clipboard here. Copy this code into another client by hand."}
                 </DialogDescription>
               </DialogHeader>
               <DialogPanel>
@@ -470,8 +471,7 @@ const PairingLinkListRow = memo(function PairingLinkListRow({
           ) : (
             <div className="flex size-[192px] shrink-0 items-center justify-center self-center rounded-xl border border-border/50 p-4 sm:self-start">
               <p className="text-center text-2xs text-muted-foreground/70">
-                No QR for this endpoint. Another device scanning a loopback link would dial itself;
-                copy the URL for use on this machine instead.
+                No QR code for this address. It only works on this machine, so copy the URL instead.
               </p>
             </div>
           )}
@@ -658,8 +658,7 @@ export const AuthorizedClientsHeaderAction = memo(function AuthorizedClientsHead
           <DialogHeader>
             <DialogTitle>Create pairing link</DialogTitle>
             <DialogDescription>
-              Generate a one-time link that another device can use to pair with this backend as an
-              authorized client.
+              Create a one-time link another device can use to pair with this environment.
             </DialogDescription>
           </DialogHeader>
           <DialogPanel>

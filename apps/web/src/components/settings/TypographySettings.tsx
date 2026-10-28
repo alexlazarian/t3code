@@ -166,7 +166,7 @@ function TerminalFontRow() {
   return (
     <FontFamilySettingsRow
       {...searchableSetting("terminal-font")}
-      description="Terminal output, independent from code blocks and diffs."
+      description="Terminal output. Set separately from code blocks and diffs."
       defaultFamily={defaults.code}
       defaultValue={DEFAULT_UNIFIED_SETTINGS.fontFamilyTerminal}
       value={settings.fontFamilyTerminal}
@@ -207,7 +207,7 @@ function FontSmoothingRow() {
   return (
     <SettingsRow
       {...searchableSetting("font-smoothing")}
-      description="Use thinner grayscale text smoothing instead of the macOS default."
+      description="Make text look thinner with grayscale smoothing instead of the macOS default."
       resetAction={
         settings.fontSmoothing !== DEFAULT_UNIFIED_SETTINGS.fontSmoothing ? (
           <SettingResetButton

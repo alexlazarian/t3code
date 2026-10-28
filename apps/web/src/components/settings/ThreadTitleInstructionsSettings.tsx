@@ -23,7 +23,7 @@ export function ThreadTitleInstructionsSettings() {
       serverScoped
       settingKeys={["threadTitleInstructions"]}
       {...searchableSetting("thread-title-instructions")}
-      description="Appended to the prompt for new and regenerated thread titles."
+      description="Added to the prompt that writes thread titles, new or regenerated."
       resetAction={
         mixed || settings.threadTitleInstructions !== "" ? (
           <SettingResetButton

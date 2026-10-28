@@ -714,7 +714,7 @@ function ConfiguredCloudLinkRow({ canManageRelay }: { readonly canManageRelay: b
       {managedTunnelActive && !signedOut ? (
         <SettingsRow
           title={searchableSetting("hold-webhooks-while-offline").title}
-          description="Keep webhook requests for up to 24 hours while this environment is offline, then deliver them. Off: T3 Connect only forwards requests and stores nothing."
+          description="While this environment is offline, hold webhook requests for up to 24 hours and deliver them when it is back. When off, T3 Connect only passes requests through and stores nothing."
           control={
             <CloudLinkSwitch
               ariaLabel="Hold webhook requests while this environment is offline"

@@ -1049,7 +1049,7 @@ export function CodexManagedRuntimeFields({
     <>
       <SettingsRow
         title="Binary path"
-        description="Selected by T3 Code."
+        description="Chosen by T3 Code."
         control={
           <div className="w-full sm:w-80">
             <Input
@@ -1081,7 +1081,7 @@ export function CodexManagedRuntimeFields({
         title="Shadow home path"
         description={
           provider?.runtimePaths?.shadowHomePath
-            ? "Account-specific home sharing the Codex state above."
+            ? "This account's own home folder. It shares the Codex state above."
             : "This instance uses the shared Codex home directly."
         }
         control={

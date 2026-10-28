@@ -341,7 +341,7 @@ export function AppearanceSettingsPanel() {
         />
         <SettingsRow
           {...searchableSetting("info-bar")}
-          description="Show the tooltip, shortcut, or thread summary of whatever you point at in a bar along the bottom of the window."
+          description="Show details about whatever you point at, like its tooltip, shortcut, or thread summary, in a bar at the bottom of the window."
           resetAction={
             settings.infoBarEnabled !== DEFAULT_UNIFIED_SETTINGS.infoBarEnabled ? (
               <SettingResetButton
@@ -362,7 +362,7 @@ export function AppearanceSettingsPanel() {
         />
         <SettingsRow
           {...searchableSetting("math-rendering")}
-          description="Typeset LaTeX math, such as $x^2$ or \[x^2\], in messages and Markdown previews. The composer keeps TeX source editable."
+          description="Render LaTeX math, such as $x^2$ or \[x^2\], in messages and Markdown previews. In the composer, you still edit the raw TeX."
           resetAction={
             settings.mathRenderingEnabled !== DEFAULT_UNIFIED_SETTINGS.mathRenderingEnabled ? (
               <SettingResetButton

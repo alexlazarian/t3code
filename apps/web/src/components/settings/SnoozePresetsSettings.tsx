@@ -186,7 +186,7 @@ export function SnoozePresetsRow() {
       serverScoped
       settingKeys={["snoozePresets"]}
       {...searchableSetting("snooze-options")}
-      description="Choices in every snooze menu, listed soonest first. Weekdays mean the next one after today."
+      description="Options in every snooze menu, soonest first. A weekday means the next one after today."
       resetAction={
         !mixed && sameSnoozePresets(presets, DEFAULT_SNOOZE_PRESETS) ? null : (
           <SettingResetButton

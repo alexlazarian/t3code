@@ -216,7 +216,7 @@ function ProviderCommandArguments({
   return (
     <SettingsRow
       title="Arguments"
-      description="One literal argument per row, in launch order."
+      description="One argument per row, in order. Each is passed exactly as written."
       control={
         <Button
           type="button"

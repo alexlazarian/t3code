@@ -119,7 +119,7 @@ export function BranchNamingSettings() {
           serverScoped
           settingKeys={["branchNameInstructions"]}
           title="Branch naming instructions"
-          description="Appended to the naming prompt. The model returns the complete branch name; no prefix or suffix is added."
+          description="Added to the prompt that names branches. The model writes the full name, so no prefix or suffix is added."
           resetAction={
             instructionsMixed || settings.branchNameInstructions !== "" ? (
               <SettingResetButton

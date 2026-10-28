@@ -57,9 +57,10 @@ const BACKGROUND_ACTIVITY_PROFILE_OPTION_LABELS: Record<BackgroundActivityProfil
 };
 
 const BACKGROUND_ACTIVITY_PROFILE_DESCRIPTIONS: Record<BackgroundActivityProfile, string> = {
-  balanced: "Pauses probes for idle clients, locked hosts, or low power mode.",
-  performance: "Allows scoped background probes while any subscribed client remains connected.",
-  "battery-saver": "Also pauses background probes when the host or client is on battery.",
+  balanced:
+    "Pauses background checks when you are idle, the host is locked, or low power mode is on.",
+  performance: "Keeps background checks running while any app is connected.",
+  "battery-saver": "Also pauses background checks when the host or your device is on battery.",
 };
 
 const ADVANCED_BACKGROUND_ACTIVITY_DESCRIPTION = "Uses custom intervals.";
@@ -125,7 +126,7 @@ function BackgroundActivityAdvancedDialog({
         <DialogHeader>
           <DialogTitle>Background Activity</DialogTitle>
           <DialogDescription>
-            Tune the shared power policy and the background intervals that feed it.
+            Choose when background work can run and how often each check happens.
           </DialogDescription>
         </DialogHeader>
         <DialogPanel>
@@ -137,7 +138,7 @@ function BackgroundActivityAdvancedDialog({
               <div className="min-w-0 space-y-1">
                 <div className="text-sm font-medium">Shared policy</div>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  Controls whether background work may run after a subscribed interval fires.
+                  Decides whether background work runs when its timer comes up.
                 </p>
               </div>
               <Select
@@ -219,8 +220,8 @@ function BackgroundActivityAdvancedDialog({
               <div className="min-w-0 space-y-1">
                 <div className="text-sm font-medium">Provider health interval</div>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  Refresh provider availability, versions, and auth state. Model catalog updates
-                  follow Provider update checks.
+                  Check provider availability, versions, and sign-in. New models follow the Provider
+                  update checks setting.
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
@@ -258,7 +259,7 @@ function BackgroundActivityAdvancedDialog({
               <div className="min-w-0 space-y-1">
                 <div className="text-sm font-medium">Host power monitor</div>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  Poll host power state while clients are active.
+                  How often to check the host&apos;s power state while an app is open.
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
@@ -296,7 +297,7 @@ function BackgroundActivityAdvancedDialog({
               <div className="min-w-0 space-y-1">
                 <div className="text-sm font-medium">Idle host monitor</div>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  Poll host power state when no foreground client is active.
+                  How often to check the host&apos;s power state when no app is in use.
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
@@ -403,8 +404,8 @@ export function BackgroundActivitySettingsRow() {
         <span className="inline-flex items-center gap-1.5">
           {searchableSetting("background-activity").title}
           <PolicyTooltip>
-            This shared policy gates background work such as Git refreshes and provider health
-            probes after their individual intervals elapse.
+            Decides when background work, like Git refreshes and provider checks, can run once its
+            timer is up.
           </PolicyTooltip>
         </span>
       }

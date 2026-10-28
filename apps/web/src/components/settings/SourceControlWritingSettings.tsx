@@ -295,7 +295,7 @@ export function SourceControlWritingSettingsSection() {
         settingKeys={["reviewGuidesEnabled"]}
         mixed={mixedReviewGuidesEnabled}
         {...searchableSetting("review-guides")}
-        description="Adds a Guide tab to pull requests: an agent writes a tour of the change, stop by stop, with the calls a maintainer should make."
+        description="Add a Guide tab to pull requests. An agent walks through the change step by step and points out the decisions a reviewer should make."
         control={
           <Switch
             mixed={mixedReviewGuidesEnabled}
@@ -312,7 +312,7 @@ export function SourceControlWritingSettingsSection() {
             serverScoped
             settingKeys={["reviewGuideModelSelection"]}
             {...searchableSetting("review-guide-model")}
-            description="Model that reads a pull request to write its review guide. It reads the change itself over many steps, so a stronger model helps. Off uses the source control writer model."
+            description="The model that writes review guides. It reads the whole change over many steps, so a stronger model helps. When off, the source control writing model is used."
             control={
               !hasServerTargets ? (
                 <span className="text-sm text-muted-foreground">
@@ -413,7 +413,7 @@ export function SourceControlWritingSettingsSection() {
             serverScoped
             settingKeys={["reviewGuideInstructions"]}
             {...searchableSetting("review-guide-instructions")}
-            description="Your preferences for review guides: what to show first, dwell on, or skip. The guide's format and coverage stay the same."
+            description="Tell review guides what to show first, spend time on, or skip. Their format and coverage don't change."
             resetAction={
               mixedReviewGuideInstructions || settings.reviewGuideInstructions !== "" ? (
                 <SettingResetButton
@@ -462,7 +462,7 @@ export function SourceControlWritingSettingsSection() {
           settingKeys={["sourceControlWritingStyle"]}
           mixed={templatesMixed}
           {...searchableSetting("follow-change-request-templates")}
-          description="Use the repository's template for change request descriptions when available."
+          description="Use the repository's description template for change requests when it has one."
           resetAction={
             templatesMixed ||
             style.followChangeRequestTemplates !== defaults.followChangeRequestTemplates ? (
@@ -498,7 +498,7 @@ export function SourceControlWritingSettingsSection() {
           serverScoped
           settingKeys={["sourceControlWriterModelSelection"]}
           {...searchableSetting("source-control-writer-model")}
-          description="Model for source control text and branch or bookmark names. Off uses the environment's text generation model."
+          description="The model that writes source control text and branch or bookmark names. When off, the environment's text model is used."
           control={
             !hasServerTargets ? (
               <span className="text-sm text-muted-foreground">

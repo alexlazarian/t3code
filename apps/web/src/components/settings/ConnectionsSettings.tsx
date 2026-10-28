@@ -779,7 +779,7 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
         return (
           <SettingsRow
             {...searchableSetting("wsl-backend")}
-            description="Couldn't load the WSL backend state."
+            description="Couldn't load WSL status."
             status={<span className="block text-destructive">{desktopWslError}</span>}
             control={
               <Button
@@ -837,7 +837,7 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
       <>
         <SettingsRow
           {...searchableSetting("wsl-backend")}
-          description="Run the selected WSL distro alongside Windows. Projects remain on their current filesystem."
+          description="Run the selected WSL distro alongside Windows. Projects stay where they are."
           status={
             desktopWslError ? (
               <span className="block text-destructive">{desktopWslError}</span>
@@ -886,7 +886,7 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
         {desktopWslState.enabled ? (
           <SettingsRow
             title="WSL only"
-            description="Run only the WSL backend. T3 Code restarts when this changes."
+            description="Use only WSL, not Windows. T3 Code restarts when you change this."
             className="bg-muted/20 pl-7 sm:pl-8"
             control={
               <Switch
@@ -909,7 +909,7 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
         tailscaleHttpsEndpoint
           ? tailscaleHttpsEndpoint.status === "available"
             ? tailscaleHttpsEndpoint.httpBaseUrl
-            : "Use Tailscale Serve to expose this backend through a MagicDNS HTTPS URL."
+            : "Use Tailscale Serve to make this server reachable at a MagicDNS HTTPS address."
           : missingTailscaleEndpointDescription(desktopServerExposureState)
       }
       control={
@@ -968,7 +968,7 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
                 ? `Reachable at ${desktopServerExposureState.endpointUrl}`
                 : desktopServerExposureState?.advertisedHost
                   ? `Exposed on all interfaces. Pairing links use ${desktopServerExposureState.advertisedHost}.`
-                  : "Exposed on all interfaces."
+                  : "Reachable on every network this machine is on."
             }
           />
         ) : desktopServerExposureState ? (
@@ -990,12 +990,12 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
       title={searchableSetting("network-access").title}
       description={
         desktopBridge
-          ? "This connection cannot view or change network exposure."
+          ? "This connection can't view or change network access."
           : currentAuthPolicy === "remote-reachable"
-            ? "Remote access is already configured. Change network exposure where the server starts."
+            ? "Remote access is already set up. Change network access where the server is started."
             : currentAuthPolicy === "loopback-browser"
-              ? "Only this machine can connect. Restart with a non-loopback host for remote pairing."
-              : "Network exposure information is unavailable."
+              ? "Only this machine can connect. To pair other devices, restart the server on an address they can reach."
+              : "Network access info isn't available."
       }
       control={
         !desktopBridge &&
@@ -1013,8 +1013,7 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
               }
             />
             <TooltipPopup side="top">
-              Network exposure changes restart the backend and must be controlled where the server
-              process is launched.
+              Changing network access restarts the server, so change it where the server is started.
             </TooltipPopup>
           </Tooltip>
         ) : undefined
@@ -1181,7 +1180,7 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
                   renderAuthorizedClients()
                 ) : (
                   <p className="px-4 py-3 text-xs text-muted-foreground">
-                    This connection can create access links but cannot view authorized clients.
+                    This connection can create access links but can&apos;t see authorized clients.
                   </p>
                 )}
               </ScrollArea>
@@ -1354,7 +1353,7 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
               <AlertDialogHeader>
                 <AlertDialogTitle>Disable Tailscale HTTPS?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  T3 Code will restart the local backend without Tailscale Serve.
+                  T3 Code will restart with Tailscale Serve off.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -1392,8 +1391,8 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
               <DialogHeader>
                 <DialogTitle>Set up Tailscale HTTPS?</DialogTitle>
                 <DialogDescription>
-                  T3 Code will restart the local backend with Tailscale Serve enabled and ask
-                  Tailscale to proxy HTTPS traffic to this backend.
+                  T3 Code will restart with Tailscale Serve on, so Tailscale can forward HTTPS
+                  traffic to it.
                 </DialogDescription>
               </DialogHeader>
               <DialogPanel>

@@ -197,8 +197,8 @@ function LinkRowImpl({
                       <EyeIcon role="img" aria-label="Watching" className="size-3.5" />
                     </TooltipTrigger>
                     <TooltipPopup>
-                      Watching: the agent wakes when checks finish, someone comments, or the branch
-                      conflicts
+                      Watching. The agent wakes up when checks finish, someone comments, or the
+                      branch has conflicts.
                     </TooltipPopup>
                   </Tooltip>
                 ) : null}

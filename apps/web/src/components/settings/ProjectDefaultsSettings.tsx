@@ -365,8 +365,8 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
             title="Automatically pull"
             description={
               isProjectScope
-                ? "Keeps this project's default branch current when the checkout has no local changes or commits."
-                : "Keeps the default branch current when the checkout has no local changes or commits. Projects can override it."
+                ? "Keep this project's default branch up to date when the checkout has no local changes or commits."
+                : "Keep the default branch up to date when the checkout has no local changes or commits. Projects can override it."
             }
             resetAction={
               settings.defaultAutoPull ? (
@@ -391,7 +391,7 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
             settingKeys={["removeAgentCreditsOnMerge"]}
             mixed={mixedAgentCredits}
             {...searchableSetting("remove-agent-credits-on-merge")}
-            description="Remove recognized agent credit lines from merge and squash messages on hosts that support it, keeping human co-authors. Includes auto-merge. Excludes merge queues, stack merges, and existing commits."
+            description="On hosts that support it, remove agent credit lines from merge and squash commit messages and keep human co-authors. Works with auto-merge. Doesn't apply to merge queues, stack merges, or existing commits."
             resetAction={
               settings.removeAgentCreditsOnMerge ? (
                 <SettingResetButton
@@ -420,7 +420,7 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
             description={
               isProjectScope
                 ? "Pull requests in this project start with this method."
-                : "Pull requests start with this method. Last selected reuses whatever you chose most recently on this device."
+                : "Pull requests start with this method. Last selected uses whatever you picked most recently on this device."
             }
             resetAction={
               settings.pullRequestMergeMethod !== null ? (
@@ -485,8 +485,8 @@ export function WorktreeSubmodulesRow() {
       {...searchableSetting("worktree-submodules")}
       description={
         isProjectScope
-          ? "How new worktrees in this project populate git submodules."
-          : "How new worktrees populate git submodules. Projects and their t3.json can override it."
+          ? "How new worktrees in this project set up git submodules."
+          : "How new worktrees set up git submodules. Projects and their t3.json can override it."
       }
       resetAction={
         !isProjectScope && settings.worktreeSubmodules !== null ? (

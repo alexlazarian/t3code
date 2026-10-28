@@ -1110,9 +1110,9 @@ function PullRequestCodeTab({
                     />
                   </TooltipTrigger>
                   <TooltipPopup side="bottom">
-                    This host keeps no shared record of which files you have read, so these ticks
-                    are kept by this environment. They follow you between the apps connected to it,
-                    but the host's own web UI will not show them.
+                    This host doesn't track which files you've viewed, so this environment keeps
+                    your ticks. You see them in every app connected to it, but not on the host's
+                    website.
                   </TooltipPopup>
                 </Tooltip>
               ) : null}
@@ -1125,8 +1125,8 @@ function PullRequestCodeTab({
                     />
                   </TooltipTrigger>
                   <TooltipPopup side="bottom">
-                    The boxes below are whatever was last read, and empty if nothing has been read
-                    yet. {filesViewed.error}
+                    The boxes below show your last loaded ticks, or none if they never loaded.{" "}
+                    {filesViewed.error}
                   </TooltipPopup>
                 </Tooltip>
               ) : null}
@@ -1139,8 +1139,8 @@ function PullRequestCodeTab({
                     />
                   </TooltipTrigger>
                   <TooltipPopup side="bottom">
-                    This change has more files than the host will report ticks for in one read, so
-                    the count is short and some boxes below start empty.
+                    This change has more files than the host reports ticks for at once, so the count
+                    is low and some boxes below start empty.
                   </TooltipPopup>
                 </Tooltip>
               ) : null}
@@ -1155,7 +1155,8 @@ function PullRequestCodeTab({
                 />
               </TooltipTrigger>
               <TooltipPopup side="bottom">
-                The host withheld part of this diff: a binary file, or a change too large to inline.
+                The host left out part of this diff, such as a binary file or a change too large to
+                show.
               </TooltipPopup>
             </Tooltip>
           ) : null}
@@ -1168,7 +1169,7 @@ function PullRequestCodeTab({
                 />
               </TooltipTrigger>
               <TooltipPopup side="bottom">
-                A comment is anchored to the whole change, so switch to All commits to write one.
+                Comments apply to the whole change. Switch to All commits to write one.
               </TooltipPopup>
             </Tooltip>
           ) : null}

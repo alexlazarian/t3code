@@ -173,7 +173,7 @@ export function ProjectActionsSettings() {
       {mixed ? (
         <SettingsRow
           title="Different actions across environments"
-          description="Choose one environment to edit its list. Adding an action here adds it on every selected environment."
+          description="Pick one environment to edit its list. Actions you add here go to every selected environment."
         />
       ) : (
         <ProjectActionsList
@@ -186,7 +186,7 @@ export function ProjectActionsSettings() {
       {t3File.status === "invalid" ? (
         <SettingsRow
           title="t3.json is invalid"
-          description="A t3.json exists in this checkout but fails to parse, so every action and icon it declares is ignored. Check the JSON syntax and icon values."
+          description="This checkout's t3.json has an error, so its actions and icons are ignored. Check the JSON syntax and icon values."
           className="text-warning"
         />
       ) : null}

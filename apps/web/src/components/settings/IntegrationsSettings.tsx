@@ -346,7 +346,7 @@ function BrowserViewportSetting({ disabled }: { readonly disabled: boolean }) {
   return (
     <SettingsRow
       {...searchableSetting("browser-default-viewport")}
-      description="Tab size for you and agents. Fill fits the panel; other sizes show the device toolbar."
+      description="Tab size for you and agents. Fill fits the panel. Other sizes show the device toolbar."
       resetAction={
         !disabled && viewport._tag !== DEFAULT_BROWSER_VIEWPORT._tag ? (
           <SettingResetButton
@@ -497,7 +497,7 @@ function BrowserAppearanceSetting({ disabled }: { readonly disabled: boolean }) 
   return (
     <SettingsRow
       {...searchableSetting("browser-default-appearance")}
-      description="The color scheme pages are told to prefer. System follows your OS setting."
+      description="The color scheme pages should use. System matches your OS."
       resetAction={
         !disabled && appearance !== DEFAULT_PREVIEW_APPEARANCE ? (
           <SettingResetButton
@@ -581,7 +581,7 @@ function BrowserRecordingFrameRateSetting({ disabled }: { readonly disabled: boo
   return (
     <SettingsRow
       {...searchableSetting("browser-recording-frame-rate")}
-      description="Maximum recording rate. 30 fps saves CPU and storage; 60 fps is smoother."
+      description="Highest frame rate for recordings. 30 fps uses less CPU and storage. 60 fps is smoother."
       resetAction={
         !disabled && frameRate !== DEFAULT_BROWSER_RECORDING_FRAME_RATE ? (
           <SettingResetButton
@@ -762,7 +762,7 @@ export function PullRequestLinksOpenInAppSetting() {
   return (
     <SettingsRow
       {...searchableSetting("pull-request-links-open-in-app")}
-      description="Clicking a pull request link opens it in T3 Code. Turn off to open pull request links like any other link, on your git host."
+      description="Pull request links open in T3 Code. Turn off to open them on your git host, like any other link."
       resetAction={
         openInApp ? null : (
           <SettingResetButton
@@ -1023,7 +1023,7 @@ function AgentBrowserAccessSetting() {
       {...searchableSetting("agent-browser-access")}
       description={
         isProjectScope
-          ? "Allow agents in this project to use the shared browser. Applies when the agent session next starts."
+          ? "Allow agents in this project to use the shared browser. Takes effect the next time the agent session starts."
           : "Allow agents to use the shared browser. Projects can override it."
       }
       resetAction={
@@ -1057,7 +1057,7 @@ function BrowserAutoShowFloatingPreviewSetting({ disabled }: { readonly disabled
   return (
     <SettingsRow
       {...searchableSetting("browser-auto-show-floating-preview")}
-      description="Show the floating preview when an agent opens a browser or device unless the agent says otherwise."
+      description="Show the floating preview when an agent opens a browser or device, unless the agent asks not to."
       resetAction={
         !disabled && autoShow !== DEFAULT_BROWSER_AUTO_SHOW_FLOATING_PREVIEW ? (
           <SettingResetButton

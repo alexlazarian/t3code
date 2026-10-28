@@ -188,7 +188,7 @@ export function CaptureShortcutConfig({
           ) : null}
           {changed ? (
             <p className="text-xs text-muted-foreground">
-              Only these changes will be saved. We'll keep a backup.
+              Only these changes are saved, and a backup is kept.
             </p>
           ) : null}
           <div className="flex gap-2">

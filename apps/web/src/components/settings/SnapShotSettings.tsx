@@ -532,7 +532,7 @@ export function SnapShotSettings() {
               />
               <SettingsRow
                 {...searchableSetting("snap-shot-flash")}
-                description="Show a gentle cue on the captured window."
+                description="Briefly highlight the captured window."
                 status={feedbackUnavailable}
                 control={
                   <Switch

@@ -1091,7 +1091,7 @@ export function EnvironmentProviderSettings({
               </PolicyTooltip>
             </span>
           }
-          description="Refresh provider status, versions, and models in the background. Set to 0 to disable."
+          description="How often to check provider status, versions, and models in the background. Set to 0 to turn off."
           resetAction={
             providerHealthRefreshIntervalSeconds !== defaultProviderHealthRefreshIntervalSeconds ? (
               <span

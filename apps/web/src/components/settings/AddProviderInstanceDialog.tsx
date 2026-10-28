@@ -685,7 +685,7 @@ export function AddProviderInstanceDialog({
               ) : !isAcpRegistry && wizardStep === 2 ? (
                 <div className="grid gap-2">
                   <p className="text-sm text-muted-foreground">
-                    This driver has no required configuration. You can add the instance now.
+                    Nothing to set up. You can add the instance now.
                   </p>
                 </div>
               ) : null}

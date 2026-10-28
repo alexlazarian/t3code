@@ -391,8 +391,8 @@ export function ThreadDetailsPrRow({
           />
         </TooltipTrigger>
         <TooltipPopup side="top">
-          Watching: the agent wakes when checks finish, someone comments, or the branch conflicts.
-          Click to stop.
+          Watching. The agent wakes up when checks finish, someone comments, or the branch has
+          conflicts. Click to stop watching.
         </TooltipPopup>
       </Tooltip>
     ) : null;

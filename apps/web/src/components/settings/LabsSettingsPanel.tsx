@@ -34,7 +34,7 @@ function BoringSidebarRow() {
   return (
     <SettingsRow
       {...searchableSetting("boring-sidebar")}
-      description="Group sidebar threads into project folders. Pinned threads stay on top, and Snoozed and Settled stay below the folders."
+      description="Group sidebar threads into project folders. Pinned threads stay at the top. Snoozed and Settled stay below the folders."
       control={
         <Switch
           checked={settings.boringSidebarEnabled || settings.legacySidebarEnabled}
@@ -78,7 +78,7 @@ function GuestLinksRowWithSignIn() {
   return (
     <SettingsRow
       {...searchableSetting("guest-links")}
-      description="Share a thread with a guest who watches it live in their browser and sends messages you approve. Sign in to T3 Connect to use guest links."
+      description="Let a guest watch a thread live in their browser and send messages you approve. Sign in to T3 Connect to use guest links."
       control={
         <Button size="sm" variant="outline" onClick={openAuthPrompt}>
           Sign in
@@ -98,12 +98,12 @@ function GuestLinksRow() {
       settingKeys={["guestSharingEnabled"]}
       description={
         <>
-          Share a thread with a guest who watches it live in their browser and sends messages you
-          approve. Needs T3 Connect: sign in and link this machine in{" "}
+          Let a guest watch a thread live in their browser and send messages you approve. Needs T3
+          Connect: sign in and link this machine in{" "}
           <Link to="/settings/access" className="underline underline-offset-2">
             Sharing & access
           </Link>
-          . While it is off, every guest link stops working.
+          . When off, guest links stop working.
         </>
       }
       control={
@@ -133,7 +133,7 @@ function LinkedEnvironmentsRow() {
           <Link to="/settings/connections" className="underline underline-offset-2">
             Connections
           </Link>
-          . While it is off, nothing new starts over a link; tasks already running finish.
+          . When off, nothing new starts over a link. Tasks already running finish.
         </>
       }
       control={

@@ -488,7 +488,7 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
           variant="ghost"
           aria-label="Search and commands"
           onClick={() => openCommandPalette()}
-          data-info={`Search and commands${paletteShortcutLabel ? ` (${paletteShortcutLabel})` : ""}`}
+          data-info={`Search and run commands${paletteShortcutLabel ? ` (${paletteShortcutLabel})` : ""}`}
         >
           <SearchIcon className="md:hidden" />
           <span className="max-md:hidden">Search and commands</span>
@@ -500,7 +500,7 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
           variant="ghost"
           aria-label="Usage"
           onClick={() => void router.navigate({ to: "/usage" })}
-          data-info={`Open usage${usageShortcutLabel ? ` (${usageShortcutLabel})` : ""}`}
+          data-info={`See your usage${usageShortcutLabel ? ` (${usageShortcutLabel})` : ""}`}
         >
           <ChartNoAxesColumnIcon className="md:hidden" />
           <span className="max-md:hidden">Usage</span>

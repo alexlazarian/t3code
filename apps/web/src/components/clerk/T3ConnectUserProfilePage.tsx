@@ -294,8 +294,8 @@ export function T3ConnectUserProfilePage() {
               <EmptyHeader>
                 <EmptyTitle>No T3 Connect environments</EmptyTitle>
                 <EmptyDescription>
-                  Link an environment from its local Settings to make it available through T3
-                  Connect.
+                  To use an environment through T3 Connect, link it from that environment's
+                  Settings.
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>

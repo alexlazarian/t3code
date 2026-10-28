@@ -352,7 +352,7 @@ function EmptySourceControlDiscovery({
           <EmptyDescription>
             {hasError
               ? error
-              : "Install Git on the server, add optional hosting integrations or credentials your workspace needs, then rescan."}
+              : "Install Git on the server, add any hosting integrations or credentials you need, then scan again."}
           </EmptyDescription>
         </EmptyHeader>
         <EmptyContent>

@@ -74,9 +74,7 @@ export function PullRequestListEmptyState({
         <BranchMark joined={false} />
         <EmptyHeader>
           <EmptyTitle>No projects in this workspace</EmptyTitle>
-          <EmptyDescription>
-            Add a project, and the pull requests from its repository appear here.
-          </EmptyDescription>
+          <EmptyDescription>Add a project to see its pull requests here.</EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
           <Button size="sm" onClick={() => openCommandPalette({ open: "add-project" })}>
@@ -106,7 +104,7 @@ export function PullRequestListEmptyState({
             Nothing matches “{query.length > 48 ? `${query.slice(0, 48)}…` : query}”
           </EmptyTitle>
           <EmptyDescription>
-            The hosts were searched for it. Try fewer words, or search by number, author or branch.
+            Your hosts were searched too. Try fewer words, or search by number, author, or branch.
           </EmptyDescription>
         </EmptyHeader>
         <div className="flex flex-wrap justify-center gap-2">

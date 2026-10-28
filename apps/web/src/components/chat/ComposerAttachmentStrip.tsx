@@ -253,7 +253,7 @@ export function ComposerAttachmentMediaRow({
                     }
                   />
                   <TooltipPopup side="top">
-                    Draft attachment could not be saved locally and may be lost on navigation.
+                    This attachment could not be saved and may be lost if you leave this page.
                   </TooltipPopup>
                 </Tooltip>
               )}

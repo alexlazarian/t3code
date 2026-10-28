@@ -57,11 +57,11 @@ export const SidebarChromeHeader = memo(function SidebarChromeHeader({
 });
 
 const PANEL_TABS: ReadonlyArray<{ id: SidebarPanel; label: string; info: string }> = [
-  { id: "threads", label: "Threads", info: "Threads: your threads by section" },
+  { id: "threads", label: "Threads", info: "Threads, grouped by section" },
   {
     id: "library",
     label: "Library",
-    info: "Library: skills, models, providers, access modes, stash, scheduled tasks, projects and machines",
+    info: "Library: skills, models, providers, access modes, stash, scheduled tasks, projects, and machines",
   },
 ];
 

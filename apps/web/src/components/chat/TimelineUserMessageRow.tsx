@@ -713,8 +713,8 @@ function UserMessageIntentMarker({
       </TooltipTrigger>
       <TooltipPopup side="top">
         {intent === "promoted_queued_to_steer"
-          ? "Originally queued, then promoted to steer the active turn"
-          : "Steered the active turn"}
+          ? "Queued first, then sent to steer the running turn"
+          : "Sent to steer the running turn"}
       </TooltipPopup>
     </Tooltip>
   );

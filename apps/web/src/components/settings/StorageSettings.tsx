@@ -65,7 +65,7 @@ export function WorktreesDirectoryRow() {
     <SettingsRow
       {...searchableSetting("storage-worktrees-location")}
       description={
-        "Folder where new worktrees are created, on any drive, such as D:\\worktrees or ~/worktrees. Existing worktrees stay where they are. Leave empty to use the T3 home folder."
+        "Where new worktrees go, on any drive, such as D:\\worktrees or ~/worktrees. Existing worktrees don't move. Leave empty to use the T3 home folder."
       }
       serverScoped
       settingKeys={["worktreesDirectory"]}
@@ -555,7 +555,7 @@ export function WorktreeCleanupSection() {
             <SettingsRow
               title="Delete worktrees with deleted threads"
               status={ruleStatus("worktreeOnDelete")}
-              description="Remove unused worktrees when active or archived threads are deleted. Worktrees with local changes are kept."
+              description="When you delete a thread, archived or not, remove its worktree if nothing else uses it. Worktrees with local changes are kept."
               serverScoped={!isProjectScope}
               control={
                 <Switch
@@ -568,7 +568,7 @@ export function WorktreeCleanupSection() {
             <SettingsRow
               title="Delete merged worktrees"
               status={ruleStatus("worktreeOnMerge")}
-              description="Remove worktrees whose pull request is merged and whose commits are included in the default branch."
+              description="Remove worktrees once their pull request is merged and their commits are on the default branch."
               serverScoped={!isProjectScope}
               control={
                 <Switch
@@ -581,7 +581,7 @@ export function WorktreeCleanupSection() {
             <SettingsRow
               title="Delete inactive worktrees"
               status={ruleStatus("worktreeAfterDays")}
-              description="Remove worktrees after their threads have been inactive for this many days. Branches and thread history are kept."
+              description="Remove worktrees whose threads have been idle for this many days. Branches and thread history are kept."
               serverScoped={!isProjectScope}
               control={
                 <RetentionControl
@@ -611,7 +611,7 @@ export function WorktreeCleanupSection() {
                     ]
                       .filter(Boolean)
                       .join(". ")}
-                    description="Remove worktrees this many days after their thread settles. Set 0 days to remove them at the next cleanup. Branches and thread history are kept."
+                    description="Remove worktrees this many days after their thread settles. Use 0 to remove them at the next cleanup. Branches and thread history are kept."
                     serverScoped={!isProjectScope}
                     control={
                       <RetentionControl
@@ -628,7 +628,7 @@ export function WorktreeCleanupSection() {
               <SettingsRow
                 title="Delete unchanged worktrees"
                 status={ruleStatus("worktreeUnchanged")}
-                description="Remove worktrees with no commits beyond the default branch."
+                description="Remove worktrees that have no new commits compared to the default branch."
                 serverScoped={!isProjectScope}
                 control={
                   <Switch
@@ -647,7 +647,7 @@ export function WorktreeCleanupSection() {
                   status={ruleStatus("worktreeKeepWhen")}
                   description={
                     settings.worktreeKeepWhen === "any-local-files"
-                      ? "Includes ignored files, except node_modules."
+                      ? "Counts ignored files too, except node_modules."
                       : settings.worktreeKeepWhen === "tracked-changes"
                         ? "Deletes untracked and ignored files, including .env."
                         : "Keeps edits and untracked files. Deletes ignored files, including .env."
@@ -728,7 +728,7 @@ export function StorageCleanupSections() {
         <SettingsRow
           title="Delete old browser artifacts"
           status={ruleStatus("browserArtifactsAfterDays")}
-          description="Delete saved browser captures after this many days. Older capture links will no longer open."
+          description="Delete saved browser captures after this many days. Links to deleted captures stop working."
           serverScoped
           control={
             <RetentionControl
@@ -741,7 +741,7 @@ export function StorageCleanupSections() {
         <SettingsRow
           title="Delete old rotated logs"
           status={ruleStatus("logsAfterDays")}
-          description="Delete inactive rotated log files after this many days. Current logs are kept."
+          description="Delete old log files after this many days. Current logs are kept."
           serverScoped
           control={
             <RetentionControl

@@ -69,7 +69,10 @@ export function ProviderSetupSection(props: ProviderSetupSectionProps) {
         }
       />
       {props.readOnly ? (
-        <SettingsRow title="Setup unavailable" description="Provider setup is read-only." />
+        <SettingsRow
+          title="Setup unavailable"
+          description="Provider setup can't be changed from here."
+        />
       ) : props.provider?.setup === undefined ? (
         <SettingsRow
           title="Update required"
