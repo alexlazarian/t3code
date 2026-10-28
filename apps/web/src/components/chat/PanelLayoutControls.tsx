@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { Maximize2, Minimize2 } from "lucide";
 import { MorphIcon } from "~/components/MorphIcon";
-import { memo, type ReactElement, type ReactNode } from "react";
+import { memo, type ReactElement } from "react";
 
 import { cn } from "~/lib/utils";
 
@@ -172,14 +172,13 @@ export const RightPanelMaximizeControl = memo(function RightPanelMaximizeControl
   );
 });
 
-/** The page header's top-right panel controls, with the maximize toggle while the panel is open. */
+/** The maximize toggle at the open right panel's top-right. */
 export function WorkspaceTitlebarControls(props: {
   readonly showMaximizeControl: boolean;
   readonly rightPanelOpen: boolean;
   readonly animationsActive: boolean;
   readonly maximized: boolean;
   readonly onToggleMaximized: () => void;
-  readonly children: ReactNode;
 }) {
   return (
     <div
@@ -205,7 +204,6 @@ export function WorkspaceTitlebarControls(props: {
           />
         </span>
       ) : null}
-      <div className="pointer-events-auto flex h-full items-center">{props.children}</div>
     </div>
   );
 }
@@ -230,6 +228,7 @@ function HeaderToolButton(props: {
   readonly info: string;
   readonly state: ThreadHeaderToolState;
   readonly onToggle: () => void;
+  readonly rightPanelToggle?: boolean;
 }) {
   return (
     <Tooltip>
@@ -242,6 +241,7 @@ function HeaderToolButton(props: {
           data-pressed={props.state.on ? "" : undefined}
           disabled={props.state.disabled}
           onClick={props.onToggle}
+          data-right-panel-toggle={props.rightPanelToggle ? "" : undefined}
         >
           <HeaderToolContent icon={props.icon} label={props.label} />
         </Button>
@@ -271,9 +271,13 @@ export interface ThreadHeaderToolsProps {
   readonly terminalOpen: boolean;
   readonly terminalShortcutLabel: string | null;
   readonly onToggleTerminal: () => void;
+  readonly rightPanelAvailable: boolean;
+  readonly rightPanelOpen: boolean;
+  readonly rightPanelShortcutLabel: string | null;
+  readonly onToggleRightPanel: () => void;
 }
 
-/** The thread header's panel buttons: thread details, right panel surfaces, terminal drawer. */
+/** The thread header's panel buttons: thread details, right panel surfaces, terminal drawer, whole right panel. */
 export const ThreadHeaderTools = memo(function ThreadHeaderTools(props: ThreadHeaderToolsProps) {
   const detailsLabel = withShortcut("Toggle thread details", props.threadPanelShortcutLabel);
   const detailsButton = (
@@ -359,6 +363,21 @@ export const ThreadHeaderTools = memo(function ThreadHeaderTools(props: ThreadHe
         }
         state={{ on: props.terminalOpen, disabled: !props.terminalAvailable }}
         onToggle={props.onToggleTerminal}
+      />
+      <HeaderToolButton
+        icon={PanelRightIcon}
+        label="Panel"
+        info={
+          props.rightPanelAvailable || props.rightPanelOpen
+            ? withShortcut("Toggle right panel", props.rightPanelShortcutLabel)
+            : "Right panel is unavailable"
+        }
+        state={{
+          on: props.rightPanelOpen,
+          disabled: !props.rightPanelAvailable && !props.rightPanelOpen,
+        }}
+        onToggle={props.onToggleRightPanel}
+        rightPanelToggle
       />
     </div>
   );

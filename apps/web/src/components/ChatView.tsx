@@ -3118,6 +3118,10 @@ export default function ChatView(props: ChatViewProps) {
       terminalOpen={panelToggleControlProps.terminalOpen}
       terminalShortcutLabel={panelToggleControlProps.terminalShortcutLabel}
       onToggleTerminal={toggleTerminalVisibilityStable}
+      rightPanelAvailable={panelToggleControlProps.rightPanelAvailable}
+      rightPanelOpen={rightPanelOpen}
+      rightPanelShortcutLabel={panelToggleControlProps.rightPanelShortcutLabel}
+      onToggleRightPanel={toggleRightPanelStable}
     />
   );
   const panelLayoutControls = (
@@ -3127,9 +3131,7 @@ export default function ChatView(props: ChatViewProps) {
       animationsActive={panelAnimationsActive}
       maximized={rightPanelMaximized}
       onToggleMaximized={toggleRightPanelMaximizedStable}
-    >
-      {panelToggleControls}
-    </WorkspaceTitlebarControls>
+    />
   );
   const workspaceFileDropHandlers = makeWorkspaceFileDropHandlers({
     setDragActive: setIsWorkspaceFileDragActive,

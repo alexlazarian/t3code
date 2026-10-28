@@ -35,7 +35,6 @@ import {
   resolveSidebarStatusLabel,
 } from "../sidebar/threadStatusLabel";
 import { useNowAfter } from "../../hooks/useDeadline";
-import { useProjectAccentColor } from "../../hooks/useProjectAccentColor";
 import { useUiStateStore } from "../../uiStateStore";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { toastManager } from "../ui/toast";
@@ -126,7 +125,6 @@ export const ChatHeader = memo(function ChatHeader({
   onOpenProjectSettings,
   tools,
 }: ChatHeaderProps) {
-  const projectAccentColor = useProjectAccentColor(activeProject);
   const activeProjectName = activeProject?.isScratch ? "No project" : activeProject?.title;
   const activeProjectCwd = activeProject?.workspaceRoot ?? null;
   const interfaceFont = useClientSettings((settings) => settings.fontFamilySans);
@@ -322,13 +320,6 @@ export const ChatHeader = memo(function ChatHeader({
       className="@container/thread-header flex min-w-0 flex-1 items-center gap-2 sm:gap-3"
       onContextMenu={handleHeaderContextMenu}
     >
-      {projectAccentColor ? (
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-y-0 left-0 w-0.5"
-          style={{ backgroundColor: projectAccentColor }}
-        />
-      ) : null}
       <WorkspaceBreadcrumb
         ariaLabel="Thread breadcrumb"
         className="flex-1 overflow-clip [overflow-clip-margin:2px]"
