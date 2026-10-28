@@ -336,6 +336,9 @@ export function parseVsCodeThemeFile(value: unknown): ThemeDefinition {
     sidebarForeground: readableOn(sidebarHex, derived.sidebarForeground, "sideBar.foreground"),
     sidebarBorder: solidOver(sidebar, "sideBar.border") ?? derived.sidebarBorder,
     sidebarRowHover: solidOver(sidebar, "list.hoverBackground") ?? derived.sidebarRowHover,
+    navSelected:
+      solidOver(sidebar, "list.inactiveSelectionBackground", "list.hoverBackground") ??
+      derived.navSelected,
     sidebarRowActive:
       solidOver(sidebar, "list.inactiveSelectionBackground", "list.hoverBackground") ??
       derived.sidebarRowActive,

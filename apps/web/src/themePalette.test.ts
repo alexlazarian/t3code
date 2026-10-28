@@ -113,6 +113,24 @@ describe("theme files", () => {
     expect(restored.variants).toEqual(theme.variants);
   });
 
+  it("gives older theme files a selected-item colour from their own row hover", () => {
+    const legacy = parseThemeFile({
+      version: THEME_FILE_VERSION,
+      name: "Legacy rows",
+      appearance: "dark",
+      colors: { sidebarRowHover: "#223344" },
+    });
+    expect(legacy.colors.navSelected).toBe(legacy.colors.sidebarRowHover);
+
+    const explicit = parseThemeFile({
+      version: THEME_FILE_VERSION,
+      name: "Explicit rows",
+      appearance: "dark",
+      colors: { sidebarRowHover: "#223344", navSelected: "#556677" },
+    });
+    expect(explicit.colors.navSelected).toBe(canonical("#556677"));
+  });
+
   it.each(["searchMatchBackground", "searchMatchActiveBackground"] as const)(
     "editing %s derives readable text without changing the other match or warning colours",
     (role) => {

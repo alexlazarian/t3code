@@ -198,6 +198,12 @@ const THEME_EDITOR_ROLE_GROUPS: ReadonlyArray<{
         roles: ["sidebarRowHover", "sidebarRowActive", "sidebarRowSelected"],
       },
       {
+        id: "selected-item",
+        label: "Selected item",
+        role: "navSelected",
+        roles: ["navSelected"],
+      },
+      {
         id: "terminal-background",
         label: "Terminal background",
         role: "terminalBackground",

@@ -34,7 +34,7 @@ export function LibraryItemList(props: {
         return (
           <li
             key={item.key}
-            className={cn("border-b border-sidebar-border", open && "bg-sidebar-row-hover")}
+            className={cn("border-b border-sidebar-border", open && "bg-nav-selected")}
           >
             <button
               type="button"

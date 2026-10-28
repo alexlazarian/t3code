@@ -33,7 +33,7 @@ export function LibraryPanel() {
                 className={cn(
                   "h-6 cursor-pointer px-2 text-left text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
                   entry.id === active?.id
-                    ? "bg-sidebar-row-hover text-sidebar-foreground"
+                    ? "bg-nav-selected text-sidebar-foreground"
                     : "text-sidebar-muted-foreground hover:bg-sidebar-row-hover hover:text-sidebar-foreground",
                 )}
               >
