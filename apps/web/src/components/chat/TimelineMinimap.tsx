@@ -37,6 +37,7 @@ function onMouseButtonsReleased(onRelease: () => void): () => void {
 }
 
 export function TimelineMinimap({
+  bottomInset,
   hasPersistentGutter,
   hitStripWidth,
   currentIndex,
@@ -45,6 +46,8 @@ export function TimelineMinimap({
   onWheel,
   onSelect,
 }: {
+  /** The composer overlaps the timeline's end; the rail centers in the part above it. */
+  bottomInset: number;
   hasPersistentGutter: boolean;
   hitStripWidth: number;
   currentIndex: number | null;
@@ -132,6 +135,7 @@ export function TimelineMinimap({
           ? "opacity-100"
           : "opacity-0 transition-opacity duration-150 hover:opacity-100 focus-within:opacity-100",
       )}
+      style={{ bottom: bottomInset }}
       data-testid="timeline-minimap"
       data-persistent-gutter={hasPersistentGutter ? "true" : "false"}
       ref={wheelTargetRef}
