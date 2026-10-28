@@ -10,6 +10,11 @@ and mode selections, unless the destination project has its own model default.
 Its branch and workspace mode come from your configured defaults. To continue in
 an existing worktree, use **New thread in this worktree** from the branch toolbar.
 
+On web and desktop, **New thread** in the top bar may ask you to choose a project, and is
+unavailable until you add one. To start in the current project directly, press `mod+shift+n`
+(`chat.newLocal`), choose **New thread in** your project from the command palette, or click the
+project name in the thread header.
+
 On mobile, **New thread** starts in the current thread's project, or else in the
 last project you opened or chose on that device. If neither is available, the
 project picker opens. Turn off **Settings → General → Use last project** to
@@ -65,6 +70,11 @@ the thread opens and the files are attached in its composer, ready for
 your next message. The same per-message file limits apply as when attaching
 files directly; see [Attach files](./composer.md#attach-files).
 
+On web and desktop, the thread list has **Pinned**, **Active**, and **Settled** sections, plus
+**Working** and **Snoozed** when they hold threads. Each header shows its thread count, and an
+empty section reads **None**. Click a header to collapse or expand its section. While a status or
+project filter is on, empty sections hide and every match shows, even in collapsed sections.
+
 On web and desktop, pinning or unpinning a thread keeps the sidebar at your current
 scroll position instead of following the thread to its new place in the list.
 
@@ -76,15 +86,12 @@ list to unpin it. Dragging a thread onto the **Settled** header settles it, and 
 thread into the active list un-settles it. A snoozed thread can be dragged out of the snoozed
 shelf, which wakes it, but threads cannot be dragged into the shelf because snoozing needs a wake
 time. Dragging a pinned thread out of the pinned section does not ask for unpin confirmation.
-Pinned and active boundary labels appear only while dragging, without moving the rows. The
-other rows slide aside to show where the thread will land. When you cross into another section,
+The other rows slide aside to show where the thread will land. When you cross into another section,
 the dragged thread shows the action the drop performs, with its icon: **Pin**, **Unpin**,
 **Settle**, **Un-settle**, or **Wake**. Its status and hover actions hide during the drag. A pinned
 thread keeps its pin only while it stays in the pinned section; once it leaves, the badge takes
-over. Reordering within the same section shows no badge. When there are no pins, drag to the top
-edge to pin a thread. Section labels stay readable for the whole drag, and the section the
-thread is over takes the accent color. Section labels also
-identify empty sections and a collapsed settled shelf.
+over. Reordering within the same section shows no badge. The header of the section the thread
+is over takes the accent color.
 
 Drag within the pinned or active section to change its order. Other rows slide aside to show the
 spot where the thread will land. Drops into either section keep the position you choose. On
