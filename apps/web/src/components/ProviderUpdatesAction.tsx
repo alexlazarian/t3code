@@ -1,14 +1,26 @@
-import { PROVIDER_DISPLAY_NAMES } from "@t3tools/contracts";
-import { settlePromise } from "@t3tools/client-runtime/state/runtime";
+import {
+  AuthProvidersManageScope,
+  PROVIDER_DISPLAY_NAMES,
+  type EnvironmentId,
+  type ProviderInstanceId,
+} from "@t3tools/contracts";
+import {
+  isAtomCommandInterrupted,
+  settlePromise,
+  squashAtomCommandFailure,
+} from "@t3tools/client-runtime/state/runtime";
 import { useRef, useState } from "react";
 
+import { useStableCallback } from "~/hooks/useStableCallback";
 import { useEnvironmentProviders, useEnvironments } from "~/state/environments";
 import { serverEnvironment } from "~/state/server";
+import { readEnvironmentScope } from "~/state/session";
 import { useAtomCommand } from "~/state/use-atom-command";
 import {
   canOneClickUpdateProviderCandidate,
   collectProviderUpdateCandidates,
   getProviderUpdateRunToastView,
+  type ProviderSettingsUpdateCandidate,
   type ProviderUpdateRun,
 } from "./ProviderUpdateLaunchNotification.logic";
 import { Button } from "./ui/button";
@@ -62,6 +74,76 @@ export function useProviderUpdates() {
   };
 
   return { machines, updateAll };
+}
+
+/** Runs one provider's update and reports how it ended; Settings and Library share it. */
+export function useRunProviderUpdate(environmentId: EnvironmentId, environmentLabel: string) {
+  const updateProvider = useAtomCommand(serverEnvironment.updateProvider, {
+    reportFailure: false,
+  });
+  const [dispatchingInstanceIds, setDispatchingInstanceIds] = useState<
+    ReadonlySet<ProviderInstanceId>
+  >(() => new Set());
+  const dispatchingRef = useRef<Set<ProviderInstanceId>>(new Set());
+
+  const runProviderUpdate = useStableCallback(
+    async (
+      candidate: Pick<ProviderSettingsUpdateCandidate, "driver" | "instanceId">,
+      targetVersion?: string,
+    ) => {
+      if (!readEnvironmentScope(environmentId, AuthProvidersManageScope)) return;
+      // Guard re-entry with a ref; deferred state updates cannot gate dispatch.
+      if (dispatchingRef.current.has(candidate.instanceId)) {
+        return;
+      }
+      dispatchingRef.current.add(candidate.instanceId);
+      setDispatchingInstanceIds((previous) => new Set(previous).add(candidate.instanceId));
+
+      const result = await updateProvider({
+        environmentId,
+        input: {
+          provider: candidate.driver,
+          instanceId: candidate.instanceId,
+          ...(targetVersion ? { targetVersion } : {}),
+        },
+      });
+      if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
+        const error = squashAtomCommandFailure(result);
+        toastManager.add(
+          stackedThreadToast({
+            type: "error",
+            title: `Could not update ${PROVIDER_DISPLAY_NAMES[candidate.driver] ?? candidate.driver}`,
+            description:
+              error instanceof Error
+                ? error.message
+                : "The provider update command could not be started.",
+          }),
+        );
+      } else if (result._tag === "Success") {
+        const view = getProviderUpdateRunToastView([
+          {
+            environmentId,
+            machineLabel: environmentLabel,
+            driver: candidate.driver,
+            instanceId: candidate.instanceId,
+            result,
+          },
+        ]);
+        if (view) toastManager.add(stackedThreadToast(view));
+      }
+      dispatchingRef.current.delete(candidate.instanceId);
+      setDispatchingInstanceIds((previous) => {
+        if (!previous.has(candidate.instanceId)) {
+          return previous;
+        }
+        const next = new Set(previous);
+        next.delete(candidate.instanceId);
+        return next;
+      });
+    },
+  );
+
+  return { dispatchingInstanceIds, runProviderUpdate };
 }
 
 export function ProviderUpdatesAction() {

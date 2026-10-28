@@ -1,10 +1,9 @@
 import { ArrowLeftIcon } from "lucide-react";
-import type { KeyboardEvent, ReactNode } from "react";
+import type { KeyboardEvent } from "react";
 import { memo } from "react";
-import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 
 import { cn } from "../../lib/utils";
-import { usePullRequestsSupported } from "../../state/environments";
 import { T3Wordmark } from "../T3Wordmark";
 import {
   SidebarFooter,
@@ -14,13 +13,10 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "../ui/sidebar";
-import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
-import { readPullRequestListPreferences } from "../pullRequest/pullRequestListPreferences";
 import { isSidebarUtilityPage, useNavigateToMainApp } from "./mainAppLocation";
 import { SidebarThreadUndoNotice } from "./SidebarThreadUndoNotice";
-import { SidebarProviderUpdatePill } from "./SidebarProviderUpdatePill";
 import { SidebarUpdateArchitectureWarning, SidebarUpdatePill } from "./SidebarUpdatePill";
-import { PullRequestGlyph } from "~/components/pullRequest/pullRequestIcons";
+import { ProviderUpdateIndicator } from "../ProviderUpdateIndicator";
 import { useUiStateStore, type SidebarPanel } from "../../uiStateStore";
 
 export const SidebarChromeHeader = memo(function SidebarChromeHeader({
@@ -110,6 +106,9 @@ function SidebarPanelTabs() {
             )}
           >
             {tab.label}
+            {tab.id === "library" ? (
+              <ProviderUpdateIndicator className="ms-1 align-middle" />
+            ) : null}
           </button>
         );
       })}
@@ -140,50 +139,16 @@ function SidebarBrandMark() {
   );
 }
 
-function SidebarUtilityItem({
-  icon,
-  label,
-  onClick,
-}: {
-  icon: ReactNode;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <SidebarMenuItem className="shrink-0">
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <SidebarMenuButton aria-label={label} onClick={onClick} size="icon">
-              {icon}
-            </SidebarMenuButton>
-          }
-        />
-        <TooltipPopup side="top">{label}</TooltipPopup>
-      </Tooltip>
-    </SidebarMenuItem>
-  );
-}
-
 const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
-  const navigate = useNavigate();
   const navigateToMainApp = useNavigateToMainApp();
   const { isMobile, setOpenMobile } = useSidebar();
   const isOnUtilityPage = useLocation({
     select: (location) => isSidebarUtilityPage(location.pathname),
   });
-  const pullRequestsSupported = usePullRequestsSupported();
   const closeMobileSidebar = () => {
     if (isMobile) {
       setOpenMobile(false);
     }
-  };
-  const handlePullRequestsClick = () => {
-    closeMobileSidebar();
-    void navigate({
-      to: "/pull-requests",
-      search: readPullRequestListPreferences(),
-    });
   };
   const handleBackClick = () => {
     closeMobileSidebar();
@@ -199,15 +164,7 @@ const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
             <span>Back</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
-      ) : (
-        pullRequestsSupported && (
-          <SidebarUtilityItem
-            icon={<PullRequestGlyph.pullRequest />}
-            label="Pull requests"
-            onClick={handlePullRequestsClick}
-          />
-        )
-      )}
+      ) : null}
       <SidebarUpdatePill />
     </SidebarMenu>
   );
@@ -217,7 +174,6 @@ export const SidebarChromeFooter = memo(function SidebarChromeFooter() {
   return (
     <SidebarFooter>
       <SidebarThreadUndoNotice />
-      <SidebarProviderUpdatePill />
       <SidebarUpdateArchitectureWarning />
       <SidebarUtilityMenu />
     </SidebarFooter>

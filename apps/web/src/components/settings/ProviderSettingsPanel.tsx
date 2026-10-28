@@ -1,10 +1,6 @@
 import { SettingsGroup } from "./SettingsGroup";
 import { RefreshIcon } from "~/components/ui/refresh-icon";
-import {
-  AuthSettingsWriteScope,
-  AuthProvidersManageScope,
-  AuthOrchestrationReadScope,
-} from "@t3tools/contracts";
+import { AuthSettingsWriteScope, AuthOrchestrationReadScope } from "@t3tools/contracts";
 import { useEnvironmentScope, readEnvironmentScope } from "../../state/session";
 import { useAtomValue } from "@effect/atom-react";
 import { connectionStatusTitle } from "@t3tools/client-runtime/connection";
@@ -17,7 +13,6 @@ import {
   defaultInstanceIdForDriver,
   type EnvironmentId,
   type AcpRegistryUrlAuthAction,
-  PROVIDER_DISPLAY_NAMES,
   ProviderDriverKind,
   type ProjectId,
   type ProviderInstanceConfig,
@@ -74,7 +69,7 @@ import {
   isProviderUpdateActive,
   type ProviderSettingsUpdateCandidate,
 } from "../ProviderUpdateLaunchNotification.logic";
-import { ProviderUpdatesAction } from "../ProviderUpdatesAction";
+import { ProviderUpdatesAction, useRunProviderUpdate } from "../ProviderUpdatesAction";
 import { Button } from "../ui/button";
 import {
   Empty,
@@ -94,7 +89,7 @@ import {
 import { ScrollArea } from "../ui/scroll-area";
 import { Toggle, ToggleGroup } from "../ui/toggle-group";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
-import { stackedThreadToast, toastManager } from "../ui/toast";
+import { toastManager } from "../ui/toast";
 import { AddProviderInstanceDialog } from "./AddProviderInstanceDialog";
 import { ExpandableText } from "./ExpandableText";
 import { ProviderInstanceCard } from "./ProviderInstanceCard";
@@ -562,9 +557,8 @@ export function EnvironmentProviderSettings({
   const refreshServerProviders = useAtomCommand(serverEnvironment.refreshProviders, {
     reportFailure: false,
   });
-  const updateProvider = useAtomCommand(serverEnvironment.updateProvider, {
-    reportFailure: false,
-  });
+  const { dispatchingInstanceIds: updatingProviderInstanceIds, runProviderUpdate } =
+    useRunProviderUpdate(environmentId, environmentLabel);
   const uninstallAcpRegistryManagedBinary = useAtomCommand(
     serverEnvironment.uninstallAcpRegistryManagedBinary,
     { reportFailure: false },
@@ -577,11 +571,7 @@ export function EnvironmentProviderSettings({
   const [selectedInstanceId, setSelectedInstanceId] = useState<ProviderInstanceId | null>(
     targetInstanceId ?? null,
   );
-  const [updatingProviderInstanceIds, setUpdatingProviderInstanceIds] = useState<
-    ReadonlySet<ProviderInstanceId>
-  >(() => new Set());
   const refreshingRef = useRef(false);
-  const updatingInstanceIdsRef = useRef<Set<ProviderInstanceId>>(new Set());
 
   const acceptUrlAuthentication = useStableCallback(
     (instanceId: ProviderInstanceId, action: AcpRegistryUrlAuthAction) => {
@@ -648,52 +638,6 @@ export function EnvironmentProviderSettings({
       }
     })();
   };
-
-  const runProviderUpdate = useStableCallback(
-    async (
-      candidate: Pick<ProviderSettingsUpdateCandidate, "driver" | "instanceId">,
-      targetVersion?: string,
-    ) => {
-      if (!readEnvironmentScope(environmentId, AuthProvidersManageScope)) return;
-      // Guard re-entry with a ref; deferred state updates cannot gate dispatch.
-      if (updatingInstanceIdsRef.current.has(candidate.instanceId)) {
-        return;
-      }
-      updatingInstanceIdsRef.current.add(candidate.instanceId);
-      setUpdatingProviderInstanceIds((previous) => new Set(previous).add(candidate.instanceId));
-
-      const result = await updateProvider({
-        environmentId,
-        input: {
-          provider: candidate.driver,
-          instanceId: candidate.instanceId,
-          ...(targetVersion ? { targetVersion } : {}),
-        },
-      });
-      if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
-        const error = squashAtomCommandFailure(result);
-        toastManager.add(
-          stackedThreadToast({
-            type: "error",
-            title: `Could not update ${PROVIDER_DISPLAY_NAMES[candidate.driver] ?? candidate.driver}`,
-            description:
-              error instanceof Error
-                ? error.message
-                : "The provider update command could not be started.",
-          }),
-        );
-      }
-      updatingInstanceIdsRef.current.delete(candidate.instanceId);
-      setUpdatingProviderInstanceIds((previous) => {
-        if (!previous.has(candidate.instanceId)) {
-          return previous;
-        }
-        const next = new Set(previous);
-        next.delete(candidate.instanceId);
-        return next;
-      });
-    },
-  );
 
   interface InstanceRow {
     readonly instanceId: ProviderInstanceId;

@@ -60,6 +60,7 @@ import { validateSettingsScopeSearch } from "./settingsScope";
 import { useSettingsSectionNavigation } from "./useSettingsSectionNavigation";
 import { isSettingsPath } from "./settingsPlacement";
 import { workspaceAreaProps } from "../../lib/workspaceFocus";
+import { ProviderUpdateIndicator } from "../ProviderUpdateIndicator";
 
 const SnapShotIcon = createLucideIcon("snap-shot", [
   [
@@ -438,6 +439,9 @@ export function SettingsSidebarNav({
                                 >
                                   {SETTINGS_SECTION_LABELS[to]}
                                 </span>
+                                {to === "/settings/providers" ? (
+                                  <ProviderUpdateIndicator className="ms-auto" />
+                                ) : null}
                               </SidebarMenuButton>
                             </SidebarMenuItem>
                           );

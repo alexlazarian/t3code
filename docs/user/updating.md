@@ -122,6 +122,10 @@ details** to include the error in a bug report.
 ## Update providers
 
 **Settings → Providers** shows provider updates for the selected environment.
+**Library → Providers** lists the same updates for the open thread's machine,
+with **Update now** on each provider that can update in one click. While any
+connected environment has one, a dot marks the **Library** tab, its
+**Providers** category, and **Providers** in Settings.
 **Update all** updates every outdated provider on every connected environment
 at once. Hover it to see which providers it will update. Providers that only
 offer a manual update command are not included.

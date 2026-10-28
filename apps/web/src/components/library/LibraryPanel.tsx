@@ -1,4 +1,5 @@
 import { cn } from "../../lib/utils";
+import { ProviderUpdateIndicator } from "../ProviderUpdateIndicator";
 import { useUiStateStore } from "../../uiStateStore";
 import { LIBRARY_CATEGORIES, LIBRARY_GROUPS, type LibraryCategory } from "./Library.logic";
 import { LibraryAccess } from "./LibraryAccess";
@@ -43,6 +44,9 @@ export function LibraryPanel() {
                 )}
               >
                 {entry.name}
+                {entry.id === "providers" ? (
+                  <ProviderUpdateIndicator className="ms-1.5 align-middle" />
+                ) : null}
               </button>
             ))}
           </div>
