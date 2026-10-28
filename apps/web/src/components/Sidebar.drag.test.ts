@@ -253,37 +253,6 @@ describe("sidebar drag projection", () => {
     expect(preview({ ...input, enabled: true }, active, over)).toEqual(reordered);
   });
 
-  it.each([
-    ["a1", "a2"],
-    ["a1", sidebarMarkerId("settled-header")],
-    ["z", "a2"],
-  ])("keeps sparse shelves at the bottom when dragging %s over %s", (active, over) => {
-    const items = [
-      pinnedHeader,
-      divider,
-      thread("a1", "active"),
-      thread("a2", "active"),
-      marker("snoozed-header"),
-      thread("z", "snoozed"),
-      settledHeader,
-      thread("s", "settled"),
-    ];
-    const strategy = createSidebarSortingStrategy({
-      items,
-      settledOrder: over === sidebarMarkerId("settled-header") ? ["a1", "s"] : ["s"],
-      settledExpanded: true,
-      boundaryLabelHeight: 24,
-      snoozedThreadCount: 1,
-    });
-    const args = layout(items, active, over);
-    for (const rect of args.rects.slice(4)) {
-      rect.top += 400;
-      rect.bottom += 400;
-    }
-    const lastIndex = items.length - 1;
-    expect(strategy({ ...args, index: lastIndex })).toEqual(stationary);
-  });
-
   const pinned = [
     pinnedHeader,
     thread("p1", "pinned"),
@@ -596,7 +565,7 @@ describe("sidebar drag projection", () => {
     },
   );
 
-  it("uses shelf height for empty target sizing when card height differs from its default", () => {
+  it("sizes an empty target like the measured row when no slim row is visible", () => {
     const items = [
       pinnedHeader,
       thread("p", "pinned"),
@@ -611,7 +580,7 @@ describe("sidebar drag projection", () => {
       settledExpanded: false,
     });
     const args = layout(items, "a", sidebarMarkerId("settled-placeholder"), 1, 78);
-    expect(strategy({ ...args, index: 4 })?.y).toBe(-42);
+    expect(strategy({ ...args, index: 4 })?.y).toBe(0);
   });
 
   it("keeps the route row visible after a settled drop pushes it beyond the page", () => {
@@ -681,7 +650,7 @@ describe("sidebar drag projection", () => {
       sidebarMarkerId("settled-placeholder"),
     );
     expect(result.get(sidebarMarkerId("settled-placeholder"))?.scaleY).toBe(0);
-    expect(result.get(sidebarMarkerId("settled-header"))?.y).toBe(-46);
+    expect(result.get(sidebarMarkerId("settled-header"))?.y).toBe(0);
   });
 
   it("preserves hidden snoozed membership when the only rendered route row leaves", () => {

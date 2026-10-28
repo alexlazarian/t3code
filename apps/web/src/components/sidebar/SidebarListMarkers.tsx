@@ -37,9 +37,11 @@ function SortableSidebarMarker(props: {
   );
 }
 
+/** Zero height unless its expanded section is empty, where it reads "None" as in the prototype. */
 export function SidebarSectionPlaceholder(props: {
-  marker: "active-placeholder" | "settled-placeholder";
+  marker: "pinned-placeholder" | "active-placeholder" | "settled-placeholder";
   label: string;
+  showNone: boolean;
   showHint: boolean;
   isDropTarget: boolean;
 }) {
@@ -47,8 +49,13 @@ export function SidebarSectionPlaceholder(props: {
     <SortableSidebarMarker
       marker={props.marker}
       data-testid={`sidebar-${props.marker}`}
-      className="relative mx-0.5 -mb-px h-0"
+      className={cn("relative", !props.showNone && "mx-0.5 -mb-px h-0")}
     >
+      {props.showNone ? (
+        <div className="border-b border-sidebar-border px-3 py-1 text-xs text-placeholder">
+          None
+        </div>
+      ) : null}
       {props.showHint ? (
         <div
           className={cn(
@@ -77,16 +84,32 @@ export function SidebarSectionHeader(props: {
   count: number;
   dragging?: boolean;
   isDropTarget?: boolean;
+  /** A narrowed list shows every match, so it hides empty sections and ignores collapse. */
+  narrowed: boolean;
   toggle: { expanded: boolean; onToggle: () => void };
 }) {
+  if (props.narrowed && props.count === 0) {
+    return (
+      <SortableSidebarMarker
+        marker={props.marker}
+        data-testid={`sidebar-${props.marker}`}
+        className="-mb-px h-0"
+      />
+    );
+  }
   return (
-    <SortableSidebarMarker marker={props.marker} data-testid={`sidebar-${props.marker}`}>
+    <SortableSidebarMarker
+      marker={props.marker}
+      data-testid={`sidebar-${props.marker}`}
+      className="sticky top-0 z-15"
+    >
       <button
         type="button"
         aria-expanded={props.toggle.expanded}
+        disabled={props.narrowed}
         onClick={props.toggle.onToggle}
         data-testid={SECTION_TESTID[props.marker]}
-        className="flex h-6 w-full cursor-pointer items-center gap-1.5 border-b border-sidebar-border bg-background px-2 text-left text-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70"
+        className="flex h-6 w-full cursor-pointer items-center disabled:cursor-default gap-1.5 border-b border-sidebar-border bg-background px-2 text-left text-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70"
       >
         <span aria-hidden className="w-2 shrink-0 text-muted-foreground">
           {props.toggle.expanded ? "\u25BE" : "\u25B8"}

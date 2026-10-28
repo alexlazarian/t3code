@@ -195,6 +195,7 @@ const SIDEBAR_MARKER_PREFIX = "sidebar-marker-";
 
 export type SidebarListMarker =
   | "pinned-header"
+  | "pinned-placeholder"
   | "active-placeholder"
   | "settled-placeholder"
   | "pinned-divider"
@@ -227,6 +228,7 @@ export function buildSidebarListItems(sections: {
   const marker = (name: SidebarListMarker): SidebarListItem => ({ kind: "marker", marker: name });
   return [
     marker("pinned-header"),
+    marker("pinned-placeholder"),
     ...rows(sections.pinned, "pinned"),
     marker("pinned-divider"),
     marker("active-placeholder"),

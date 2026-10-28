@@ -27,6 +27,7 @@ import {
   AlarmClockOffIcon,
   ArrowRightLeftIcon,
   CheckIcon,
+  FolderGit2Icon,
   CircleAlertIcon,
   CircleCheckIcon,
   ClockIcon,
@@ -60,6 +61,7 @@ import { RelativeTimeLabel, threadTimeTimestamp } from "./RelativeTimeLabel";
 import type { SidebarThreadSummary } from "../../types";
 import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
 import { cn } from "~/lib/utils";
+import { formatWorktreePathForDisplay } from "../../worktreeCleanup";
 import { textDirection } from "~/textDirection";
 import { EnvironmentMachineIcon } from "../EnvironmentMachineIcon";
 import {
@@ -202,6 +204,15 @@ function SidebarThreadTooltip({
           <div className="flex min-w-0 items-center gap-2">
             <GitBranchIcon className="size-3 shrink-0 stroke-muted-foreground" />
             <MiddleTruncate value={thread.branch} className="flex" />
+          </div>
+        ) : null}
+        {thread.worktreePath?.trim() ? (
+          <div className="flex min-w-0 items-center gap-2">
+            <FolderGit2Icon className="size-3 shrink-0 stroke-muted-foreground" />
+            <MiddleTruncate
+              value={`Worktree: ${formatWorktreePathForDisplay(thread.worktreePath)}`}
+              className="flex"
+            />
           </div>
         ) : null}
         {branchMismatch ? (
@@ -1163,6 +1174,9 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
               {thread.branch ? (
                 <>
                   {separator}
+                  {thread.worktreePath?.trim() ? (
+                    <FolderGit2Icon className="mr-0.5 inline size-3 align-text-bottom" />
+                  ) : null}
                   <span className="font-mono">{thread.branch}</span>
                 </>
               ) : showsScratchMachine ? (

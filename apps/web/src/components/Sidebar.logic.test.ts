@@ -1170,6 +1170,7 @@ describe("Working shelf (beta)", () => {
       });
       expect(built).toEqual([
         marker("pinned-header"),
+        marker("pinned-placeholder"),
         marker("pinned-divider"),
         marker("active-placeholder"),
         row("a1", "active"),
