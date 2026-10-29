@@ -1,15 +1,17 @@
 import { FolderIcon } from "lucide-react";
-import { Fragment, type DragEvent } from "react";
+import type { DragEvent } from "react";
 
 import { cn } from "~/lib/utils";
 
-import { OVERVIEW_INK } from "../../projectAccentColor.logic";
 import { ProjectFavicon } from "../ProjectFavicon";
+import { projectTagColorProps } from "../sidebar/SidebarThreadRow";
+import { StatusLight } from "../StatusLight";
 import type { OverviewColumn, OverviewMachine } from "./Overview.logic";
 
 export function OverviewColumnHeader(props: {
   readonly column: OverviewColumn;
-  readonly fill: string;
+  readonly columnIndex: number;
+  readonly accentColor: string | null;
   readonly machines: ReadonlyArray<OverviewMachine>;
   /** Where a dragged column would land relative to this one, while one hovers it. */
   readonly dropSide: "before" | "after" | null;
@@ -19,7 +21,10 @@ export function OverviewColumnHeader(props: {
   readonly onDragEnd: () => void;
 }) {
   const { column } = props;
-  const { open, working, needsYou } = column.counts;
+  const { open, needsYou } = column.counts;
+  const nameColor = projectTagColorProps(props.accentColor, false);
+  const allOffline =
+    props.machines.length > 0 && props.machines.every((machine) => machine.offline);
   const movable = column.project !== null;
   const handleDragOver = (event: DragEvent) => {
     if (!props.onDragOver(column.projectKey)) return;
@@ -41,8 +46,9 @@ export function OverviewColumnHeader(props: {
         props.onDrop(column.projectKey);
       }}
       onDragEnd={props.onDragEnd}
+      style={{ gridColumn: props.columnIndex + 2, gridRow: 2 }}
       className={cn(
-        "sticky top-0 z-10 min-w-0 border-r border-border bg-muted",
+        "sticky top-4.5 z-11 min-w-0 border-r border-border bg-muted",
         movable && "cursor-grab active:cursor-grabbing",
       )}
     >
@@ -56,38 +62,35 @@ export function OverviewColumnHeader(props: {
         />
       ) : null}
       <div
-        className="flex h-[22px] items-center gap-1.5 px-2 text-xs font-semibold"
-        style={{ backgroundColor: props.fill, color: OVERVIEW_INK }}
+        className={cn(
+          "flex h-6 items-center gap-1.5 border-b border-border px-2",
+          allOffline && "[&>:not(:last-child)]:opacity-50",
+        )}
       >
         {column.project ? (
-          <span className="inline-flex shrink-0 items-center justify-center bg-black/15 [&:has(img)]:bg-white [&:has(img)]:p-px">
-            <ProjectFavicon project={column.project} className="size-3.5 shrink-0" />
-          </span>
+          <ProjectFavicon project={column.project} className="size-4 shrink-0" />
         ) : (
-          <FolderIcon className="size-3.5 shrink-0" />
+          <FolderIcon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
         )}
-        <span className="truncate">{column.displayName}</span>
-      </div>
-      <div className="truncate border-b border-border px-2 pt-0.5 pb-0.75 text-3xs text-muted-foreground">
-        {props.machines.map((machine, index) => (
-          <Fragment key={machine.id}>
-            {index > 0 ? " + " : null}
-            {machine.label}
-            {machine.offline ? <span className="text-status-failed"> offline</span> : null}
-          </Fragment>
-        ))}
-        {props.machines.length > 0 ? <> &middot; </> : null}
-        {open} open
-        {working > 0 ? (
-          <>
-            , <span className="text-status-working">{working} working</span>
-          </>
-        ) : null}
-        {needsYou > 0 ? (
-          <>
-            , <span className="text-status-needs-you">{needsYou} need you</span>
-          </>
-        ) : null}
+        <span
+          className={cn("min-w-0 truncate text-xs font-semibold", nameColor.className)}
+          style={nameColor.style}
+        >
+          {column.displayName}
+        </span>
+        <span
+          className="ml-auto flex shrink-0 items-center gap-1.5 text-3xs text-muted-foreground"
+          data-info={`${open} open`}
+        >
+          {needsYou > 0 ? <span className="text-status-needs-you">{needsYou} need you</span> : null}
+          <span className="flex items-center gap-0.75">
+            {column.lights.map((tone, index) => (
+              // oxlint-disable-next-line react/no-array-index-key -- lights are an ordered list without identity
+              <StatusLight key={index} tone={tone} size="small" />
+            ))}
+          </span>
+          <span className="min-w-2 text-right text-2xs text-foreground tabular-nums">{open}</span>
+        </span>
       </div>
     </div>
   );

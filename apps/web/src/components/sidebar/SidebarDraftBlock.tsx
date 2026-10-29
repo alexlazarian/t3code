@@ -36,7 +36,7 @@ const SidebarDraftRow = memo(function SidebarDraftRow(props: {
 }) {
   const { composer, draftId, onContextMenu, onDiscard, onNavigate } = props;
   const projectAccentColor = useProjectAccentColor(props.project);
-  const preview = draftPreviewLine(composer);
+  const preview = draftPreviewLine(composer) || "New thread";
   const accessibility = resolveSidebarRowAccessibility({
     title: preview,
     statusLabel: "Unsent draft",

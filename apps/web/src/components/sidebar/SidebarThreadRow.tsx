@@ -184,30 +184,36 @@ function SidebarThreadTile(props: {
   );
 }
 
-/** The project name in its Overview column color; muted when the project has no color. */
+/** Color props for a project name in its Overview column color; muted when the project has none. */
+export function projectTagColorProps(color: string | null, inverted: boolean) {
+  return {
+    className: cn(
+      color === null
+        ? "text-muted-foreground"
+        : "text-(--project-tag) light:text-(--project-tag-raw)",
+      color !== null && inverted && "dark:brightness-50",
+    ),
+    style:
+      color === null
+        ? undefined
+        : ({
+            "--project-tag": projectFillColor(color),
+            "--project-tag-raw": color,
+          } as CSSProperties),
+  };
+}
+
 export function SidebarProjectTag(props: {
   readonly name: string;
   readonly color: string | null;
   readonly inverted: boolean;
 }) {
+  const { className, style } = projectTagColorProps(props.color, props.inverted);
   return (
     <span
       aria-hidden
-      className={cn(
-        "max-w-[40%] shrink-0 truncate text-2xs",
-        props.color === null
-          ? "text-muted-foreground"
-          : "text-(--project-tag) light:text-(--project-tag-raw)",
-        props.color !== null && props.inverted && "dark:brightness-50",
-      )}
-      style={
-        props.color === null
-          ? undefined
-          : ({
-              "--project-tag": projectFillColor(props.color),
-              "--project-tag-raw": props.color,
-            } as CSSProperties)
-      }
+      className={cn("max-w-[40%] shrink-0 truncate text-2xs", className)}
+      style={style}
     >
       {props.name}
     </span>

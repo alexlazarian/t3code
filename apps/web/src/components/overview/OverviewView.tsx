@@ -8,7 +8,7 @@ import {
   scopeProjectRef,
   scopeThreadRef,
 } from "@t3tools/client-runtime/environment";
-import { ChevronDownIcon, PlusIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronsDownUpIcon, ChevronsUpDownIcon, PlusIcon } from "lucide-react";
 import {
   Fragment,
   useEffect,
@@ -31,7 +31,6 @@ import { useStableCallback } from "../../hooks/useStableCallback";
 import { updateClientSettings, useClientSettings } from "../../hooks/useSettings";
 import { useSidebarProjectGroups } from "../../hooks/useSidebarProjectGroups";
 import { selectProjectGroupingSettings } from "@t3tools/client-runtime/state/project-grouping";
-import { projectFillColor } from "../../projectAccentColor.logic";
 import { resolveSidebarProjectScopeKeys } from "../../sidebarProjectGrouping";
 import { useEnvironments } from "../../state/environments";
 import {
@@ -59,8 +58,8 @@ import {
 import { sidebarProviderEntriesAtom } from "../sidebar/sidebarProviderEntries";
 import {
   ACTIVE_SECTION_EXPANDED_KEY,
+  DRAFTS_SHELF_EXPANDED_KEY,
   PINNED_SECTION_EXPANDED_KEY,
-  SECTION_NOTES,
   SETTLED_SHELF_EXPANDED_KEY,
   SETTLED_TAIL_INITIAL_COUNT,
   SETTLED_TAIL_PAGE_COUNT,
@@ -82,16 +81,20 @@ import {
   orderOverviewProjects,
   overviewProjectOrderKeys,
   overviewColumnMachines,
+  overviewMachineSpans,
   overviewProjectKeyOf,
   overviewSplitDragFraction,
   resolveOverviewPaneTarget,
   resolveOverviewSplitRelease,
   type OverviewColumn,
   type OverviewFocusDirection,
+  type OverviewRow,
 } from "./Overview.logic";
 import { OverviewCard } from "./OverviewCard";
 import { OverviewColumnHeader } from "./OverviewColumnHeader";
-import { OverviewColumnDrafts } from "./OverviewDraftCard";
+import { OverviewDraftsShelf } from "./OverviewDraftCard";
+import { OverviewMachineRow } from "./OverviewMachineRow";
+import { OverviewShelf } from "./OverviewShelf";
 
 const SECTION_NAMES: Record<SidebarSection, string> = {
   pinned: "Pinned",
@@ -125,10 +128,11 @@ const ARROW_DIRECTIONS: Partial<Record<string, OverviewFocusDirection>> = {
 };
 
 // Working, Snoozed and Settled share the sidebar shelves' keys, so collapsing one collapses both.
-function useOverviewRowExpansion(): Record<
-  SidebarSection,
-  readonly [boolean, (v: boolean) => void]
-> {
+function useOverviewRowExpansion(): {
+  drafts: readonly [boolean, (v: boolean) => void];
+  sections: Record<SidebarSection, readonly [boolean, (v: boolean) => void]>;
+} {
+  const drafts = useLocalStorage(DRAFTS_SHELF_EXPANDED_KEY, true, Schema.Boolean);
   const pinned = useLocalStorage(PINNED_SECTION_EXPANDED_KEY, true, Schema.Boolean);
   const active = useLocalStorage(ACTIVE_SECTION_EXPANDED_KEY, true, Schema.Boolean);
   const working = useLocalStorage(
@@ -146,7 +150,7 @@ function useOverviewRowExpansion(): Record<
     SIDEBAR_SHELF_EXPANDED_DEFAULT,
     Schema.Boolean,
   );
-  return { pinned, active, working, snoozed, settled };
+  return { drafts, sections: { pinned, active, working, snoozed, settled } };
 }
 
 export function OverviewView() {
@@ -246,8 +250,6 @@ export function OverviewView() {
       ] as const;
     }),
   );
-  const accentColors = useProjectAccentColors(columns.map((column) => column.project));
-  const fills = accentColors.map(projectFillColor);
   const phases = new Map(
     environments.map((environment) => [environment.environmentId, environment.connection.phase]),
   );
@@ -269,9 +271,13 @@ export function OverviewView() {
       ),
     ]),
   );
+  const accentColors = useProjectAccentColors(columns.map((column) => column.project));
+  const machineSpans = overviewMachineSpans(
+    columns.map((column) => machinesByColumn.get(column.projectKey) ?? []),
+  );
   const focusGrid = columns.map((column) =>
     rows
-      .filter((row) => expansion[row.section][0])
+      .filter((row) => expansion.sections[row.section][0])
       .map((row) => (row.cells.get(column.projectKey) ?? []).map(threadShellKey)),
   );
   const allKeys = focusGrid.flat(2);
@@ -323,6 +329,22 @@ export function OverviewView() {
   };
   const startThreadIn = (project: NonNullable<OverviewColumn["project"]>) => {
     void handleNewThread(scopeProjectRef(project.environmentId, project.id));
+  };
+  const settledMoreShown = (row: OverviewRow) =>
+    row.section === "settled" && hiddenSettledCount > 0 && expansion.sections.settled[0];
+  const shelfSizes = rows.map(
+    (row) => (expansion.sections[row.section][0] ? 2 : 1) + (settledMoreShown(row) ? 1 : 0),
+  );
+  const shelfRows = shelfSizes.map(
+    (_, index) =>
+      3 +
+      (expansion.drafts[0] ? 2 : 1) +
+      shelfSizes.slice(0, index).reduce((sum, size) => sum + size, 0),
+  );
+  const allExpanded = expansion.drafts[0] || rows.some((row) => expansion.sections[row.section][0]);
+  const toggleAll = () => {
+    expansion.drafts[1](!allExpanded);
+    for (const row of rows) expansion.sections[row.section][1](!allExpanded);
   };
   const clearFilters = () => {
     setStatusFilter("all");
@@ -450,9 +472,8 @@ export function OverviewView() {
           className="border-b border-border bg-muted text-xs whitespace-nowrap text-muted-foreground"
         >
           <span className="min-w-0 truncate">
-            {columns.length} project{columns.length === 1 ? "" : "s"}, {cardCount} thread
-            {cardCount === 1 ? "" : "s"}. Click a card to open it below. Double-click to open it
-            full size.
+            {cardCount} thread{cardCount === 1 ? "" : "s"} &middot; click to open below,
+            double-click for full size
             {columns.length === 1 && scopedGroups.length === 0
               ? " With one project, List view gives you more room."
               : null}
@@ -502,14 +523,33 @@ export function OverviewView() {
             >
               <div
                 className="grid min-w-full bg-card"
-                style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(180px, 1fr))` }}
+                style={{
+                  gridTemplateColumns: `22px repeat(${columns.length}, minmax(180px, 1fr))`,
+                }}
               >
+                <div
+                  role="presentation"
+                  style={{ gridColumn: 1, gridRow: "1 / span 2" }}
+                  className="sticky top-0 z-13 flex items-center justify-center border-r border-b border-border bg-background"
+                >
+                  <Button
+                    variant="ghost-muted"
+                    size="icon-tiny"
+                    aria-label={allExpanded ? "Collapse all shelves" : "Expand all shelves"}
+                    data-info={allExpanded ? "Collapse all shelves" : "Expand all shelves"}
+                    onClick={toggleAll}
+                  >
+                    {allExpanded ? <ChevronsDownUpIcon /> : <ChevronsUpDownIcon />}
+                  </Button>
+                </div>
                 <div role="row" className="contents">
+                  <OverviewMachineRow spans={machineSpans} />
                   {columns.map((column, index) => (
                     <OverviewColumnHeader
                       key={column.projectKey}
                       column={column}
-                      fill={fills[index]!}
+                      columnIndex={index}
+                      accentColor={accentColors[index] ?? null}
                       machines={machinesByColumn.get(column.projectKey) ?? []}
                       dropSide={
                         columnDrag?.over === column.projectKey
@@ -525,115 +565,79 @@ export function OverviewView() {
                     />
                   ))}
                 </div>
-                {rows.map((row) => {
-                  const [expanded, setExpanded] = expansion[row.section];
-
+                <OverviewDraftsShelf
+                  columns={columns}
+                  projectKeyOf={projectKeyOf}
+                  openKey={openKey}
+                  row={3}
+                  expanded={expansion.drafts[0]}
+                  onToggle={() => expansion.drafts[1](!expansion.drafts[0])}
+                  onOpen={showThread}
+                  onNewThread={startThreadIn}
+                />
+                {rows.map((row, rowIndex) => {
+                  const [expanded, setExpanded] = expansion.sections[row.section];
+                  const shelfRow = shelfRows[rowIndex]!;
                   const showMore = expanded && row.section === "settled" && hiddenSettledCount > 0;
                   return (
                     <Fragment key={row.section}>
-                      <div role="row" className="contents">
-                        <div
-                          role="rowheader"
-                          className="col-span-full border-b border-border bg-background"
-                        >
-                          <button
-                            type="button"
-                            aria-expanded={expanded}
-                            onClick={() => setExpanded(!expanded)}
-                            className="sticky left-0 flex h-5 cursor-pointer items-center gap-1.5 px-2 text-3xs whitespace-nowrap"
-                          >
-                            <ChevronDownIcon
-                              aria-hidden
-                              className={cn(
-                                "size-3 text-muted-foreground",
-                                !expanded && "-rotate-90",
-                              )}
-                            />
-                            <span className="font-semibold tracking-wide text-foreground uppercase">
-                              {SECTION_NAMES[row.section]}
-                            </span>
-                            <span className="text-muted-foreground tabular-nums">
-                              {row.section === "settled" ? settledTotal : row.total}
-                            </span>
-                            <span className="text-muted-foreground/70">
-                              {SECTION_NOTES[row.section]}
-                            </span>
-                          </button>
-                        </div>
-                        {expanded
-                          ? columns.map((column) => {
-                              const cellThreads = row.cells.get(column.projectKey) ?? [];
-                              return (
-                                <div
-                                  key={column.projectKey}
-                                  role="gridcell"
-                                  className="flex min-h-2.5 min-w-0 flex-col gap-0.75 border-r border-b border-border p-0.75"
-                                >
-                                  {row.section === "active" ? (
-                                    <OverviewColumnDrafts
-                                      projectKey={column.projectKey}
-                                      projectKeyOf={projectKeyOf}
-                                      openKey={openKey}
-                                      onOpen={showThread}
-                                    />
-                                  ) : null}
-                                  {cellThreads.length === 0 && column.project !== null ? (
-                                    <NewThreadInColumnButton
-                                      projectName={column.displayName}
-                                      onClick={() => {
-                                        if (column.project !== null) startThreadIn(column.project);
-                                      }}
-                                    />
-                                  ) : null}
-                                  {cellThreads.map((thread) => {
-                                    const key = threadShellKey(thread);
-                                    const instanceId =
-                                      thread.runtime?.providerInstanceId ??
-                                      thread.modelSelection.instanceId;
-                                    const providerEntry = providerEntriesByEnvironment
-                                      .get(thread.environmentId)
-                                      ?.get(instanceId);
-                                    return (
-                                      <OverviewCard
-                                        key={key}
-                                        thread={thread}
-                                        section={row.section}
-                                        projectName={column.displayName}
-                                        machineLabel={
-                                          machineLabelsByColumn
-                                            .get(column.projectKey)
-                                            ?.get(thread.environmentId) ?? null
-                                        }
-                                        providerName={
-                                          providerEntry?.displayName ??
-                                          thread.runtime?.providerName ??
-                                          instanceId
-                                        }
-                                        providerEntry={providerEntry}
-                                        lastVisitedAt={resolveThreadLastVisitedAt(
-                                          thread.lastVisitedAt,
-                                          lastVisitedById[key],
-                                        )}
-                                        wokeAt={threadWokeAt(thread, { now: partition.snoozeNow })}
-                                        offline={isOverviewThreadOffline(
-                                          thread.environmentId,
-                                          phases,
-                                        )}
-                                        selected={key === openKey}
-                                        tabbable={key === tabbableKey}
-                                        onOpen={openThread}
-                                        onSelect={showThread}
-                                      />
-                                    );
-                                  })}
-                                </div>
-                              );
-                            })
-                          : null}
-                      </div>
+                      <OverviewShelf
+                        name={SECTION_NAMES[row.section]}
+                        total={row.section === "settled" ? settledTotal : row.total}
+                        expanded={expanded}
+                        onToggle={() => setExpanded(!expanded)}
+                        urgency={row.urgency}
+                        row={shelfRow}
+                        columns={columns.map((column) => ({
+                          key: column.projectKey,
+                          count: row.cells.get(column.projectKey)?.length ?? 0,
+                          cell: (row.cells.get(column.projectKey) ?? []).map((thread) => {
+                            const key = threadShellKey(thread);
+                            const instanceId =
+                              thread.runtime?.providerInstanceId ??
+                              thread.modelSelection.instanceId;
+                            const providerEntry = providerEntriesByEnvironment
+                              .get(thread.environmentId)
+                              ?.get(instanceId);
+                            return (
+                              <OverviewCard
+                                key={key}
+                                thread={thread}
+                                section={row.section}
+                                projectName={column.displayName}
+                                machineLabel={
+                                  machineLabelsByColumn
+                                    .get(column.projectKey)
+                                    ?.get(thread.environmentId) ?? null
+                                }
+                                providerName={
+                                  providerEntry?.displayName ??
+                                  thread.runtime?.providerName ??
+                                  instanceId
+                                }
+                                providerEntry={providerEntry}
+                                lastVisitedAt={resolveThreadLastVisitedAt(
+                                  thread.lastVisitedAt,
+                                  lastVisitedById[key],
+                                )}
+                                wokeAt={threadWokeAt(thread, { now: partition.snoozeNow })}
+                                offline={isOverviewThreadOffline(thread.environmentId, phases)}
+                                selected={key === openKey}
+                                tabbable={key === tabbableKey}
+                                onOpen={openThread}
+                                onSelect={showThread}
+                              />
+                            );
+                          }),
+                        }))}
+                      />
                       {showMore ? (
                         <div role="row" className="contents">
-                          <div role="gridcell" className="col-span-full border-b border-border">
+                          <div
+                            role="gridcell"
+                            style={{ gridColumn: "1 / -1", gridRow: shelfRow + 2 }}
+                            className="border-b border-border"
+                          >
                             <button
                               type="button"
                               onClick={() =>
@@ -701,22 +705,5 @@ export function OverviewView() {
         )}
       </div>
     </SidebarInset>
-  );
-}
-
-function NewThreadInColumnButton(props: {
-  readonly projectName: string;
-  readonly onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={`New thread in ${props.projectName}`}
-      onClick={props.onClick}
-      className="flex min-h-6 w-full flex-1 cursor-pointer items-center justify-center gap-1 border border-dashed border-muted-foreground/20 text-2xs text-muted-foreground/50 hover:border-muted-foreground hover:text-foreground"
-    >
-      <PlusIcon aria-hidden className="size-3" />
-      New thread
-    </button>
   );
 }
