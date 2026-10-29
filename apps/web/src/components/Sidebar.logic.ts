@@ -22,6 +22,7 @@ import {
   sortWorkingThreadsBySend,
 } from "@t3tools/client-runtime/state/thread-inbox";
 import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/models";
+import { isThreadUnread, threadOutcomeAt } from "@t3tools/client-runtime/state/thread-visits";
 import {
   sortPinnedThreadsByOrderKey,
   sortSettledThreads,
@@ -71,9 +72,17 @@ export function resolveSidebarRowAccessibility(input: {
   readonly statusLabel: string | null;
   readonly projectDisplayName: string | null;
   readonly isActive: boolean;
+  readonly isUnread?: boolean;
 }): { readonly label: string; readonly current: "page" | undefined } {
   return {
-    label: [input.title, input.statusLabel, input.projectDisplayName].filter(Boolean).join(", "),
+    label: [
+      input.title,
+      input.isUnread ? "unread" : null,
+      input.statusLabel,
+      input.projectDisplayName,
+    ]
+      .filter(Boolean)
+      .join(", "),
     current: input.isActive ? "page" : undefined,
   };
 }
@@ -665,6 +674,7 @@ type ThreadStatusInput = Pick<
   | "interactionMode"
   | "latestRun"
   | "runtime"
+  | "updatedAt"
 > & {
   lastVisitedAt?: string | null | undefined;
   pendingBackgroundTasks?: SidebarThreadSummary["pendingBackgroundTasks"] | undefined;
@@ -696,25 +706,14 @@ export function resolveThreadLastVisitedAt(
   return serverLastVisitedAt ?? undefined;
 }
 
-export function hasUnseenCompletion(thread: ThreadStatusInput): boolean {
-  if (!thread.latestRun?.completedAt) return false;
-  const completedAt = Date.parse(thread.latestRun.completedAt);
-  if (Number.isNaN(completedAt)) return false;
-  if (!thread.lastVisitedAt) return false;
+export { isThreadUnread };
 
-  const lastVisitedAt = Date.parse(thread.lastVisitedAt);
-  if (Number.isNaN(lastVisitedAt)) return true;
-  return completedAt > lastVisitedAt;
-}
-
-/** Unopened threads' failures still count as unseen, unlike completions. */
-function hasUnseenFailure(thread: ThreadStatusInput): boolean {
-  if (thread.latestRun?.status !== "failed") return false;
-  if (!thread.lastVisitedAt) return true;
-  const completedAt = Date.parse(thread.latestRun.completedAt ?? "");
-  const lastVisitedAt = Date.parse(thread.lastVisitedAt);
-  if (Number.isNaN(completedAt) || Number.isNaN(lastVisitedAt)) return true;
-  return completedAt > lastVisitedAt;
+/** Unread or read once the agent has left an outcome; "none" before it has. */
+export function resolveThreadReadState(
+  thread: Parameters<typeof isThreadUnread>[0],
+): "unread" | "read" | "none" {
+  if (isThreadUnread(thread)) return "unread";
+  return threadOutcomeAt(thread) === null ? "none" : "read";
 }
 
 // Suppress trailing double-click navigation; keyboard and synthetic clicks use detail 0.
@@ -815,26 +814,18 @@ export type SidebarThreadStatus =
   | "limited"
   | "ready";
 
+/** Read rows fade; the open row, running work, and anything waiting on the user never do. */
 export function shouldRecedeSidebarThread(input: {
   status: SidebarThreadStatus;
+  hasActionableProposedPlan: boolean;
   isUnread: boolean;
   isWoke: boolean;
   isActive: boolean;
   isSelected: boolean;
 }): boolean {
-  if (
-    input.isActive ||
-    input.isSelected ||
-    input.status === "input" ||
-    input.status === "request"
-  ) {
-    return false;
-  }
-  if (input.status === "working" || input.status === "waiting") return true;
-  if (input.status === "ready" || input.status === "approval") {
-    return !input.isUnread && !input.isWoke;
-  }
-  return false;
+  if (input.isActive || input.isSelected || input.isUnread || input.isWoke) return false;
+  if (input.status === "ready") return !input.hasActionableProposedPlan;
+  return input.status === "failed";
 }
 
 type SidebarThreadStatusInput = Pick<
@@ -895,7 +886,7 @@ export function resolveSidebarFolderDot(
   if (statuses.has("failed")) return "failed";
   // Rows show Done only for ready threads, so the dot follows the same rule.
   const hasUnread = threads.some(
-    (thread) => resolveSidebarThreadStatus(thread) === "ready" && hasUnseenCompletion(thread),
+    (thread) => resolveSidebarThreadStatus(thread) === "ready" && isThreadUnread(thread),
   );
   if (hasUnread) return "unread";
   if (statuses.has("working")) return "working";
@@ -1178,7 +1169,7 @@ export function resolveThreadStatusPill(input: {
     };
   }
 
-  if (hasUnseenFailure(thread)) {
+  if (thread.latestRun?.status === "failed" && isThreadUnread(thread)) {
     return {
       label: "Failed",
       colorClass: "text-red-600 dark:text-red-300/90",
@@ -1201,7 +1192,7 @@ export function resolveThreadStatusPill(input: {
     };
   }
 
-  if (hasUnseenCompletion(thread)) {
+  if (isThreadUnread(thread)) {
     return {
       label: "Completed",
       colorClass: "text-emerald-600 dark:text-emerald-300/90",

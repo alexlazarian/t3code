@@ -122,10 +122,12 @@ vi.mock("./useSettings", () => ({
     }),
 }));
 vi.mock("./useThreadActions", () => ({
+  readThreadReadState: () => "read",
   useThreadActions: () =>
     Object.fromEntries(
       [
         "markThreadUnread",
+        "markThreadsRead",
         "settleThread",
         "unsettleThread",
         "snoozeThread",

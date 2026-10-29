@@ -3,6 +3,7 @@ import type { EnvironmentId, ScopedThreadRef, ThreadId } from "@t3tools/contract
 import { Atom } from "effect/reactivity";
 
 import { parseThreadKey, threadKey } from "./entities.ts";
+import { threadRuntimeIsActive, type ThreadRuntimeSummary } from "./models.ts";
 import { type AtomCommand, runAtomCommand } from "./runtime.ts";
 import { claimThreadOpen } from "./threadSearch.ts";
 import type { VisitThreadInput } from "../operations/commands.ts";
@@ -12,16 +13,63 @@ import type { VisitThreadInput } from "../operations/commands.ts";
 // broadcast to all shell subscribers.
 export const VISIT_DISPATCH_THROTTLE_MS = 10_000;
 
+export interface ThreadReadStateInput {
+  readonly updatedAt: string;
+  readonly lastVisitedAt?: string | null | undefined;
+  readonly latestRun: { readonly completedAt: string | null } | null;
+  readonly runtime?: Pick<ThreadRuntimeSummary, "status"> | null | undefined;
+  readonly hasPendingApprovals?: boolean | undefined;
+  readonly hasPendingUserInput?: boolean | undefined;
+  readonly pendingSubagentRequest?: string | null | undefined;
+}
+
+/**
+ * When the agent last left something for the user: a pending request, or the
+ * finished, failed or plan-ready run. Null while it works with nothing pending.
+ * Requests carry no time of their own, so they use updatedAt; runs use
+ * completedAt so a later rename does not make a read thread unread.
+ */
+export function threadOutcomeAt(thread: ThreadReadStateInput): string | null {
+  // A subagent's request leaves the parent streaming, so updatedAt keeps moving and
+  // would re-flag a read thread on every tick; only count it once the parent is idle or blocked.
+  if (
+    thread.hasPendingApprovals === true ||
+    thread.hasPendingUserInput === true ||
+    ((thread.pendingSubagentRequest ?? null) !== null && !threadIsStreaming(thread))
+  ) {
+    return thread.updatedAt;
+  }
+  if (threadRuntimeIsActive(thread.runtime)) return null;
+  return thread.latestRun?.completedAt ?? null;
+}
+
+function threadIsStreaming(thread: ThreadReadStateInput): boolean {
+  return thread.runtime?.status !== "waiting" && threadRuntimeIsActive(thread.runtime);
+}
+
+/** Never-opened threads (null watermark) with an outcome are unread too. */
+export function isThreadUnread(thread: ThreadReadStateInput): boolean {
+  const outcomeAt = threadOutcomeAt(thread);
+  const outcomeAtMs = outcomeAt === null ? NaN : Date.parse(outcomeAt);
+  if (Number.isNaN(outcomeAtMs)) return false;
+  const lastVisitedAtMs = thread.lastVisitedAt ? Date.parse(thread.lastVisitedAt) : NaN;
+  return Number.isNaN(lastVisitedAtMs) || outcomeAtMs > lastVisitedAtMs;
+}
+
+/** The watermark that makes `isThreadUnread` true again, or null when there is no outcome. */
+export function threadUnreadWatermark(thread: ThreadReadStateInput): string | null {
+  const outcomeAt = threadOutcomeAt(thread);
+  const outcomeAtMs = outcomeAt === null ? NaN : Date.parse(outcomeAt);
+  return Number.isNaN(outcomeAtMs) ? null : new Date(outcomeAtMs - 1).toISOString();
+}
+
 const IDLE_TRACKER: Atom.Atom<void> = Atom.make(undefined).pipe(
   Atom.withLabel("thread-visit-tracker:idle"),
 );
 
-interface VisitedShell {
+interface VisitedShell extends ThreadReadStateInput {
   readonly environmentId: EnvironmentId;
   readonly id: ThreadId;
-  readonly updatedAt: string;
-  readonly lastVisitedAt?: string | null | undefined;
-  readonly latestRun: { readonly completedAt: string | null } | null;
   /**
    * When a scheduled wake the user is looking at took effect. A wake later
    * than `updatedAt` is an update the server never sent, so the watermark
@@ -117,14 +165,12 @@ export function createThreadVisitTracker(options: ThreadVisitTrackerOptions) {
         if (!Number.isNaN(lastVisitedAtMs) && lastVisitedAtMs >= updatedAtMs) return;
         if (lastDispatchedUpdatedAt === visitedAt) return;
 
-        const completedAtMs = shell.latestRun?.completedAt
-          ? Date.parse(shell.latestRun.completedAt)
-          : NaN;
-        const hasUnseenCompletion =
-          !Number.isNaN(completedAtMs) &&
-          (Number.isNaN(lastVisitedAtMs) || completedAtMs > lastVisitedAtMs);
         const elapsed = Date.now() - lastDispatchAt;
-        if (hasUnseenCompletion || wakeIsLatest || elapsed >= VISIT_DISPATCH_THROTTLE_MS) {
+        if (
+          (isThreadUnread(shell) && !threadIsStreaming(shell)) ||
+          wakeIsLatest ||
+          elapsed >= VISIT_DISPATCH_THROTTLE_MS
+        ) {
           dispatch(shell, visitedAt, false);
           return;
         }

@@ -111,7 +111,9 @@ export interface ThreadRuntimeSummary {
 /** The runtime summary a thread's structure determines; see ThreadStructure. */
 export type ThreadStructureRuntime = Omit<ThreadRuntimeSummary, "updatedAt">;
 
-export function threadRuntimeIsActive(runtime: ThreadStructureRuntime | null | undefined): boolean {
+export function threadRuntimeIsActive(
+  runtime: Pick<ThreadStructureRuntime, "status"> | null | undefined,
+): boolean {
   return runtime !== null && runtime !== undefined && threadRunStatusIsActive(runtime.status);
 }
 

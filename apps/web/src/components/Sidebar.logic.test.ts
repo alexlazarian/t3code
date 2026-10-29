@@ -12,7 +12,7 @@ import {
   archiveSelectedThreadEntries,
   deleteSelectedThreadEntries,
   getFallbackThreadIdAfterDelete,
-  hasUnseenCompletion,
+  isThreadUnread,
   resolveSidebarRowThreadId,
   applySidebarStatusFilter,
   matchesSidebarStatusFilter,
@@ -315,6 +315,7 @@ describe("resolveSidebarThreadStatus", () => {
     expect(
       shouldRecedeSidebarThread({
         status: "limited",
+        hasActionableProposedPlan: false,
         isUnread: false,
         isWoke: false,
         isActive: false,
@@ -438,6 +439,7 @@ describe("resolveThreadStatusPill", () => {
     interactionMode: "plan" as const,
     latestRun: null,
     lastVisitedAt: undefined,
+    updatedAt: "2026-03-09T10:05:00.000Z",
     runtime: {
       status: "running" as const,
       providerName: "Codex",
@@ -504,11 +506,12 @@ describe("resolveThreadStatusPill", () => {
     ).toMatchObject({ label: "Plan Ready", pulse: false });
   });
 
-  it("does not manufacture completed state without a client visit marker", () => {
+  it("shows completed for a never-opened thread with a finished run", () => {
     expect(
       resolveThreadStatusPill({
         thread: {
           ...baseThread,
+          interactionMode: "default",
           latestRun: makeLatestRun(),
           runtime: {
             ...baseThread.runtime,
@@ -517,7 +520,7 @@ describe("resolveThreadStatusPill", () => {
           },
         },
       }),
-    ).toBeNull();
+    ).toMatchObject({ label: "Completed" });
   });
 
   it("shows completed when there is an unseen completion and no active blocker", () => {
@@ -984,27 +987,52 @@ describe("navigation after parking a thread", () => {
   );
 });
 
+describe("shouldRecedeSidebarThread", () => {
+  const read = {
+    status: "ready" as const,
+    hasActionableProposedPlan: false,
+    isUnread: false,
+    isWoke: false,
+    isActive: false,
+    isSelected: false,
+  };
+  it.each([
+    ["a read thread", {}, true],
+    ["a read failure", { status: "failed" }, true],
+    ["an unread thread", { isUnread: true }, false],
+    ["a woken thread", { isWoke: true }, false],
+    ["the open thread", { isActive: true }, false],
+    ["a selected thread", { isSelected: true }, false],
+    ["running work", { status: "working" }, false],
+    ["a thread waiting on another", { status: "waiting" }, false],
+    ["a pending approval", { status: "approval" }, false],
+    ["a read plan ready", { hasActionableProposedPlan: true }, false],
+  ] as const)("%s recedes: %s", (_name, patch, expected) => {
+    expect(shouldRecedeSidebarThread({ ...read, ...patch })).toBe(expected);
+  });
+});
+
 describe("unseen completion with background work", () => {
   it.each([
     {
       roster: "dev server",
       task: { kind: "command" },
       status: "ready",
-      receded: false,
+      working: false,
       pill: "Completed",
     },
     {
       roster: "dev server watchdog",
       task: { kind: "monitor" },
       status: "ready",
-      receded: false,
+      working: false,
       pill: "Completed",
     },
     {
       roster: "awaited command",
       task: { kind: "command", awaited: true },
       status: "waiting",
-      receded: true,
+      working: true,
       pill: "Waiting",
     },
   ] as const)("presents a completed thread with a $roster roster", (expected) => {
@@ -1017,20 +1045,21 @@ describe("unseen completion with background work", () => {
       pendingBackgroundTasks: [{ taskId: "background-work", ...expected.task }],
     });
     const status = resolveSidebarThreadStatus(thread);
-    const isUnread = hasUnseenCompletion(thread);
+    const isUnread = isThreadUnread(thread);
 
     expect(isUnread).toBe(true);
     expect(status).toBe(expected.status);
     expect(
       shouldRecedeSidebarThread({
         status,
+        hasActionableProposedPlan: false,
         isUnread,
         isWoke: false,
         isActive: false,
         isSelected: false,
       }),
-    ).toBe(expected.receded);
-    expect(isSidebarThreadWorking(thread)).toBe(expected.receded);
+    ).toBe(false);
+    expect(isSidebarThreadWorking(thread)).toBe(expected.working);
     expect(resolveThreadStatusPill({ thread })).toMatchObject({ label: expected.pill });
   });
 });
@@ -1396,6 +1425,7 @@ describe("resolveSidebarFolderDot", () => {
       interactionMode: "default" as const,
       latestRun: makeLatestRun(),
       lastVisitedAt: "2026-03-09T10:06:00.000Z",
+      updatedAt: "2026-03-09T10:05:00.000Z",
       runtime: null,
     };
     const runtime = {

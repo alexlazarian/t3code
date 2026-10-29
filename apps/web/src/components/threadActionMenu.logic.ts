@@ -17,6 +17,7 @@ export type ThreadActionMenuId =
   | "unsnooze"
   | "rename"
   | "regenerate-title"
+  | "mark-read"
   | "mark-unread"
   | "share-guest"
   | "copy"
@@ -80,6 +81,8 @@ export interface ThreadActionMenuState {
   readonly isRegeneratingTitle: boolean;
   /** Archive rejects attached providers, so disable it while running. */
   readonly isRunning: boolean;
+  /** "none" until the agent has left an outcome, so there is nothing to mark. */
+  readonly readState: "unread" | "read" | "none";
   readonly supports: {
     readonly settlement: boolean;
     readonly autoSettleOptOut: boolean;
@@ -97,6 +100,7 @@ export function threadActionRequiresOperate(action: ThreadActionMenuId): boolean
   return ![
     "new-thread-on-branch",
     "project-settings",
+    "mark-read",
     "mark-unread",
     "share-guest",
     "copy",
@@ -169,7 +173,11 @@ export function buildThreadActionMenuItems(
           },
         ]
       : []),
-    { id: "mark-unread", label: "Mark unread", icon: "mail-open" },
+    ...(state.readState === "unread"
+      ? [{ id: "mark-read" as const, label: "Mark as read", icon: "mail-open" }]
+      : state.readState === "read"
+        ? [{ id: "mark-unread" as const, label: "Mark as unread", icon: "mail" }]
+        : []),
     ...(state.canShareWithGuest
       ? [{ id: "share-guest" as const, label: "Share with guest", icon: "user-plus" }]
       : []),
@@ -297,7 +305,7 @@ export interface ThreadStripAction {
 }
 
 export function buildThreadActionStrip(
-  state: ThreadActionMenuState,
+  state: Omit<ThreadActionMenuState, "readState">,
 ): ReadonlyArray<ThreadStripAction> {
   const entries: ReadonlyArray<{
     readonly id: ThreadStripActionId;

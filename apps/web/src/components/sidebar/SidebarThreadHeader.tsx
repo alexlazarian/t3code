@@ -20,6 +20,9 @@ export interface SidebarThreadHeaderProps {
   statusFilter: SidebarStatusFilter;
   statusCounts: Record<"needs-you" | "working", number>;
   onStatusFilterChange: (filter: SidebarStatusFilter) => void;
+  /** Unread threads among those the filter, scope and search show. */
+  unreadCount: number;
+  onMarkAllRead: () => void;
 }
 
 export function SidebarThreadHeader({
@@ -35,6 +38,8 @@ export function SidebarThreadHeader({
   statusFilter,
   statusCounts,
   onStatusFilterChange,
+  unreadCount,
+  onMarkAllRead,
 }: SidebarThreadHeaderProps) {
   const resultsVisible = isSearching && searchResultCount > 0;
   // Shrinking results can remove the active option; never leave aria-activedescendant pointing at it.
@@ -112,6 +117,13 @@ export function SidebarThreadHeader({
           })}
         </div>
       </div>
+      {unreadCount > 0 ? (
+        <div className="flex justify-end">
+          <Button type="button" size="xs" variant="ghost" onClick={onMarkAllRead}>
+            Mark all read
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

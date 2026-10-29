@@ -51,8 +51,10 @@ import {
 } from "../../threadView";
 import { useThreadSelectionStore } from "../../threadSelectionStore";
 import { useUiStateStore } from "../../uiStateStore";
+import { useMarkThreadsRead } from "../../hooks/useThreadActions";
 import { cn } from "~/lib/utils";
 import {
+  isThreadUnread,
   partitionSidebarThreads,
   resolveThreadLastVisitedAt,
   threadShellKey,
@@ -175,6 +177,7 @@ export function OverviewView() {
   const delegatedUnderParent = useDelegatedUnderParent();
   const lastVisitedById = useUiStateStore((store) => store.threadLastVisitedAtById);
   const clearSelection = useThreadSelectionStore((store) => store.clearSelection);
+  const markThreadsRead = useMarkThreadsRead();
   const providerEntriesByEnvironment = useAtomValue(sidebarProviderEntriesAtom);
   const { environments } = useEnvironments();
   const clockKey = useSidebarPartitionClockKey(threads);
@@ -241,6 +244,19 @@ export function OverviewView() {
     workingShelfEnabled,
   });
   const cardCount = rows.reduce((sum, row) => sum + row.total, 0) + hiddenSettledCount;
+  const unreadShown = rows.flatMap((row) =>
+    [...row.cells.values()].flat().flatMap((thread) =>
+      isThreadUnread({
+        ...thread,
+        lastVisitedAt: resolveThreadLastVisitedAt(
+          thread.lastVisitedAt,
+          lastVisitedById[threadShellKey(thread)],
+        ),
+      })
+        ? [scopeThreadRef(thread.environmentId, thread.id)]
+        : [],
+    ),
+  );
   const isNarrowed = statusFilter !== "all" || scopedGroups.length > 0;
 
   const machineLabelsByColumn = new Map(
@@ -526,7 +542,19 @@ export function OverviewView() {
               ? " With one project, List view gives you more room."
               : null}
           </span>
-          <span className="ml-auto flex shrink-0 gap-2.25">
+          {unreadShown.length > 0 ? (
+            <Button
+              size="xs"
+              variant="ghost"
+              className="ml-auto shrink-0"
+              onClick={() => void markThreadsRead(unreadShown)}
+            >
+              Mark all read
+            </Button>
+          ) : null}
+          <span
+            className={cn("flex shrink-0 gap-2.25", unreadShown.length > 0 ? "ml-2" : "ml-auto")}
+          >
             {LEGEND.map((item) => (
               <span key={item.label} className="flex items-center gap-1">
                 <span aria-hidden className={cn("size-1.75", item.className)} />

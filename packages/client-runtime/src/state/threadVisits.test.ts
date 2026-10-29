@@ -4,7 +4,13 @@ import { expect, it, vi } from "vite-plus/test";
 
 import type { VisitThreadInput } from "../operations/commands.ts";
 import { claimThreadOpen } from "./threadSearch.ts";
-import { createThreadVisitTracker, VISIT_DISPATCH_THROTTLE_MS } from "./threadVisits.ts";
+import {
+  createThreadVisitTracker,
+  isThreadUnread,
+  type ThreadReadStateInput,
+  threadUnreadWatermark,
+  VISIT_DISPATCH_THROTTLE_MS,
+} from "./threadVisits.ts";
 
 const environmentId = EnvironmentId.make("env-visits");
 
@@ -15,6 +21,9 @@ interface Shell {
   readonly lastVisitedAt?: string | null;
   readonly latestRun: { readonly completedAt: string | null } | null;
   readonly wokeAt?: string | null;
+  readonly hasPendingApprovals?: boolean;
+  readonly pendingSubagentRequest?: string | null;
+  readonly runtime?: { readonly status: "running" | "waiting" | "completed" } | null;
 }
 
 function at(seconds: number) {
@@ -81,15 +90,34 @@ it("records the open once, then throttles streaming visits", () => {
   expect(t.visits.slice(1)).toEqual([{ threadId: t.ref.threadId, visitedAt: at(12) }]);
 });
 
-it("sends an unseen completion without waiting for the throttle", () => {
-  using t = setup("thread-completion", {
+it.each([
+  ["completion", { latestRun: { completedAt: at(20) } }],
+  ["approval request", { hasPendingApprovals: true }],
+] as const)("sends an unseen %s without waiting for the throttle", (name, outcome) => {
+  using t = setup(`thread-outcome-${name}`, {
     updatedAt: at(10),
     lastVisitedAt: at(0),
     latestRun: null,
   });
   t.mount();
-  t.update({ updatedAt: at(20), latestRun: { completedAt: at(20) } });
+  t.update({ updatedAt: at(20), ...outcome });
   expect(t.visits.slice(1)).toEqual([{ threadId: t.ref.threadId, visitedAt: at(20) }]);
+});
+
+it("throttles a subagent request while the parent keeps running", () => {
+  using t = setup("thread-subagent-running", {
+    updatedAt: at(10),
+    lastVisitedAt: at(0),
+    latestRun: null,
+    runtime: { status: "running" },
+  });
+  t.mount();
+  t.update({ updatedAt: at(11), pendingSubagentRequest: "approval" });
+  t.update({ updatedAt: at(12) });
+  expect(t.visits).toHaveLength(1);
+
+  vi.advanceTimersByTime(VISIT_DISPATCH_THROTTLE_MS);
+  expect(t.visits.slice(1)).toEqual([{ threadId: t.ref.threadId, visitedAt: at(12) }]);
 });
 
 it("does not resend the open a palette pick already sent", () => {
@@ -153,4 +181,50 @@ it("advances the watermark to a wake without waiting for the throttle", () => {
   vi.advanceTimersByTime(1_000);
   t.update({ updatedAt: at(16) });
   expect(t.visits).toHaveLength(2);
+});
+
+const settled: ThreadReadStateInput = {
+  updatedAt: at(30),
+  lastVisitedAt: at(10),
+  latestRun: { completedAt: at(20) },
+  runtime: { status: "completed" },
+};
+
+it.each([
+  ["a never-opened thread with an outcome", { lastVisitedAt: null }, true],
+  ["a never-opened thread without one", { lastVisitedAt: null, latestRun: null }, false],
+  ["a finished run after the visit", {}, true],
+  ["a failed run after the visit", { runtime: { status: "failed" } }, true],
+  ["a run visited after it finished", { lastVisitedAt: at(25) }, false],
+  ["a rename after the visited finish", { lastVisitedAt: at(20), updatedAt: at(40) }, false],
+  ["running with nothing pending", { latestRun: null, runtime: { status: "running" } }, false],
+  [
+    "a pending approval",
+    { latestRun: null, runtime: { status: "running" }, hasPendingApprovals: true },
+    true,
+  ],
+  [
+    "pending user input",
+    { latestRun: null, runtime: { status: "running" }, hasPendingUserInput: true },
+    true,
+  ],
+  ["a subagent's request", { lastVisitedAt: at(25), pendingSubagentRequest: "approval" }, true],
+  [
+    "a subagent's request while the parent runs",
+    { latestRun: null, runtime: { status: "running" }, pendingSubagentRequest: "approval" },
+    false,
+  ],
+  [
+    "a subagent's request while the parent is blocked",
+    { latestRun: null, runtime: { status: "waiting" }, pendingSubagentRequest: "approval" },
+    true,
+  ],
+  ["a request already seen", { lastVisitedAt: at(30), hasPendingUserInput: true }, false],
+] as const)("%s is unread: %s", (_name, patch, unread) => {
+  const thread = { ...settled, ...patch };
+  expect(isThreadUnread(thread)).toBe(unread);
+  const watermark = threadUnreadWatermark(thread);
+  if (watermark !== null) {
+    expect(isThreadUnread({ ...thread, lastVisitedAt: watermark })).toBe(true);
+  }
 });

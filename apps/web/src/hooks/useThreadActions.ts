@@ -22,7 +22,17 @@ import * as Schema from "effect/Schema";
 import { AsyncResult } from "effect/reactivity";
 import { useRouter } from "@tanstack/react-router";
 
-import { getFallbackThreadIdAfterDelete, pinOrderKeyBetween } from "../components/Sidebar.logic";
+import {
+  getFallbackThreadIdAfterDelete,
+  pinOrderKeyBetween,
+  resolveThreadLastVisitedAt,
+  resolveThreadReadState,
+} from "../components/Sidebar.logic";
+import {
+  isThreadUnread,
+  threadOutcomeAt,
+  threadUnreadWatermark,
+} from "@t3tools/client-runtime/state/thread-visits";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { environmentSession, readEnvironmentScope } from "../state/session";
 import { appAtomRegistry } from "../rpc/atomRegistry";
@@ -182,21 +192,71 @@ export async function navigateAfterThreadDeletion(navigate: () => Promise<void>)
   }
 }
 
+function readThreadForReadState(target: ScopedThreadRef) {
+  const thread = readThreadShell(target);
+  if (!thread) return null;
+  const localLastVisitedAt =
+    useUiStateStore.getState().threadLastVisitedAtById[scopedThreadKey(target)];
+  return {
+    ...thread,
+    lastVisitedAt: resolveThreadLastVisitedAt(thread.lastVisitedAt, localLastVisitedAt),
+  };
+}
+
+export function readThreadReadState(target: ScopedThreadRef): "unread" | "read" | "none" {
+  const thread = readThreadForReadState(target);
+  return thread ? resolveThreadReadState(thread) : "none";
+}
+
 function useMarkThreadUnread() {
   const markThreadUnreadMutation = useAtomCommand(threadEnvironment.markUnread, {
     reportFailure: false,
   });
   const markThreadUnreadLocal = useUiStateStore((state) => state.markThreadUnread);
   return (target: ScopedThreadRef) => {
+    const thread = readThreadShell(target);
     if (readEnvironmentServerConfigLoaded(target.environmentId)) {
+      const visitedAt = thread ? threadUnreadWatermark(thread) : null;
       void markThreadUnreadMutation({
         environmentId: target.environmentId,
-        input: { threadId: target.threadId },
+        input: { threadId: target.threadId, ...(visitedAt === null ? {} : { visitedAt }) },
       });
       return;
     }
-    const thread = readThreadShell(target);
-    markThreadUnreadLocal(scopedThreadKey(target), thread?.latestRun?.completedAt);
+    markThreadUnreadLocal(scopedThreadKey(target), thread ? threadOutcomeAt(thread) : null);
+  };
+}
+
+// Each visit is its own command; a few in flight keep a large Mark all read off the socket's back.
+const MARK_READ_CONCURRENCY = 4;
+
+/** Marks the unread threads among `targets` read, up to their latest outcome. */
+export function useMarkThreadsRead() {
+  const visitThreadMutation = useAtomCommand(threadEnvironment.visit, { reportFailure: false });
+  const markThreadVisited = useUiStateStore((state) => state.markThreadVisited);
+  return async (targets: ReadonlyArray<ScopedThreadRef>) => {
+    const visits = targets.flatMap((target) => {
+      const thread = readThreadForReadState(target);
+      const visitedAt = thread && isThreadUnread(thread) ? threadOutcomeAt(thread) : null;
+      return visitedAt === null ? [] : [{ target, visitedAt }];
+    });
+    const serverVisits = visits.filter(({ target, visitedAt }) => {
+      if (readEnvironmentServerConfigLoaded(target.environmentId)) return true;
+      markThreadVisited(scopedThreadKey(target), visitedAt);
+      return false;
+    });
+    let next = 0;
+    await Promise.all(
+      Array.from({ length: Math.min(MARK_READ_CONCURRENCY, serverVisits.length) }, async () => {
+        while (next < serverVisits.length) {
+          const { target, visitedAt } = serverVisits[next++]!;
+          await visitThreadMutation({
+            environmentId: target.environmentId,
+            input: { threadId: target.threadId, visitedAt },
+          });
+        }
+      }),
+    );
   };
 }
 
@@ -263,6 +323,7 @@ export function useThreadActions() {
     reportFailure: false,
   });
   const markThreadUnread = useMarkThreadUnread();
+  const markThreadsRead = useMarkThreadsRead();
   const stopThreadSession = useOrchestrationCommand(threadEnvironment.stopSession);
   const removeWorktree = useAtomCommand(vcsEnvironment.removeWorktree, {
     reportFailure: false,
@@ -888,6 +949,7 @@ export function useThreadActions() {
     confirmAndUnpinThread,
     reorderPinnedThread,
     markThreadUnread,
+    markThreadsRead,
     setThreadAutoSettle,
   };
 }

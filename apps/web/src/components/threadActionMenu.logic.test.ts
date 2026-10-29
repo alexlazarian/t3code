@@ -18,6 +18,7 @@ const baseState: ThreadActionMenuState = {
   canSnoozeNow: true,
   isRegeneratingTitle: false,
   isRunning: false,
+  readState: "read",
   supports: {
     settlement: true,
     autoSettleOptOut: true,
@@ -106,6 +107,15 @@ describe("buildThreadActionMenuItems", () => {
       }
     },
   );
+
+  it.each([
+    ["unread", ["mark-read"]],
+    ["read", ["mark-unread"]],
+    ["none", []],
+  ] as const)("offers the way out of a %s thread", (readState, expected) => {
+    const ids = buildThreadActionMenuItems({ ...baseState, readState }).map((item) => item.id);
+    expect(ids.filter((id) => id === "mark-read" || id === "mark-unread")).toEqual(expected);
+  });
 
   it("disables archive while the thread is running", () => {
     const archiveItem = buildThreadActionMenuItems({ ...baseState, isRunning: true }).find(

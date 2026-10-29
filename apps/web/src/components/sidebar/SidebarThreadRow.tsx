@@ -69,7 +69,7 @@ import { textDirection } from "~/textDirection";
 import { EnvironmentMachineIcon } from "../EnvironmentMachineIcon";
 import {
   animateSidebarLayoutChanges,
-  hasUnseenCompletion,
+  isThreadUnread,
   resolveSidebarRowAccessibility,
   type SidebarDropVerb,
   resolveSidebarThreadStatus,
@@ -705,7 +705,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
     ? resolveThreadCurrentPullRequestLink(thread.pullRequests)
     : null;
 
-  const isUnread = hasUnseenCompletion({ ...thread, lastVisitedAt });
+  const isUnread = isThreadUnread({ ...thread, lastVisitedAt });
   const status = resolveSidebarThreadStatus(thread);
   const isWoke = isSidebarThreadWoke({
     wokeAt: props.wokeAt,
@@ -714,6 +714,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
   });
   const shouldRecede = shouldRecedeSidebarThread({
     status,
+    hasActionableProposedPlan: thread.hasActionableProposedPlan,
     isUnread,
     isWoke,
     isActive: props.isActive,
@@ -921,12 +922,9 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
       ? SIDEBAR_ACTIVE_ROW_CLASS
       : isSelected || props.sweepAction !== null
         ? "bg-sidebar-row-selected text-sidebar-foreground light:ring-1 light:ring-inset light:ring-sidebar-border/70"
-        : shouldRecede
-          ? "text-sidebar-muted-foreground/75 hover:bg-sidebar-row-hover hover:text-sidebar-foreground"
-          : "bg-transparent text-sidebar-foreground hover:bg-sidebar-row-hover",
+        : "bg-transparent text-sidebar-foreground hover:bg-sidebar-row-hover",
     shouldRecede &&
-      status === "working" &&
-      "opacity-70 transition-opacity hover:opacity-100 focus-within:opacity-100 motion-reduce:transition-none",
+      "opacity-60 transition-opacity hover:opacity-100 focus-within:opacity-100 motion-reduce:transition-none",
     isFileDragOver && "ring-1 ring-inset ring-primary/70",
     isFileDragOver && !props.isActive && !isSelected && "bg-sidebar-row-hover",
     props.sortable?.isDragging &&
@@ -969,6 +967,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
     statusLabel: topStatus?.label ?? null,
     projectDisplayName: props.projectDisplayName,
     isActive: props.isActive,
+    isUnread,
   });
 
   const title = isRenaming ? (
@@ -983,7 +982,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
       aria-hidden
       className={cn(
         "min-w-0 flex-1 truncate text-start text-sm leading-4.5 transition-opacity motion-reduce:transition-none",
-        quiet
+        quiet && !isUnread
           ? "font-normal text-muted-foreground group-hover/sidebar-row:text-foreground group-focus-visible/sidebar-row:text-foreground"
           : "font-semibold text-foreground",
         isRegeneratingTitle && "opacity-55",
@@ -1288,6 +1287,9 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
           </span>
           <span className="flex min-w-0 items-center gap-1.5">
             {title}
+            {isUnread ? (
+              <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-primary" />
+            ) : null}
             {pinIndicator}
             {subagentCount > 0 ? (
               <SubagentToggle

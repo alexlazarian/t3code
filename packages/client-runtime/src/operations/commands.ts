@@ -119,7 +119,9 @@ export interface VisitThreadInput extends ThreadCommandInput {
   readonly searchQuery?: string;
 }
 
-export type MarkThreadUnreadInput = ThreadCommandInput;
+export interface MarkThreadUnreadInput extends ThreadCommandInput {
+  readonly visitedAt?: string;
+}
 
 export interface UpdateThreadMetadataInput extends ThreadCommandInput {
   readonly limitRecovery?: import("@t3tools/contracts").OrchestrationV2LimitRecoveryUpdate | null;
@@ -592,6 +594,7 @@ export const markThreadUnread = Effect.fn("EnvironmentCommands.markThreadUnread"
     type: "thread.mark-unread",
     commandId: yield* allocateCommandId(input),
     threadId: input.threadId,
+    ...(input.visitedAt === undefined ? {} : { visitedAt: input.visitedAt }),
   });
 });
 

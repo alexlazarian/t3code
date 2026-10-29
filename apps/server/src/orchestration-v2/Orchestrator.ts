@@ -3308,7 +3308,28 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
       snoozedUntil = parsedSnoozedUntil.value;
     }
     let markUnreadVisitedAt: DateTime.Utc | null = null;
-    if (command.type === "thread.mark-unread") {
+    if (command.type === "thread.mark-unread" && command.visitedAt !== undefined) {
+      const visitedAt = DateTime.make(command.visitedAt);
+      if (Option.isNone(visitedAt)) {
+        return yield* new OrchestratorDispatchError({
+          commandId: command.commandId,
+          commandType: command.type,
+          cause: `Thread ${command.threadId} unread time ${command.visitedAt} is not a valid timestamp.`,
+        });
+      }
+      const currentVisitedAt = thread.lastVisitedAt;
+      if (
+        currentVisitedAt !== null &&
+        DateTime.toEpochMillis(visitedAt.value) > DateTime.toEpochMillis(currentVisitedAt)
+      ) {
+        return yield* new OrchestratorDispatchError({
+          commandId: command.commandId,
+          commandType: command.type,
+          cause: `Thread ${command.threadId} unread time ${command.visitedAt} is after its last visit.`,
+        });
+      }
+      markUnreadVisitedAt = visitedAt.value;
+    } else if (command.type === "thread.mark-unread") {
       const projection = yield* loadProjectionForCommand(command, ["runs"]);
       const latestRunCompletedAt = projection.runs.at(-1)?.completedAt ?? null;
       if (latestRunCompletedAt === null) {

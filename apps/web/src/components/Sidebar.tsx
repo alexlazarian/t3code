@@ -102,7 +102,11 @@ import {
   getThreadKeysToDeselectAfterDelete,
   useThreadSelectionStore,
 } from "../threadSelectionStore";
-import { useAcknowledgeThreadWoke, useThreadActions } from "../hooks/useThreadActions";
+import {
+  readThreadReadState,
+  useAcknowledgeThreadWoke,
+  useThreadActions,
+} from "../hooks/useThreadActions";
 import { useHandleNewThread } from "../hooks/useHandleNewThread";
 import { useSidebarProjectGroups } from "../hooks/useSidebarProjectGroups";
 import { useTerminalFocus } from "../hooks/useTerminalFocus";
@@ -167,6 +171,8 @@ import {
   resolveSidebarSweepKeys,
   resolveSidebarDropTarget,
   resolveSidebarDropVerb,
+  isThreadUnread,
+  resolveThreadLastVisitedAt,
   searchSidebarThreads,
   shouldNavigateAfterThreadPark,
   sidebarListItemId,
@@ -196,6 +202,7 @@ import {
 } from "./Sidebar.snooze";
 import { ProjectFavicon } from "./ProjectFavicon";
 import { useStableCallback } from "../hooks/useStableCallback";
+import { provideSidebarUnreadInView } from "../sidebarUnreadInView";
 import {
   resolveSidebarRouteReveal,
   type SidebarRouteReveal,
@@ -719,6 +726,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     setThreadAutoSettle,
     reorderPinnedThread,
     markThreadUnread,
+    markThreadsRead,
     archiveThread,
     deleteThread,
   } = useThreadActions();
@@ -1180,6 +1188,22 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   const threadSearchResultKeys = threadSearchResults.map((thread) =>
     scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id)),
   );
+
+  // Mark all read clears what the filter, project scope and search show, collapsed shelves included.
+  const localLastVisitedAtById = useUiStateStore((store) => store.threadLastVisitedAtById);
+  const unreadInView = (isSearchingThreads ? threadSearchResults : searchableThreads).flatMap(
+    (thread) => {
+      const threadRef = scopeThreadRef(thread.environmentId, thread.id);
+      const lastVisitedAt = resolveThreadLastVisitedAt(
+        thread.lastVisitedAt,
+        localLastVisitedAtById[scopedThreadKey(threadRef)],
+      );
+      return isThreadUnread({ ...thread, lastVisitedAt }) ? [threadRef] : [];
+    },
+  );
+  const readUnreadInView = useStableCallback(() => unreadInView);
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- lends the sidebar's view to the command palette, which lives outside this tree
+  useEffect(() => provideSidebarUnreadInView(readUnreadInView), [readUnreadInView]);
 
   // The highlight follows its thread, so rows that arrive late do not move
   // it under Enter; a new query starts at the top.
@@ -2039,6 +2063,16 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
       const pinnedSelectedThreads = selectedThreads.filter(
         (thread) => serverConfigs.has(thread.environmentId) && thread.pinnedAt != null,
       );
+      const readStates = selectedThreads.map((thread) => ({
+        thread,
+        readState: readThreadReadState(scopeThreadRef(thread.environmentId, thread.id)),
+      }));
+      const unreadSelectedThreads = readStates.flatMap(({ thread, readState }) =>
+        readState === "unread" ? [thread] : [],
+      );
+      const readSelectedThreads = readStates.flatMap(({ thread, readState }) =>
+        readState === "read" ? [thread] : [],
+      );
       const unpinMenuItem = buildBulkUnpinContextMenuItem({
         pinnedCount: pinnedSelectedThreads.length,
       });
@@ -2093,7 +2127,12 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                   },
                 ]
               : []),
-            { id: "mark-unread", label: `Mark unread (${count})` },
+            ...(unreadSelectedThreads.length > 0
+              ? [{ id: "mark-read", label: `Mark as read (${unreadSelectedThreads.length})` }]
+              : []),
+            ...(readSelectedThreads.length > 0
+              ? [{ id: "mark-unread", label: `Mark as unread (${readSelectedThreads.length})` }]
+              : []),
             {
               id: "delete",
               label: `Delete (${count})`,
@@ -2119,7 +2158,12 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                 })
               : selectedThreads;
       if (clicked.value === "settle" && actionTargets.length === 0) return;
-      if (clicked.value !== "mark-unread" && !checkThreadOperations(actionTargets)) return;
+      if (
+        clicked.value !== "mark-unread" &&
+        clicked.value !== "mark-read" &&
+        !checkThreadOperations(actionTargets)
+      )
+        return;
       if (clicked.value?.startsWith("snooze:")) {
         const preset =
           clicked.value === "snooze:custom"
@@ -2203,11 +2247,17 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
         return;
       }
       if (clicked.value === "mark-unread") {
-        for (const threadKey of threadKeys) {
-          const thread = threadByKeyRef.current.get(threadKey);
-          if (thread) markThreadUnread(scopeThreadRef(thread.environmentId, thread.id));
+        for (const thread of readSelectedThreads) {
+          markThreadUnread(scopeThreadRef(thread.environmentId, thread.id));
         }
         clearSelection();
+        return;
+      }
+      if (clicked.value === "mark-read") {
+        clearSelection();
+        await markThreadsRead(
+          unreadSelectedThreads.map((thread) => scopeThreadRef(thread.environmentId, thread.id)),
+        );
         return;
       }
       if (clicked.value !== "delete") return;
@@ -2370,6 +2420,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
               canSnoozeNow: canSnooze(thread, { now: new Date().toISOString() }),
               isRegeneratingTitle,
               isRunning: !threadRuntimeCanArchive(thread.runtime),
+              readState: readThreadReadState(threadRef),
               canShareWithGuest: appAtomRegistry.get(
                 canShareWithGuestAtom(threadRef.environmentId),
               ),
@@ -2495,6 +2546,9 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
             }
             return;
           }
+          case "mark-read":
+            await markThreadsRead([threadRef]);
+            return;
           case "mark-unread":
             markThreadUnread(threadRef);
             return;
@@ -2873,6 +2927,8 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                 statusFilter={statusFilter}
                 statusCounts={statusCounts}
                 onStatusFilterChange={setStatusFilter}
+                unreadCount={unreadInView.length}
+                onMarkAllRead={() => void markThreadsRead(unreadInView)}
               />
             </div>
           }

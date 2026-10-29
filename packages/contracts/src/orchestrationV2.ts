@@ -3045,6 +3045,9 @@ export const OrchestrationV2Command = Schema.Union([
     type: Schema.Literal("thread.mark-unread"),
     commandId: CommandId,
     threadId: ThreadId,
+    // Just before the client's outcome time, so threads with only a pending request can be
+    // marked unread. Without it the server rewinds to the latest completed run.
+    visitedAt: Schema.optional(IsoDateTime),
   }),
   Schema.Struct({
     type: Schema.Literal("thread.metadata.update"),

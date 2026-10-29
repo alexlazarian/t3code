@@ -52,7 +52,7 @@ import { threadRuntimeCanArchive } from "@t3tools/client-runtime/state/models";
 import { useCopyToClipboard } from "./useCopyToClipboard";
 import { useNewThreadHandler } from "./useHandleNewThread";
 import { useClientSettings } from "./useSettings";
-import { useThreadActions } from "./useThreadActions";
+import { readThreadReadState, useThreadActions } from "./useThreadActions";
 
 function failureToast(title: string, error: unknown) {
   toastManager.add(
@@ -109,6 +109,7 @@ export function useThreadActionMenu(input: ThreadMenuTarget) {
     archiveThread,
     deleteThread,
     markThreadUnread,
+    markThreadsRead,
   } = useThreadActions();
   const updateThreadMetadata = useOrchestrationCommand(threadEnvironment.updateMetadata, {
     reportFailure: false,
@@ -253,6 +254,9 @@ export function useThreadActionMenu(input: ThreadMenuTarget) {
           }),
         );
         return;
+      case "mark-read":
+        await markThreadsRead([threadRef]);
+        return;
       case "mark-unread":
         markThreadUnread(threadRef);
         return;
@@ -378,6 +382,7 @@ export function useThreadActionMenu(input: ThreadMenuTarget) {
           canSnoozeNow: canSnooze(thread, { now: now.toISOString() }),
           isRegeneratingTitle: thread.titleRegeneration != null,
           isRunning: !threadRuntimeCanArchive(thread.runtime),
+          readState: readThreadReadState(threadRef),
           supports,
           snoozePresets,
           canShareWithGuest: target.canShareWithGuest,

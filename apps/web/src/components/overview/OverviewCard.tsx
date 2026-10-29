@@ -14,8 +14,9 @@ import {
   resolveSidebarStatusLabel,
 } from "../sidebar/threadStatusLabel";
 import {
-  hasUnseenCompletion,
+  isThreadUnread,
   resolveSidebarThreadStatus,
+  shouldRecedeSidebarThread,
   threadShellKey,
   type SidebarSection,
 } from "../Sidebar.logic";
@@ -79,18 +80,28 @@ export const OverviewCard = memo(function OverviewCard(props: {
   const { thread, lastVisitedAt } = props;
   const [expanded, setExpanded] = useState(false);
   const threadKey = threadShellKey(thread);
-  const isUnread = hasUnseenCompletion({ ...thread, lastVisitedAt });
+  const isUnread = isThreadUnread({ ...thread, lastVisitedAt });
+  const sidebarStatus = resolveSidebarThreadStatus(thread);
+  const isWoke = isSidebarThreadWoke({
+    wokeAt: props.wokeAt,
+    lastVisitedAt,
+    settledOverride: thread.settledOverride,
+  });
   const status = resolveSidebarStatusLabel({
-    status: resolveSidebarThreadStatus(thread),
+    status: sidebarStatus,
     goalActive: thread.goal?.status === "active",
     hasActionableProposedPlan: thread.hasActionableProposedPlan,
     isUnread,
     isCompleted: isSidebarThreadCompleted(thread),
-    isWoke: isSidebarThreadWoke({
-      wokeAt: props.wokeAt,
-      lastVisitedAt,
-      settledOverride: thread.settledOverride,
-    }),
+    isWoke,
+  });
+  const recedes = shouldRecedeSidebarThread({
+    status: sidebarStatus,
+    hasActionableProposedPlan: thread.hasActionableProposedPlan,
+    isUnread,
+    isWoke,
+    isActive: false,
+    isSelected: props.selected,
   });
   const icon = status?.icon ?? null;
   const light = overviewLight(icon);
@@ -140,7 +151,9 @@ export const OverviewCard = memo(function OverviewCard(props: {
       tabIndex={props.tabbable ? 0 : -1}
       data-thread-key={threadKey}
       data-info-thread={threadKey}
-      aria-label={[thread.title, props.projectName, status?.label].filter(Boolean).join(", ")}
+      aria-label={[thread.title, isUnread ? "unread" : null, props.projectName, status?.label]
+        .filter(Boolean)
+        .join(", ")}
       aria-pressed={props.selected}
       onClick={() => props.onSelect(threadKey)}
       onDoubleClick={() => props.onOpen(threadKey)}
@@ -150,10 +163,13 @@ export const OverviewCard = memo(function OverviewCard(props: {
       className={cn(
         "min-w-0 cursor-pointer border border-border bg-muted text-foreground outline-0 -outline-offset-1 outline-ring select-none focus-visible:outline-2",
         props.selected && "outline-2 outline-primary",
+        // The section fade is stronger than the read fade, so they never stack.
         props.offline
           ? "opacity-50"
-          : (props.section === "snoozed" || props.section === "settled") &&
-              "opacity-55 saturate-50",
+          : props.section === "snoozed" || props.section === "settled"
+            ? "opacity-55 saturate-50"
+            : recedes &&
+              "opacity-60 transition-opacity hover:opacity-100 focus-within:opacity-100 motion-reduce:transition-none",
       )}
     >
       <div
@@ -166,11 +182,18 @@ export const OverviewCard = memo(function OverviewCard(props: {
         <span
           className={cn(
             "min-w-0 flex-1 truncate text-xs",
-            light === "done" || light === "idle" ? "text-muted-foreground" : "font-semibold",
+            isUnread
+              ? "font-semibold text-foreground"
+              : light === "done" || light === "idle"
+                ? "text-muted-foreground"
+                : "font-semibold",
           )}
         >
           {thread.title}
         </span>
+        {isUnread ? (
+          <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-primary" />
+        ) : null}
         {subagentCount > 0 ? (
           <SubagentToggle
             subagents={subagents}

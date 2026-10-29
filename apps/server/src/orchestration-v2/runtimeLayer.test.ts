@@ -6091,6 +6091,27 @@ it.layer(layerSharedApplicationDataPlaneTest)("visited projection", (it) => {
         .pipe(Effect.flip);
       assert.instanceOf(markUnread, Orchestrator.OrchestratorDispatchError);
 
+      // A thread waiting on the user has no completed run; the client sends its outcome time.
+      const unreadAt = "2026-07-24T00:59:59.999Z";
+      yield* orchestrator.dispatch({
+        type: "thread.mark-unread",
+        commandId: CommandId.make("runtime-layer-visited-thread-mark-unread-at"),
+        threadId,
+        visitedAt: unreadAt,
+      });
+      const futureUnread = yield* orchestrator
+        .dispatch({
+          type: "thread.mark-unread",
+          commandId: CommandId.make("runtime-layer-visited-thread-mark-unread-future"),
+          threadId,
+          visitedAt: "2999-01-01T00:00:00.000Z",
+        })
+        .pipe(Effect.flip);
+      assert.instanceOf(futureUnread, Orchestrator.OrchestratorDispatchError);
+      const markedUnread = yield* orchestrator.getThreadProjection(threadId);
+      assert.equal(DateTime.formatIso(markedUnread.thread.lastVisitedAt!), unreadAt);
+      assert.deepEqual(markedUnread.thread.updatedAt, createdUpdatedAt);
+
       const sql = yield* SqlClient.SqlClient;
       yield* sql`INSERT INTO orchestration_v2_projection_turn_items (
         turn_item_id, thread_id, ordinal, type, status, updated_at, payload_json

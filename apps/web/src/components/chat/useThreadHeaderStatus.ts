@@ -5,7 +5,7 @@ import { effectiveSnoozed, threadWokeAt } from "@t3tools/client-runtime/state/th
 import { useNowAfter } from "../../hooks/useDeadline";
 import { useUiStateStore } from "../../uiStateStore";
 import {
-  hasUnseenCompletion,
+  isThreadUnread,
   resolveSidebarThreadStatus,
   resolveThreadLastVisitedAt,
 } from "../Sidebar.logic";
@@ -36,7 +36,7 @@ export function useThreadHeaderStatus(
     status: resolveSidebarThreadStatus(thread),
     goalActive: thread.goal?.status === "active",
     hasActionableProposedPlan: thread.hasActionableProposedPlan,
-    isUnread: hasUnseenCompletion({ ...thread, lastVisitedAt }),
+    isUnread: isThreadUnread({ ...thread, lastVisitedAt }),
     isCompleted: isSidebarThreadCompleted(thread),
     isWoke: isSidebarThreadWoke({
       wokeAt: threadWokeAt(thread, { now: nowIso }),

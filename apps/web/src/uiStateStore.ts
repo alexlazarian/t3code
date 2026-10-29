@@ -289,19 +289,20 @@ export function markThreadVisited(state: UiState, threadId: string, visitedAt: s
   };
 }
 
+/** `outcomeAt` is the thread's `threadOutcomeAt`, so the server and this fallback agree. */
 export function markThreadUnread(
   state: UiState,
   threadId: string,
-  latestTurnCompletedAt: string | null | undefined,
+  outcomeAt: string | null | undefined,
 ): UiState {
-  if (!latestTurnCompletedAt) {
+  if (!outcomeAt) {
     return state;
   }
-  const latestTurnCompletedAtMs = Date.parse(latestTurnCompletedAt);
-  if (Number.isNaN(latestTurnCompletedAtMs)) {
+  const outcomeAtMs = Date.parse(outcomeAt);
+  if (Number.isNaN(outcomeAtMs)) {
     return state;
   }
-  const unreadVisitedAt = new Date(latestTurnCompletedAtMs - 1).toISOString();
+  const unreadVisitedAt = new Date(outcomeAtMs - 1).toISOString();
   if (state.threadLastVisitedAtById[threadId] === unreadVisitedAt) {
     return state;
   }
@@ -463,7 +464,7 @@ export function reorderProjects(
 
 interface UiStateStore extends UiState {
   markThreadVisited: (threadId: string, visitedAt: string) => void;
-  markThreadUnread: (threadId: string, latestTurnCompletedAt: string | null | undefined) => void;
+  markThreadUnread: (threadId: string, outcomeAt: string | null | undefined) => void;
   setThreadChangedFilesExpanded: (threadId: string, turnId: string, expanded: boolean) => void;
   setDefaultAdvertisedEndpointKey: (key: string | null) => void;
   setSidebarProjectScopeKeys: (projectKeys: readonly string[]) => void;
@@ -482,8 +483,8 @@ export const useUiStateStore = create<UiStateStore>((set) => ({
   ...readPersistedState(),
   markThreadVisited: (threadId, visitedAt) =>
     set((state) => markThreadVisited(state, threadId, visitedAt)),
-  markThreadUnread: (threadId, latestTurnCompletedAt) =>
-    set((state) => markThreadUnread(state, threadId, latestTurnCompletedAt)),
+  markThreadUnread: (threadId, outcomeAt) =>
+    set((state) => markThreadUnread(state, threadId, outcomeAt)),
   setThreadChangedFilesExpanded: (threadId, turnId, expanded) =>
     set((state) => setThreadChangedFilesExpanded(state, threadId, turnId, expanded)),
   setDefaultAdvertisedEndpointKey: (key) =>

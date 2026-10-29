@@ -69,6 +69,7 @@ import {
   ListIcon,
   MessageSquareDashedIcon,
   LinkIcon,
+  MailOpenIcon,
   MessageSquareIcon,
   PaletteIcon,
   RotateCcwIcon,
@@ -121,6 +122,8 @@ import { useAtomCommand } from "../state/use-atom-command";
 import { useAtomQueryRunner } from "../state/use-atom-query-runner";
 import { useScratchProject } from "../hooks/useScratchProject";
 import { useStartTriage } from "../hooks/useStartTriage";
+import { useMarkThreadsRead } from "../hooks/useThreadActions";
+import { readSidebarUnreadInView } from "../sidebarUnreadInView";
 import { pickTriageEnvironment } from "../lib/triageTarget";
 import { useNewProject } from "../hooks/useNewProject";
 import {
@@ -417,6 +420,7 @@ function OpenCommandPaletteDialog(props: {
   });
   const { scratchEnvironmentId, scratchWorkspaceRootFor, startScratchThread } = useScratchProject();
   const startTriage = useStartTriage();
+  const markThreadsRead = useMarkThreadsRead();
   const lookupRepository = useAtomQueryRunner(sourceControlEnvironment.repository, {
     reportFailure: false,
   });
@@ -1171,6 +1175,20 @@ function OpenCommandPaletteDialog(props: {
       requestOpenSidebar();
     },
   });
+  const sidebarUnreadInView = readSidebarUnreadInView();
+  if (sidebarUnreadInView.length > 0) {
+    actionItems.push({
+      kind: "action",
+      value: "action:mark-all-threads-read",
+      searchTerms: ["mark", "read", "unread", "all", "clear", "inbox", "seen"],
+      title: "Mark all threads as read",
+      description: `${sidebarUnreadInView.length} unread in the sidebar`,
+      icon: <MailOpenIcon className={ITEM_ICON_CLASS} />,
+      run: async () => {
+        await markThreadsRead(readSidebarUnreadInView());
+      },
+    });
+  }
 
   if (projects.length > 0) {
     const activeProjectTitle =

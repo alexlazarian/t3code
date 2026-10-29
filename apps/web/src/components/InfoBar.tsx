@@ -15,7 +15,7 @@ import { useStableCallback } from "../hooks/useStableCallback";
 import { environmentPresentations } from "../state/presentation";
 import { useUiStateStore } from "../uiStateStore";
 import {
-  hasUnseenCompletion,
+  isThreadUnread,
   resolveSidebarThreadStatus,
   resolveThreadLastVisitedAt,
 } from "./Sidebar.logic";
@@ -55,7 +55,7 @@ function lookupThread(
     status: resolveSidebarThreadStatus(thread),
     goalActive: thread.goal?.status === "active",
     hasActionableProposedPlan: thread.hasActionableProposedPlan,
-    isUnread: hasUnseenCompletion({ ...thread, lastVisitedAt }),
+    isUnread: isThreadUnread({ ...thread, lastVisitedAt }),
     isCompleted: isSidebarThreadCompleted(thread),
     isWoke: isSidebarThreadWoke({
       wokeAt: threadWokeAt(thread, { now: new Date().toISOString() }),

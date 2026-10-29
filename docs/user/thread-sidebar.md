@@ -228,6 +228,16 @@ The **All projects** menu beside the search narrows the list to one project. **S
 another project, or press **Shift+Enter** on it, to show several at once. Overview follows the
 same choice.
 
+## Unread threads
+
+On web and desktop, a thread is unread when the agent finished, failed, has a plan
+ready, or is waiting on you since you last opened it. Unread threads show a bold title
+and a dot; threads you have read fade until you hover them. Opening a thread marks it
+read. Use **Mark as read** or **Mark as unread** in the thread's menu, or on a
+multi-selection. **Mark all read** below the filter chips, or in the Overview header,
+clears only the threads the current filter, project choice, and search show. **Mark
+all threads as read** in the command palette does the same for the sidebar.
+
 ## See every project at once
 
 On web and desktop, **Overview** lays out each project as a column of thread cards.
