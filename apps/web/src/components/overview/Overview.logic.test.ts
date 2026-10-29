@@ -38,6 +38,7 @@ import {
   sidebarStepLine,
   overviewWaitStrip,
   overviewSplitDragFraction,
+  resolveOverviewPaneTarget,
   resolveOverviewSplitRelease,
 } from "./Overview.logic";
 
@@ -464,6 +465,34 @@ describe("overview drafts", () => {
       },
     ]);
     expect(build(sessions, composers).has(NO_PROJECT_KEY)).toBe(false);
+  });
+
+  it("resolves the pane through draft promotion", () => {
+    const threadKey = keyOf("d");
+    const draftId = DraftId.make("d");
+    const none = {
+      serverThreadKeys: new Set<string>(),
+      draftIdByThreadKey: new Map<string, DraftId>(),
+      promotedThreadKeys: new Set<string>(),
+    };
+    expect(
+      resolveOverviewPaneTarget(threadKey, {
+        ...none,
+        draftIdByThreadKey: new Map([[threadKey, draftId]]),
+      }),
+    ).toEqual({ kind: "draft", threadKey, draftId });
+    expect(
+      resolveOverviewPaneTarget(threadKey, { ...none, promotedThreadKeys: new Set([threadKey]) }),
+    ).toEqual({ kind: "pending", threadKey });
+    expect(
+      resolveOverviewPaneTarget(threadKey, {
+        serverThreadKeys: new Set([threadKey]),
+        draftIdByThreadKey: new Map([[threadKey, draftId]]),
+        promotedThreadKeys: new Set([threadKey]),
+      }),
+    ).toEqual({ kind: "server", threadKey });
+    expect(resolveOverviewPaneTarget(threadKey, none)).toBeNull();
+    expect(resolveOverviewPaneTarget(null, none)).toBeNull();
   });
 
   it("shows an empty draft only while it is open in the pane", () => {

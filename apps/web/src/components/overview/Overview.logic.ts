@@ -217,6 +217,28 @@ export function overviewDraftCards(input: {
   return byProject;
 }
 
+export type OverviewPaneTarget =
+  | { kind: "server"; threadKey: string }
+  | { kind: "draft"; threadKey: string; draftId: DraftId }
+  | { kind: "pending"; threadKey: string };
+
+/** A promoted draft resolves as pending until its server shell arrives, so the pane never closes. */
+export function resolveOverviewPaneTarget(
+  openKey: string | null,
+  input: {
+    serverThreadKeys: ReadonlySet<string>;
+    draftIdByThreadKey: ReadonlyMap<string, DraftId>;
+    promotedThreadKeys: ReadonlySet<string>;
+  },
+): OverviewPaneTarget | null {
+  if (openKey === null) return null;
+  if (input.serverThreadKeys.has(openKey)) return { kind: "server", threadKey: openKey };
+  const draftId = input.draftIdByThreadKey.get(openKey);
+  if (draftId !== undefined) return { kind: "draft", threadKey: openKey, draftId };
+  if (input.promotedThreadKeys.has(openKey)) return { kind: "pending", threadKey: openKey };
+  return null;
+}
+
 export type OverviewFocusDirection = "up" | "down" | "left" | "right";
 
 /** `grid[column][row]` lists the card keys of each visible cell. */

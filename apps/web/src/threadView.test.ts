@@ -12,6 +12,7 @@ import {
   overviewSplitThreadKey,
   pickLastVisitedThread,
   pickListThread,
+  subscribeOverviewSplit,
 } from "./threadView";
 
 describe("threadView", () => {
@@ -81,6 +82,23 @@ describe("threadView", () => {
       expect(pickListThread([shell("a")])?.threadId).toBe("a");
       noteThreadRouteOpened(ref("b"));
       expect(overviewSplitThreadKey()).toBe(key("b"));
+    });
+
+    it("notifies split listeners on open and close", () => {
+      __resetCurrentThreadForTests();
+      let calls = 0;
+      const unsubscribe = subscribeOverviewSplit(() => {
+        calls += 1;
+      });
+      noteOverviewSplitOpened(ref("a"));
+      expect(calls).toBe(1);
+      noteOverviewSplitOpened(ref("a"));
+      expect(calls).toBe(1);
+      noteOverviewSplitClosed();
+      expect(calls).toBe(2);
+      unsubscribe();
+      noteOverviewSplitOpened(ref("b"));
+      expect(calls).toBe(2);
     });
 
     it("falls back to the last visit when the current thread is gone", () => {

@@ -37,21 +37,43 @@ let overviewSplitClosed = false;
 const threadKeyOf = (ref: ThreadRouteRef) =>
   scopedThreadKey(scopeThreadRef(ref.environmentId, ref.threadId));
 
+const splitListeners = new Set<() => void>();
+
+export function subscribeOverviewSplit(listener: () => void): () => void {
+  splitListeners.add(listener);
+  return () => {
+    splitListeners.delete(listener);
+  };
+}
+
+function updateSplit(update: () => void): void {
+  const before = overviewSplitThreadKey();
+  update();
+  if (overviewSplitThreadKey() === before) return;
+  for (const listener of splitListeners) listener();
+}
+
 /** A thread route showed this thread. Returning to a thread already current is not a new open. */
 export function noteThreadRouteOpened(ref: ThreadRouteRef): void {
   if (currentThread !== null && threadKeyOf(currentThread) === threadKeyOf(ref)) return;
-  currentThread = ref;
-  overviewSplitClosed = false;
+  updateSplit(() => {
+    currentThread = ref;
+    overviewSplitClosed = false;
+  });
 }
 
 export function noteOverviewSplitOpened(ref: ThreadRouteRef): void {
-  currentThread = ref;
-  overviewSplitClosed = false;
+  updateSplit(() => {
+    currentThread = ref;
+    overviewSplitClosed = false;
+  });
 }
 
 /** Hides the split; the thread stays current for List. */
 export function noteOverviewSplitClosed(): void {
-  overviewSplitClosed = true;
+  updateSplit(() => {
+    overviewSplitClosed = true;
+  });
 }
 
 export function currentThreadKey(): string | null {
@@ -65,6 +87,7 @@ export function overviewSplitThreadKey(): string | null {
 export function __resetCurrentThreadForTests(): void {
   currentThread = null;
   overviewSplitClosed = false;
+  splitListeners.clear();
 }
 
 export function pickListThread(shells: ReadonlyArray<VisitedShell>): ThreadRouteRef | null {
