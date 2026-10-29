@@ -241,6 +241,22 @@ describe("thread execution presentation", () => {
     expect(deriveThreadRuntime(onlyHeld)).toBeNull();
   });
 
+  it("gives an imported thread that never ran no runtime", () => {
+    const imported = {
+      ...v2Projection,
+      runs: [],
+      turnItems: [],
+      thread: {
+        ...v2Projection.thread,
+        activeProviderThreadId: ProviderThreadId.make("provider-thread-imported"),
+      },
+    };
+    expect(deriveThreadRuntime(imported)).toBeNull();
+
+    const queued = { ...imported, runs: [run("run-queued", 1, "queued")] };
+    expect(deriveThreadRuntime(queued)).toMatchObject({ status: "queued" });
+  });
+
   it("does not expose a queued-only run as interruptible", () => {
     const queuedRun = run("run-queued", 1, "queued");
     const projection = { ...v2Projection, runs: [queuedRun], updatedAt: now };

@@ -241,11 +241,12 @@ export function deriveThreadStructureRuntime(
       pullRequests: projection.thread.pullRequests,
     }),
   );
-  // A pull request watch can hold a thread that never ran.
+  // A pull request watch or a queued run can hold a thread that never ran.
+  // Imported sessions carry a provider thread but no run; they get no runtime.
   if (
     latestRun === null &&
-    projection.thread.activeProviderThreadId === null &&
-    !backgroundWorkHoldsRun
+    !backgroundWorkHoldsRun &&
+    !projection.runs.some((run) => run.status === "queued" && run.queueHeld !== true)
   ) {
     return null;
   }
