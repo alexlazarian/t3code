@@ -1,7 +1,5 @@
 import {
   ClaudeContextConflictError,
-  type ClaudeContextFolder,
-  type ClaudeContextSnapshot,
   type ClaudeMemory,
   type ClaudeMemoryType,
   type EnvironmentId,
@@ -15,7 +13,7 @@ import { useState, type KeyboardEvent, type ReactNode } from "react";
 import { cn } from "../../lib/utils";
 import { serverEnvironment } from "../../state/server";
 import { useAtomCommand } from "../../state/use-atom-command";
-import type { LibrarySkillEntry } from "../library/Library.logic";
+import type { ContextMachine } from "./ContextPage";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
@@ -23,16 +21,29 @@ import { toastManager } from "../ui/toast";
 import {
   MEMORY_TYPES,
   displayPath,
+  homeOf,
+  skillSelectionName,
   instructionScopeLabel,
   isMemoryType,
   memoryTypeLabel,
   type ContextSelection,
+  type ContextSkill,
+  type ContextSource,
 } from "./contextPage.logic";
 
 export type ContextEditor =
-  | { readonly kind: "new-memory"; readonly folderKey: string }
-  | { readonly kind: "edit-memory"; readonly folderKey: string; readonly fileName: string }
-  | { readonly kind: "edit-user-instructions" };
+  | {
+      readonly kind: "new-memory";
+      readonly environmentId: EnvironmentId;
+      readonly folderKey: string;
+    }
+  | {
+      readonly kind: "edit-memory";
+      readonly environmentId: EnvironmentId;
+      readonly folderKey: string;
+      readonly fileName: string;
+    }
+  | { readonly kind: "edit-user-instructions"; readonly environmentId: EnvironmentId };
 
 const isConflict = Schema.is(ClaudeContextConflictError);
 
@@ -49,55 +60,99 @@ function failureOf(result: { readonly _tag: string; readonly cause?: Cause.Cause
     : null;
 }
 
-export function ContextDetail(props: {
-  readonly environmentId: EnvironmentId;
-  readonly providerInstanceId: ProviderInstanceId;
-  readonly snapshot: ClaudeContextSnapshot;
+export type FolderChoice = {
+  readonly value: string;
+  readonly target: Target;
+  readonly folderKey: string;
+  readonly label: string;
+  readonly group: string;
+  readonly memoryDirectory: string;
   readonly home: string | null;
-  readonly folders: ReadonlyArray<ClaudeContextFolder>;
-  readonly currentFolderKey: string;
+};
+
+function folderChoiceValue(environmentId: EnvironmentId, folderKey: string): string {
+  return `${environmentId}|${folderKey}`;
+}
+
+/** Every folder a memory can go in, grouped by project; deleted worktrees and outside folders included. */
+function folderChoices(
+  machines: ReadonlyArray<ContextMachine>,
+  sources: ReadonlyArray<ContextSource>,
+  currentFolderKey: string | null,
+): ReadonlyArray<FolderChoice> {
+  return sources.flatMap((source) => {
+    const machine = machines.find((entry) => entry.environmentId === source.environmentId);
+    if (!machine) return [];
+    const titleOf = (projectRoot: string | null) =>
+      projectRoot === null
+        ? "Other folders"
+        : (source.projects.find((project) => project.projectRoot === projectRoot)?.title ??
+          projectRoot);
+    return source.snapshot.folders
+      .map((folder) => ({
+        value: folderChoiceValue(source.environmentId, folder.key),
+        target: {
+          environmentId: machine.environmentId,
+          providerInstanceId: machine.providerInstanceId,
+        },
+        folderKey: folder.key,
+        label: `${folder.label} (${folder.kind === "main" ? "main checkout" : folder.kind === "worktree" ? "worktree" : "folder"}${folder.key === currentFolderKey ? ", this thread" : ""})`,
+        group: `${titleOf(folder.projectRoot)}${source.machineLabel ? ` (${source.machineLabel})` : ""}`,
+        memoryDirectory: folder.memoryDirectory,
+        home: homeOf(source.snapshot.claudeHome),
+      }))
+      .toSorted((a, b) => a.group.localeCompare(b.group));
+  });
+}
+
+export function ContextDetail(props: {
+  readonly machines: ReadonlyArray<ContextMachine>;
+  readonly sources: ReadonlyArray<ContextSource>;
+  readonly current: { readonly environmentId: EnvironmentId; readonly projectRoot: string } | null;
+  readonly currentFolderKey: string | null;
   readonly selection: ContextSelection | null;
   readonly setSelection: (selection: ContextSelection | null) => void;
   readonly editor: ContextEditor | null;
   readonly setEditor: (editor: ContextEditor | null) => void;
   readonly refresh: () => void;
-  readonly skills: ReadonlyArray<LibrarySkillEntry>;
+  readonly skills: ReadonlyArray<ContextSkill>;
   readonly insert: ((text: string) => void) | null;
 }) {
-  const { snapshot, selection, editor } = props;
-  const target: Target = {
-    environmentId: props.environmentId,
-    providerInstanceId: props.providerInstanceId,
-  };
+  const { selection, editor } = props;
+  const environmentId = editor?.environmentId ?? selection?.environmentId ?? null;
+  const source = props.sources.find((entry) => entry.environmentId === environmentId) ?? null;
+  const machine = props.machines.find((entry) => entry.environmentId === environmentId) ?? null;
+  if (editor && (source === null || machine === null)) return null;
+  const snapshot = source?.snapshot ?? null;
+  const home = snapshot ? homeOf(snapshot.claudeHome) : null;
+  const target: Target | null = machine
+    ? { environmentId: machine.environmentId, providerInstanceId: machine.providerInstanceId }
+    : null;
+  const isCurrentMachine = props.current?.environmentId === environmentId;
   const folderLabel = (key: string) =>
-    snapshot.folders.find((folder) => folder.key === key)?.label ?? key;
+    snapshot?.folders.find((folder) => folder.key === key)?.label ?? key;
 
   if (editor?.kind === "new-memory" || editor?.kind === "edit-memory") {
     const memory =
       editor.kind === "edit-memory"
-        ? (snapshot.memories.find(
+        ? (snapshot?.memories.find(
             (entry) => entry.folderKey === editor.folderKey && entry.fileName === editor.fileName,
           ) ?? null)
         : null;
+    const choices = folderChoices(props.machines, props.sources, props.currentFolderKey);
     return (
       <MemoryEditor
         key={editor.kind === "edit-memory" ? `${editor.folderKey}/${editor.fileName}` : "new"}
-        target={target}
         memory={memory}
-        folders={props.folders}
-        initialFolderKey={editor.folderKey}
-        currentFolderKey={props.currentFolderKey}
-        home={props.home}
-        memoryDirectory={(key) =>
-          snapshot.folders.find((folder) => folder.key === key)?.memoryDirectory ??
-          `${snapshot.claudeHome}/projects/${key}/memory`
-        }
-        onDone={(saved) => {
+        choices={choices}
+        initialChoice={folderChoiceValue(editor.environmentId, editor.folderKey)}
+        onDone={(saved, savedEnvironmentId) => {
           props.setEditor(null);
           props.refresh();
           if (saved) {
             props.setSelection({
               kind: "memory",
+              environmentId: savedEnvironmentId,
               folderKey: saved.folderKey,
               fileName: saved.fileName,
             });
@@ -107,15 +162,15 @@ export function ContextDetail(props: {
       />
     );
   }
-  const userInstructions = snapshot.instructions.find(
+  const userInstructions = snapshot?.instructions.find(
     (file) => file.scope === "user" && !file.importedBy,
   );
-  if (editor?.kind === "edit-user-instructions" && userInstructions) {
+  if (editor?.kind === "edit-user-instructions" && userInstructions && target) {
     return (
       <UserInstructionsEditor
         target={target}
         path={userInstructions.path}
-        home={props.home}
+        home={home}
         initial={userInstructions.content}
         onDone={() => {
           props.setEditor(null);
@@ -126,7 +181,7 @@ export function ContextDetail(props: {
     );
   }
 
-  if (selection === null) {
+  if (selection === null || snapshot === null || target === null) {
     return (
       <div className="flex flex-col items-center gap-2 p-10 text-center text-sm text-muted-foreground">
         <p className="font-medium text-foreground">Pick a memory, instruction file or skill</p>
@@ -143,17 +198,19 @@ export function ContextDetail(props: {
     return (
       <DetailFrame
         title="MEMORY.md"
-        subtitle={`${folder.label} (${folder.kind === "main" ? "main checkout" : "worktree"})`}
+        subtitle={`${folder.label} (${folder.kind === "main" ? "main checkout" : folder.kind === "worktree" ? "worktree" : "folder outside your projects"})`}
       >
         <Facts
           rows={[
             [
               "Folder",
               folder.path
-                ? displayPath(folder.path, props.home)
-                : "Worktree removed; its memory stays here.",
+                ? displayPath(folder.path, home)
+                : folder.kind === "worktree"
+                  ? "Worktree removed; its memory stays here."
+                  : "A folder Claude ran in that is not one of your projects.",
             ],
-            ["File", displayPath(`${folder.memoryDirectory}/MEMORY.md`, props.home)],
+            ["File", displayPath(`${folder.memoryDirectory}/MEMORY.md`, home)],
             [
               "Loaded",
               "At the start of every session that runs in this folder. Claude opens a memory file when its line looks relevant.",
@@ -181,12 +238,13 @@ export function ContextDetail(props: {
       <MemoryView
         target={target}
         memory={memory}
-        home={props.home}
+        home={home}
         folderLabel={folderLabel(memory.folderKey)}
-        isCurrentFolder={memory.folderKey === props.currentFolderKey}
+        isCurrentFolder={isCurrentMachine && memory.folderKey === props.currentFolderKey}
         onEdit={() =>
           props.setEditor({
             kind: "edit-memory",
+            environmentId: target.environmentId,
             folderKey: memory.folderKey,
             fileName: memory.fileName,
           })
@@ -197,11 +255,7 @@ export function ContextDetail(props: {
         }}
         onRestored={() => {
           props.refresh();
-          props.setSelection({
-            kind: "memory",
-            folderKey: memory.folderKey,
-            fileName: memory.fileName,
-          });
+          props.setSelection(selection);
         }}
       />
     );
@@ -213,13 +267,18 @@ export function ContextDetail(props: {
     return (
       <DetailFrame
         title={file.path.split("/").at(-1) ?? file.path}
-        subtitle={displayPath(file.path, props.home)}
+        subtitle={displayPath(file.path, home)}
         actions={
           file.editable ? (
             <Button
               size="xs"
               variant="outline"
-              onClick={() => props.setEditor({ kind: "edit-user-instructions" })}
+              onClick={() =>
+                props.setEditor({
+                  kind: "edit-user-instructions",
+                  environmentId: target.environmentId,
+                })
+              }
             >
               {file.content === null ? "Create" : "Edit"}
             </Button>
@@ -230,7 +289,7 @@ export function ContextDetail(props: {
           rows={[
             ["Scope", instructionScopeLabel(file.scope)],
             ...(file.importedBy
-              ? [["Imported by", displayPath(file.importedBy, props.home)] as const]
+              ? [["Imported by", displayPath(file.importedBy, home)] as const]
               : []),
             [
               "Loaded",
@@ -256,7 +315,11 @@ export function ContextDetail(props: {
     );
   }
 
-  const skill = props.skills.find((entry) => entry.name === selection.name);
+  const skill = props.skills.find(
+    (entry) =>
+      entry.environmentId === selection.environmentId &&
+      skillSelectionName(entry) === selection.name,
+  );
   if (!skill) return null;
   return (
     <DetailFrame
@@ -272,8 +335,13 @@ export function ContextDetail(props: {
     >
       <Facts
         rows={[
-          ["Source", skill.source],
-          ["Use", `Type ${skill.name} in the composer.`],
+          ["Source", skill.projectTitle ? `project · ${skill.projectTitle}` : skill.source],
+          [
+            "Use",
+            skill.projectTitle
+              ? `Type ${skill.name} in a thread in ${skill.projectTitle}.`
+              : `Type ${skill.name} in the composer.`,
+          ],
         ]}
       />
       {skill.description ? <p className="text-sm">{skill.description}</p> : null}
@@ -399,14 +467,10 @@ function MemoryView(props: {
 }
 
 function MemoryEditor(props: {
-  readonly target: Target;
   readonly memory: ClaudeMemory | null;
-  readonly folders: ReadonlyArray<ClaudeContextFolder>;
-  readonly initialFolderKey: string;
-  readonly currentFolderKey: string;
-  readonly home: string | null;
-  readonly memoryDirectory: (folderKey: string) => string;
-  readonly onDone: (saved: ClaudeMemory | null) => void;
+  readonly choices: ReadonlyArray<FolderChoice>;
+  readonly initialChoice: string;
+  readonly onDone: (saved: ClaudeMemory | null, environmentId: EnvironmentId) => void;
   readonly onCancel: () => void;
 }) {
   const { memory } = props;
@@ -415,7 +479,9 @@ function MemoryEditor(props: {
   const [type, setType] = useState<ClaudeMemoryType>(
     memory && isMemoryType(memory.type) ? memory.type : "feedback",
   );
-  const [folderKey, setFolderKey] = useState(props.initialFolderKey);
+  const [choiceValue, setChoiceValue] = useState(props.initialChoice);
+  const choice =
+    props.choices.find((entry) => entry.value === choiceValue) ?? props.choices[0] ?? null;
   const [description, setDescription] = useState(memory?.description ?? "");
   const [body, setBody] = useState(memory?.body.trim() ?? "");
   const [conflict, setConflict] = useState<string | null | undefined>(undefined);
@@ -424,14 +490,14 @@ function MemoryEditor(props: {
   const valid = title.trim().length > 0;
 
   const save = async (overwrite: boolean) => {
-    if (!valid || saving) return;
+    if (!valid || saving || choice === null) return;
     setSaving(true);
     setError(null);
     const result = await writeMemory({
-      environmentId: props.target.environmentId,
+      environmentId: choice.target.environmentId,
       input: {
-        providerInstanceId: props.target.providerInstanceId,
-        folderKey,
+        providerInstanceId: choice.target.providerInstanceId,
+        folderKey: choice.folderKey,
         ...(memory ? { fileName: memory.fileName } : {}),
         title: title.trim(),
         description: description.trim(),
@@ -447,7 +513,7 @@ function MemoryEditor(props: {
         title: memory ? "Memory saved" : "Memory added",
         description: NEXT_SESSION_NOTE,
       });
-      props.onDone(result.value);
+      props.onDone(result.value, choice.target.environmentId);
       return;
     }
     const failure = failureOf(result);
@@ -470,15 +536,19 @@ function MemoryEditor(props: {
     <DetailFrame
       title={memory ? "Edit memory" : "New memory"}
       subtitle={displayPath(
-        memory ? memory.path : `${props.memoryDirectory(folderKey)}/<title>.md`,
-        props.home,
+        memory ? memory.path : `${choice?.memoryDirectory ?? ""}/<title>.md`,
+        choice?.home ?? null,
       )}
     >
       <div onKeyDown={onKeyDown} className="flex flex-col gap-3">
         {conflict !== undefined ? (
           <div className="flex flex-wrap items-center gap-2 border border-warning/40 bg-warning-surface px-3 py-2 text-xs text-warning-foreground">
             <span className="flex-1">Claude changed this memory since you opened it.</span>
-            <Button size="xs" variant="outline" onClick={() => props.onDone(null)}>
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={() => choice && props.onDone(null, choice.target.environmentId)}
+            >
               Use Claude's version
             </Button>
             <Button size="xs" variant="warning-outline" onClick={() => void save(true)}>
@@ -525,21 +595,24 @@ function MemoryEditor(props: {
           }
         >
           {memory ? (
-            <span className="font-mono text-xs">
-              {props.folders.find((folder) => folder.key === folderKey)?.label ?? folderKey}
-            </span>
+            <span className="font-mono text-xs">{choice?.label ?? memory.folderKey}</span>
           ) : (
             <select
               aria-label="Folder"
-              value={folderKey}
-              onChange={(event) => setFolderKey(event.target.value)}
+              value={choice?.value ?? ""}
+              onChange={(event) => setChoiceValue(event.target.value)}
               className="h-6 border border-input bg-popover px-1.5 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
             >
-              {props.folders.map((folder) => (
-                <option key={folder.key} value={folder.key}>
-                  {folder.label} ({folder.kind === "main" ? "main checkout" : "worktree"}
-                  {folder.key === props.currentFolderKey ? ", this thread" : ""})
-                </option>
+              {[...new Set(props.choices.map((entry) => entry.group))].map((group) => (
+                <optgroup key={group} label={group}>
+                  {props.choices
+                    .filter((entry) => entry.group === group)
+                    .map((entry) => (
+                      <option key={entry.value} value={entry.value}>
+                        {entry.label}
+                      </option>
+                    ))}
+                </optgroup>
               ))}
             </select>
           )}

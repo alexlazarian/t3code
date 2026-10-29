@@ -18,17 +18,24 @@ export type ClaudeMemoryFileName = typeof ClaudeMemoryFileName.Type;
 export const ClaudeMemoryType = Schema.Literals(["user", "feedback", "project", "reference"]);
 export type ClaudeMemoryType = typeof ClaudeMemoryType.Type;
 
+export const ClaudeContextProjectInput = Schema.Struct({
+  projectRoot: TrimmedNonEmptyString,
+  worktreePaths: Schema.Array(TrimmedNonEmptyString),
+});
+export type ClaudeContextProjectInput = typeof ClaudeContextProjectInput.Type;
+
 export const ClaudeContextReadInput = Schema.Struct({
   /** Picks the Claude home when instances use different config directories. */
   providerInstanceId: Schema.optional(ProviderInstanceId),
-  projectRoot: TrimmedNonEmptyString,
-  worktreePaths: Schema.Array(TrimmedNonEmptyString),
+  projects: Schema.Array(ClaudeContextProjectInput),
 });
 export type ClaudeContextReadInput = typeof ClaudeContextReadInput.Type;
 
 export const ClaudeContextFolder = Schema.Struct({
   key: ClaudeMemoryFolderKey,
-  kind: Schema.Literals(["main", "worktree"]),
+  /** `other` is a memory folder that belongs to none of the listed projects. */
+  kind: Schema.Literals(["main", "worktree", "other"]),
+  projectRoot: Schema.NullOr(TrimmedNonEmptyString),
   label: TrimmedNonEmptyString,
   /** Null for a folder known only by its memory, such as a deleted worktree. */
   path: Schema.NullOr(TrimmedNonEmptyString),
@@ -54,6 +61,8 @@ export type ClaudeMemory = typeof ClaudeMemory.Type;
 
 export const ClaudeInstructionFile = Schema.Struct({
   scope: Schema.Literals(["managed", "user", "project", "local"]),
+  /** Set for project and local files: the project they load in. */
+  projectRoot: Schema.optional(TrimmedNonEmptyString),
   path: TrimmedNonEmptyString,
   /** Set for a file pulled in by an `@path` import in another instruction file. */
   importedBy: Schema.optional(TrimmedNonEmptyString),

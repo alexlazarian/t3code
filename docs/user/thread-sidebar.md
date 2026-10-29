@@ -260,12 +260,14 @@ start a new thread. Each category explains what its items do.
 
 ### See and edit what Claude loads
 
-**Library → Context** opens a page with everything Claude loads for the open
-thread's project: its memories, its instruction files, and its skills and
-commands. You can also open it from the command palette.
+**Library → Context** opens a page with everything Claude loads, grouped by
+project: memories, instruction files, and skills and commands. The open thread's
+project comes first, and folders that belong to no project are listed under
+**Other folders**. Pick one project at the top to narrow the page. You can also
+open it from the command palette.
 
-Claude saves memories per folder, so the page combines the memories from the
-project's main checkout and all its worktrees, and tags each one with its folder.
+Claude saves memories per folder, so each project combines the memories from its
+main checkout and all its worktrees, and tags each one with its folder.
 Memories from a worktree you have deleted stay listed. You can view, edit,
 delete, and add memories. **New memory** asks which folder the memory belongs
 to, because only sessions in that folder load it. Deleting a memory shows

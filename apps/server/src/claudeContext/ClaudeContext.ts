@@ -146,6 +146,64 @@ export const make = Effect.gen(function* () {
     return yield* resolveClaudeHomePath({ homePath: config?.homePath ?? "" }, environment);
   });
 
+  // Claude's key replaced every non-alphanumeric character with `-`; walk the disk to find the folder it came from.
+  const resolveFolderKey = Effect.fn("ClaudeContext.resolveFolderKey")(function* (
+    key: string,
+    listings: Map<string, ReadonlyArray<string>>,
+  ) {
+    if (!key.startsWith("-")) return null;
+    const list = Effect.fnUntraced(function* (directory: string) {
+      const cached = listings.get(directory);
+      if (cached) return cached;
+      const names = yield* fileSystem
+        .readDirectory(directory)
+        .pipe(Effect.orElseSucceed((): ReadonlyArray<string> => []));
+      listings.set(directory, names);
+      return names;
+    });
+    // Each state is a real directory plus the start of a child's name; keep only prefixes some child has.
+    let states: Array<{ readonly directory: string; readonly segment: string }> = [
+      { directory: "/", segment: "" },
+    ];
+    for (const token of key.slice(1).split("-")) {
+      const next: Array<{ readonly directory: string; readonly segment: string }> = [];
+      for (const state of states) {
+        const children = yield* list(state.directory);
+        const candidates =
+          state.segment.length === 0
+            ? [{ directory: state.directory, segment: token.length === 0 ? "." : token }]
+            : [
+                ...(children.includes(state.segment) &&
+                (yield* isDirectory(path.join(state.directory, state.segment)))
+                  ? [
+                      {
+                        directory: path.join(state.directory, state.segment),
+                        segment: token.length === 0 ? "." : token,
+                      },
+                    ]
+                  : []),
+                ...(token.length === 0
+                  ? []
+                  : ["-", ".", "_", " "].map((joiner) => ({
+                      directory: state.directory,
+                      segment: `${state.segment}${joiner}${token}`,
+                    }))),
+              ];
+        for (const candidate of candidates) {
+          const names = yield* list(candidate.directory);
+          if (names.some((name) => name.startsWith(candidate.segment))) next.push(candidate);
+        }
+      }
+      states = next;
+      if (states.length === 0) return null;
+    }
+    for (const state of states) {
+      const candidate = path.join(state.directory, state.segment);
+      if (claudeFolderKey(candidate) === key && (yield* isDirectory(candidate))) return candidate;
+    }
+    return null;
+  });
+
   const memoryDirectory = (home: string, folderKey: string) =>
     path.join(home, "projects", folderKey, "memory");
 
@@ -162,44 +220,78 @@ export const make = Effect.gen(function* () {
         index: null,
       });
     };
-    add({
-      key: claudeFolderKey(input.projectRoot),
-      kind: "main",
-      label: path.basename(input.projectRoot),
-      path: input.projectRoot,
-    });
-    for (const worktreePath of input.worktreePaths) {
+    for (const project of input.projects) {
       add({
-        key: claudeFolderKey(worktreePath),
-        kind: "worktree",
-        label: path.basename(worktreePath),
-        path: worktreePath,
+        key: claudeFolderKey(project.projectRoot),
+        kind: "main",
+        projectRoot: project.projectRoot,
+        label: path.basename(project.projectRoot),
+        path: project.projectRoot,
       });
+    }
+    for (const project of input.projects) {
+      for (const worktreePath of project.worktreePaths) {
+        add({
+          key: claudeFolderKey(worktreePath),
+          kind: "worktree",
+          projectRoot: project.projectRoot,
+          label: path.basename(worktreePath),
+          path: worktreePath,
+        });
+      }
     }
     // Worktrees share a parent folder, so memory left by a deleted worktree still matches by prefix.
     const settings = yield* settingsService.getSettings.pipe(Effect.option);
-    const managedParents = Option.isSome(settings)
-      ? managedWorktreesDirectories(settings.value, serverConfig.worktreesDir, path, userHome).map(
-          (directory) => path.join(directory, path.basename(input.projectRoot)),
-        )
+    const managedDirectories = Option.isSome(settings)
+      ? managedWorktreesDirectories(settings.value, serverConfig.worktreesDir, path, userHome)
       : [];
-    const siblingPrefixes = [
-      ...new Set(
+    const siblingPrefixes = input.projects
+      .flatMap((project) =>
         [
-          ...input.worktreePaths.map((worktreePath) => path.dirname(worktreePath)),
-          ...managedParents,
-        ].map((parent) => `${claudeFolderKey(parent)}-`),
-      ),
-    ];
-    const projectsDirectory = path.join(home, "projects");
+          ...project.worktreePaths.map((worktreePath) => path.dirname(worktreePath)),
+          ...managedDirectories.map((directory) =>
+            path.join(directory, path.basename(project.projectRoot)),
+          ),
+        ].map((parent) => ({
+          prefix: `${claudeFolderKey(parent)}-`,
+          projectRoot: project.projectRoot,
+        })),
+      )
+      .toSorted((a, b) => b.prefix.length - a.prefix.length);
+    const homePrefix = `${claudeFolderKey(userHome)}-`;
+    const listings = new Map<string, ReadonlyArray<string>>();
+    // A folder that no longer exists keeps its key, minus the home prefix.
+    const otherFolderLabel = (entry: string) =>
+      entry === claudeFolderKey(userHome)
+        ? "~"
+        : entry.startsWith(homePrefix)
+          ? `~-${entry.slice(homePrefix.length)}`
+          : entry;
     const entries = yield* fileSystem
-      .readDirectory(projectsDirectory)
+      .readDirectory(path.join(home, "projects"))
       .pipe(Effect.orElseSucceed((): ReadonlyArray<string> => []));
     for (const entry of [...entries].toSorted()) {
-      const prefix = siblingPrefixes.find((candidate) => entry.startsWith(candidate));
-      if (prefix === undefined || folders.has(entry) || !/^[A-Za-z0-9-]+$/.test(entry)) continue;
+      if (folders.has(entry) || !/^[A-Za-z0-9-]+$/.test(entry)) continue;
       if (!(yield* isDirectory(memoryDirectory(home, entry)))) continue;
-      add({ key: entry, kind: "worktree", label: entry.slice(prefix.length) || entry, path: null });
+      const sibling = siblingPrefixes.find((candidate) => entry.startsWith(candidate.prefix));
+      if (sibling) {
+        add({
+          key: entry,
+          kind: "worktree",
+          projectRoot: sibling.projectRoot,
+          label: entry.slice(sibling.prefix.length) || entry,
+          path: null,
+        });
+        continue;
+      }
+      const resolved = yield* resolveFolderKey(entry, listings);
+      add({
+        key: entry,
+        kind: "other",
+        projectRoot: null,
+        label: resolved ? path.basename(resolved) || resolved : otherFolderLabel(entry),
+        path: resolved,
+      });
     }
     return yield* Effect.forEach([...folders.values()], (folder) =>
       readOptional(path.join(folder.memoryDirectory, MEMORY_INDEX_FILE_NAME)).pipe(
@@ -260,7 +352,7 @@ export const make = Effect.gen(function* () {
 
   const readInstructions = Effect.fn("ClaudeContext.readInstructions")(function* (
     home: string,
-    projectRoot: string,
+    projectRoots: ReadonlyArray<string>,
   ) {
     const files: Array<ClaudeInstructionFile> = [];
     const seen = new Set<string>();
@@ -271,6 +363,7 @@ export const make = Effect.gen(function* () {
         readonly editable: boolean;
         readonly showMissing: boolean;
         readonly importedBy?: string;
+        readonly projectRoot?: string;
         readonly depth: number;
       },
     ): Effect.fn.Return<void, ClaudeContextError> {
@@ -282,6 +375,7 @@ export const make = Effect.gen(function* () {
         scope,
         path: filePath,
         ...(options.importedBy ? { importedBy: options.importedBy } : {}),
+        ...(options.projectRoot ? { projectRoot: options.projectRoot } : {}),
         content,
         editable: options.editable,
       });
@@ -294,6 +388,7 @@ export const make = Effect.gen(function* () {
           editable: false,
           showMissing: false,
           importedBy: filePath,
+          ...(options.projectRoot ? { projectRoot: options.projectRoot } : {}),
           depth: options.depth + 1,
         });
       }
@@ -308,21 +403,26 @@ export const make = Effect.gen(function* () {
       showMissing: true,
       depth: 0,
     });
-    yield* visit("project", path.join(projectRoot, "CLAUDE.md"), {
-      editable: false,
-      showMissing: true,
-      depth: 0,
-    });
-    yield* visit("project", path.join(projectRoot, ".claude", "CLAUDE.md"), {
-      editable: false,
-      showMissing: false,
-      depth: 0,
-    });
-    yield* visit("local", path.join(projectRoot, "CLAUDE.local.md"), {
-      editable: false,
-      showMissing: true,
-      depth: 0,
-    });
+    for (const projectRoot of projectRoots) {
+      yield* visit("project", path.join(projectRoot, "CLAUDE.md"), {
+        editable: false,
+        showMissing: true,
+        projectRoot,
+        depth: 0,
+      });
+      yield* visit("project", path.join(projectRoot, ".claude", "CLAUDE.md"), {
+        editable: false,
+        showMissing: false,
+        projectRoot,
+        depth: 0,
+      });
+      yield* visit("local", path.join(projectRoot, "CLAUDE.local.md"), {
+        editable: false,
+        showMissing: true,
+        projectRoot,
+        depth: 0,
+      });
+    }
     return files;
   });
 
@@ -338,7 +438,10 @@ export const make = Effect.gen(function* () {
     const home = yield* resolveHome(input.providerInstanceId);
     const folders = yield* readFolders(home, input);
     const memories = yield* Effect.forEach(folders, readMemories, { concurrency: 4 });
-    const instructions = yield* readInstructions(home, input.projectRoot);
+    const instructions = yield* readInstructions(
+      home,
+      input.projects.map((project) => project.projectRoot),
+    );
     return { claudeHome: home, folders, memories: memories.flat(), instructions };
   }, provide);
 

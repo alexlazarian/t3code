@@ -47,7 +47,7 @@ const testHome = Layer.succeed(HostProcess.HomeDirectory, "/nonexistent/t3-claud
 
 it.layer(Layer.mergeAll(NodeServices.layer, testHome))("ClaudeContext", (it) => {
   it.effect(
-    "lists a project's folders, including a deleted worktree's memory, and its imports",
+    "lists every project's folders, a deleted worktree's memory, other folders, and imports",
     () =>
       Effect.gen(function* () {
         const { path, home, projectRoot, worktree, key, memoryDir, write, service } =
@@ -65,28 +65,54 @@ it.layer(Layer.mergeAll(NodeServices.layer, testHome))("ClaudeContext", (it) => 
           path.join(memoryDir(deleted), "stale.md"),
           "---\nname: stale-fact\ndescription: from a gone worktree\ntype: project\n---\nBody\n",
         );
-        yield* write(path.join(home, "projects", "-unrelated", "memory", "x.md"), "nope");
+        const other = path.join(path.dirname(projectRoot), "scratch-notes.v2");
+        yield* write(path.join(other, "notes.txt"), "");
+        yield* write(
+          path.join(memoryDir(other), "loose.md"),
+          "---\nname: loose\ndescription: no project\ntype: user\n---\nBody\n",
+        );
+        yield* write(path.join(home, "projects", "-no-memory", "transcript.jsonl"), "{}");
+        const second = path.join(path.dirname(projectRoot), "site");
         yield* write(
           path.join(projectRoot, "CLAUDE.md"),
           "Read @AGENTS.md first.\n`@ignored.md`\n",
         );
         yield* write(path.join(projectRoot, "AGENTS.md"), "# Agents\n");
 
-        const snapshot = yield* service.read({ projectRoot, worktreePaths: [worktree] });
+        const snapshot = yield* service.read({
+          projects: [
+            { projectRoot, worktreePaths: [worktree] },
+            { projectRoot: second, worktreePaths: [] },
+          ],
+        });
 
         assert.deepEqual(
-          snapshot.folders.map((folder) => [folder.key, folder.kind, folder.label, folder.path]),
+          snapshot.folders.map((folder) => [
+            folder.key,
+            folder.kind,
+            folder.projectRoot,
+            folder.label,
+            folder.path,
+          ]),
           [
-            [key(projectRoot), "main", "app", projectRoot],
-            [key(worktree), "worktree", "feature-a", worktree],
-            [key(deleted), "worktree", "old-branch", null],
+            [key(projectRoot), "main", projectRoot, "app", projectRoot],
+            [key(second), "main", second, "site", second],
+            [key(worktree), "worktree", projectRoot, "feature-a", worktree],
+            [key(other), "other", null, "scratch-notes.v2", other],
+            [key(deleted), "worktree", projectRoot, "old-branch", null],
           ],
         );
         // No open worktrees: the managed worktrees folder still finds the deleted one.
-        const withoutWorktrees = yield* service.read({ projectRoot, worktreePaths: [] });
+        const withoutWorktrees = yield* service.read({
+          projects: [{ projectRoot, worktreePaths: [] }],
+        });
         assert.deepEqual(
-          withoutWorktrees.folders.map((folder) => folder.label),
-          ["app", "old-branch"],
+          withoutWorktrees.folders.map((folder) => [folder.label, folder.projectRoot]),
+          [
+            ["app", projectRoot],
+            ["scratch-notes.v2", null],
+            ["old-branch", projectRoot],
+          ],
         );
         assert.deepEqual(
           snapshot.memories.map((memory) => [
@@ -97,22 +123,26 @@ it.layer(Layer.mergeAll(NodeServices.layer, testHome))("ClaudeContext", (it) => 
           ]),
           [
             [key(projectRoot), "Use vp", "feedback", "Run vp.\n"],
+            [key(other), "loose", "user", "Body\n"],
             [key(deleted), "stale-fact", "project", "Body\n"],
           ],
         );
         assert.deepEqual(
           snapshot.instructions.map((file) => [
             file.scope,
+            file.projectRoot === undefined ? null : path.basename(file.projectRoot),
             path.basename(file.path),
             file.editable,
             file.importedBy === undefined ? null : path.basename(file.importedBy),
             file.content !== null,
           ]),
           [
-            ["user", "CLAUDE.md", true, null, false],
-            ["project", "CLAUDE.md", false, null, true],
-            ["project", "AGENTS.md", false, "CLAUDE.md", true],
-            ["local", "CLAUDE.local.md", false, null, false],
+            ["user", null, "CLAUDE.md", true, null, false],
+            ["project", "app", "CLAUDE.md", false, null, true],
+            ["project", "app", "AGENTS.md", false, "CLAUDE.md", true],
+            ["local", "app", "CLAUDE.local.md", false, null, false],
+            ["project", "site", "CLAUDE.md", false, null, false],
+            ["local", "site", "CLAUDE.local.md", false, null, false],
           ],
         );
       }),
