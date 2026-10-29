@@ -56,7 +56,7 @@ and worktree while you stay in the new thread composer. This requires a Git proj
 
 ## Pin and reorder threads
 
-Pin a thread from its menu to keep it above your active work.
+Pin a thread with **Pin** under its title, or from its menu, to keep it above your active work.
 
 On web and desktop, unpinning, settling, snoozing, and archiving a thread each show
 a notification with **Undo** for five seconds. Undo restores the thread's previous
@@ -162,7 +162,7 @@ is off. Each device keeps its own choice.
 
 ## Settle finished work
 
-Choose **Settle thread** from its menu to move finished work out of the active list
+Choose **Settle** under the thread's title, or **Settle thread** from its menu, to move finished work out of the active list
 without deleting the conversation. **Un-settle thread** restores it to active work
 and prevents automatic settlement until new activity resumes the usual rules.
 Manually settling an idle thread dismisses unanswered async questions without
@@ -240,10 +240,11 @@ the view you last chose. **Switch between List and Overview** has no default sho
 assign one in **Settings → Keybindings**.
 
 Click a card, or focus it and press `Space`, to open the thread below the grid. Click
-another card to switch threads. Drag the divider to resize the split. To close the thread
-and get the full grid back, click an empty spot in the grid, press `Esc`, or drag the
-divider all the way down. A double-click or `Enter` opens the thread in List view at
-full size.
+another card to switch threads. Drag the divider to resize the split. The bar above the
+thread has **Close** (or `Esc`), **Open full size**, and arrows to step to the previous
+or next card. Clicking an empty spot in the grid or dragging the divider all the way
+down also closes it. A double-click or `Enter` opens the thread in List view at full
+size.
 
 Unsent drafts appear in the **Drafts** shelf until you send them. **New thread** in a
 column starts a draft and opens it below the board, so you stay in Overview. The row
