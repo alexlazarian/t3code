@@ -1,3 +1,4 @@
+import type { OrchestrationV2ExecutionNode } from "@t3tools/contracts";
 import { scopedThreadKey, scopeThreadRef } from "@t3tools/client-runtime/environment";
 import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
 import { effectiveSnoozed, threadWokeAt } from "@t3tools/client-runtime/state/thread-settled";
@@ -18,6 +19,7 @@ import { resolveThreadHeaderStatus, type ThreadHeaderStatus } from "./threadHead
 
 export function useThreadHeaderStatus(
   thread: EnvironmentThreadShell | null,
+  providerSubagentStatus: OrchestrationV2ExecutionNode["status"] | null,
 ): ThreadHeaderStatus | null {
   const localLastVisitedAt = useUiStateStore((state) =>
     thread === null
@@ -48,5 +50,6 @@ export function useThreadHeaderStatus(
     live,
     snoozedUntil: effectiveSnoozed(thread, { now: nowIso }) ? (thread.snoozedUntil ?? null) : null,
     isSettled: thread.settledOverride === "settled",
+    providerSubagentStatus,
   });
 }

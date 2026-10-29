@@ -22,7 +22,8 @@ import {
   type DraftSessionState,
 } from "../../composerDraftStore";
 import { UnsentDraftLabel } from "./UnsentDraftLabel";
-import { SIDEBAR_ACTIVE_ROW_CLASS, SidebarProjectTag } from "./SidebarThreadRow";
+import { SIDEBAR_ACTIVE_ROW_CLASS } from "./sidebarRowStyles";
+import { SidebarProjectTag } from "./SidebarThreadRow";
 
 const SidebarDraftRow = memo(function SidebarDraftRow(props: {
   draftId: DraftId;

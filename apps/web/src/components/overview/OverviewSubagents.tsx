@@ -1,9 +1,10 @@
-import type { OrchestrationV2ShellSubagent } from "@t3tools/contracts";
+import type { OrchestrationV2ShellSubagent, ThreadId } from "@t3tools/contracts";
 import * as DateTime from "effect/DateTime";
 import type { CSSProperties, KeyboardEvent, MouseEvent } from "react";
 
 import { cn } from "~/lib/utils";
 import { AgentElapsed } from "../chat/AgentElapsed";
+import { SIDEBAR_ACTIVE_ROW_CLASS } from "../sidebar/sidebarRowStyles";
 import { StatusLight } from "../StatusLight";
 import {
   overviewStrobeDelay,
@@ -104,12 +105,19 @@ export function SubagentRows(props: {
   readonly subagentCount: number;
   readonly onOpen: (subagent: OrchestrationV2ShellSubagent) => void;
   readonly className?: string;
+  /** The open thread, lit like the sidebar's active row; the lead matches on `leadThreadId`. */
+  readonly activeThreadId?: ThreadId | null;
+  readonly leadThreadId?: ThreadId;
 }) {
-  const { threadKey, light, step, leadWaiting, subagents, subagentCount } = props;
+  const { threadKey, light, step, leadWaiting, subagents, subagentCount, activeThreadId } = props;
+  const leadActive = activeThreadId != null && activeThreadId === props.leadThreadId;
   return (
     <div className={cn("leading-relaxed", props.className)}>
       <div
-        className="mb-px flex min-w-0 items-center gap-1.25 border-b border-border pb-px"
+        className={cn(
+          "mb-px flex min-w-0 items-center gap-1.25 border-b border-border pb-px",
+          leadActive && SIDEBAR_ACTIVE_ROW_CLASS,
+        )}
         style={{ "--strobe-delay": overviewStrobeDelay(threadKey, 1) } as CSSProperties}
       >
         <StatusLight
@@ -126,6 +134,7 @@ export function SubagentRows(props: {
       </div>
       {subagents.map((subagent, index) => {
         const state = overviewSubagentState(subagent.status);
+        const active = activeThreadId != null && subagent.threadId === activeThreadId;
         return (
           <button
             // oxlint-disable-next-line react/no-array-index-key -- subagents carry no id; order is stable
@@ -140,7 +149,10 @@ export function SubagentRows(props: {
             onKeyDown={isolate}
             data-info={subagent.threadId === null ? undefined : "Open this subagent's thread"}
             style={{ "--strobe-delay": overviewStrobeDelay(threadKey, index + 2) } as CSSProperties}
-            className="flex w-full min-w-0 cursor-pointer items-center gap-1.25 text-left outline-0 outline-ring hover:bg-accent focus-visible:outline-2 disabled:cursor-default disabled:hover:bg-transparent"
+            className={cn(
+              "flex w-full min-w-0 cursor-pointer items-center gap-1.25 text-left outline-0 outline-ring focus-visible:outline-2 disabled:cursor-default disabled:hover:bg-transparent",
+              active ? SIDEBAR_ACTIVE_ROW_CLASS : "hover:bg-accent",
+            )}
           >
             <StatusLight size="small" tone={SUBAGENT_LIGHT[state]} strobe={state === "running"} />
             <span className="max-w-[48%] shrink-0 truncate text-foreground">{subagent.title}</span>

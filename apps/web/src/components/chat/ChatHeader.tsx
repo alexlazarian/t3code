@@ -1,6 +1,7 @@
 import {
   AuthOrchestrationOperateScope,
   type EnvironmentId,
+  type OrchestrationV2ExecutionNode,
   type ThreadId,
 } from "@t3tools/contracts";
 import { scopeThreadRef } from "@t3tools/client-runtime/environment";
@@ -47,6 +48,7 @@ interface ChatHeaderProps {
   activeThreadLinkOrigin?: string | null | undefined;
   isServerThread: boolean;
   threadShell: EnvironmentThreadShell | null;
+  providerSubagentStatus: OrchestrationV2ExecutionNode["status"] | null;
   rename: ThreadTitleRename;
   activeProject: EnvironmentProject | null;
   parentThreadLink: { threadId: ThreadId; title: string } | null;
@@ -69,6 +71,7 @@ export const ChatHeader = memo(function ChatHeader({
   activeThreadLinkOrigin,
   isServerThread,
   threadShell,
+  providerSubagentStatus,
   rename,
   activeProject,
   parentThreadLink,
@@ -77,7 +80,7 @@ export const ChatHeader = memo(function ChatHeader({
   onOpenProjectSettings,
   ...tools
 }: ChatHeaderProps & Omit<ThreadHeaderToolsProps, "isServerThread">) {
-  const status = useThreadHeaderStatus(threadShell);
+  const status = useThreadHeaderStatus(threadShell, providerSubagentStatus);
   const activeProjectName = activeProject?.isScratch ? "No project" : activeProject?.title;
   const activeProjectCwd = activeProject?.workspaceRoot ?? null;
   const interfaceFont = useClientSettings((settings) => settings.fontFamilySans);

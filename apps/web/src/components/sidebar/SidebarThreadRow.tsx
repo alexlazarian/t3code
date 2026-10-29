@@ -20,6 +20,7 @@ import {
   type EnvironmentId,
   type EnvironmentMachineKind,
   type ScopedThreadRef,
+  type ThreadId,
 } from "@t3tools/contracts";
 
 import type { TimestampFormat } from "@t3tools/contracts/settings";
@@ -109,6 +110,7 @@ import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuShortcut, MenuTrigger } f
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { MiddleTruncate } from "../ui/middle-truncate";
 import { useThreadHasUnsentDraft } from "../../composerDraftStore";
+import { SIDEBAR_ACTIVE_ROW_CLASS } from "./sidebarRowStyles";
 import { UnsentDraftLabel } from "./UnsentDraftLabel";
 import { AgentElapsed } from "../chat/AgentElapsed";
 import { StatusLight } from "../StatusLight";
@@ -147,11 +149,6 @@ const useSubagentsExpandedStore = create<{
       return { threadKeys };
     }),
 }));
-
-// The open thread's row is lit like the open tab. Its children re-point the text tokens at the
-// inverted colors, so every label, light and action inside reads on the light fill.
-export const SIDEBAR_ACTIVE_ROW_CLASS =
-  "bg-sidebar-foreground text-sidebar *:[--contrast-foreground:var(--sidebar)] *:[--contrast-sidebar-foreground:var(--sidebar)] *:[--contrast-muted-foreground:color-mix(in_oklab,var(--sidebar)_68%,var(--sidebar-foreground))] *:[--contrast-sidebar-muted-foreground:color-mix(in_oklab,var(--sidebar)_68%,var(--sidebar-foreground))] *:[--contrast-secondary-label:color-mix(in_oklab,var(--sidebar)_68%,var(--sidebar-foreground))] *:[--contrast-placeholder:color-mix(in_oklab,var(--sidebar)_68%,var(--sidebar-foreground))]";
 
 /** The project icon with the provider glyph in its corner; folder rows already sit under their project, so they show the glyph alone. */
 function SidebarThreadTile(props: {
@@ -553,6 +550,8 @@ type SidebarThreadRowProps = {
   // Unlike isActive, never true for the ancestor standing in for an open
   // subagent: drafts and PR clicks care about which composer is on screen.
   isRouteThread: boolean;
+  // The open thread, set on the active row only so a route change re-renders just that row.
+  openThreadId: ThreadId | null;
   openPullRequestsInRightPanel: boolean;
   jumpLabel: string | null;
   currentEnvironmentId: string | null;
@@ -1352,6 +1351,8 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
             onThreadActivate(scopeThreadRef(thread.environmentId, subagent.threadId));
           }}
           className="border-b border-sidebar-border py-0.5 pr-2 pl-6.5 text-2xs"
+          activeThreadId={props.openThreadId}
+          leadThreadId={thread.id}
         />
       ) : null}
     </li>

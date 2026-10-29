@@ -26,6 +26,22 @@ describe("resolveThreadHeaderStatus", () => {
     ).toEqual({ tone: "working" });
   });
 
+  it("shows working for an idle thread whose provider subagent is still running", () => {
+    const waiting: SidebarStatusLabel = {
+      label: "Waiting",
+      icon: "waiting",
+      className: "text-muted-foreground",
+    };
+    expect(
+      resolveThreadHeaderStatus({
+        live: waiting,
+        snoozedUntil: null,
+        isSettled: false,
+        providerSubagentStatus: "running",
+      }),
+    ).toEqual({ tone: "working" });
+  });
+
   it("shows an idle light for a snoozed or settled thread", () => {
     expect(
       resolveThreadHeaderStatus({
