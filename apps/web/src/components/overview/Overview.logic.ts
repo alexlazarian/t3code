@@ -10,7 +10,11 @@ import {
 
 import type { SidebarThreadSummary } from "../../types";
 import type { SidebarProjectSnapshot } from "../../sidebarProjectGrouping";
-import type { SidebarStatusLabel } from "../sidebar/threadStatusLabel";
+import {
+  isSidebarThreadCompleted,
+  resolveSidebarStatusLabel,
+  type SidebarStatusLabel,
+} from "../sidebar/threadStatusLabel";
 import type { StatusLightTone } from "../StatusLight";
 import {
   matchesSidebarStatusFilter,
@@ -26,12 +30,14 @@ export type OverviewColumn = {
   displayName: string;
   project: SidebarProjectSnapshot | null;
   counts: { open: number; working: number; needsYou: number };
+  lights: ReadonlyArray<StatusLightTone>;
 };
 
 export type OverviewRow = {
   section: SidebarSection;
   cells: ReadonlyMap<string, ReadonlyArray<SidebarThreadSummary>>;
   total: number;
+  urgency: "needs-you" | "working" | null;
 };
 
 export function overviewProjectKeyOf(projects: ReadonlyArray<SidebarProjectSnapshot>) {
@@ -102,8 +108,10 @@ export function buildOverviewGrid(input: {
 
   const known = new Set(projects.map((project) => project.projectKey));
   const stats = new Map<string, OverviewColumn["counts"]>();
+  const lightsByColumn = new Map<string, StatusLightTone[]>();
   const rows: OverviewRow[] = sections.map(([section, threads]) => {
     const cells = new Map<string, SidebarThreadSummary[]>();
+    let urgency: OverviewRow["urgency"] = null;
     for (const thread of threads) {
       const projectKey = projectKeyOf(thread);
       const key = known.has(projectKey) ? projectKey : NO_PROJECT_KEY;
@@ -115,12 +123,28 @@ export function buildOverviewGrid(input: {
       stats.set(key, counts);
       counts.open += 1;
       const status = resolveSidebarThreadStatus(thread);
-      if (status === "working") counts.working += 1;
-      else if (matchesSidebarStatusFilter(status, thread.hasActionableProposedPlan, "needs-you")) {
+      const label = resolveSidebarStatusLabel({
+        status,
+        goalActive: thread.goal?.status === "active",
+        hasActionableProposedPlan: thread.hasActionableProposedPlan,
+        isUnread: false,
+        isCompleted: isSidebarThreadCompleted(thread),
+        isWoke: false,
+      });
+      const lights = lightsByColumn.get(key);
+      if (lights) lights.push(overviewLight(label?.icon ?? null));
+      else lightsByColumn.set(key, [overviewLight(label?.icon ?? null)]);
+      if (status === "working") {
+        counts.working += 1;
+        urgency ??= "working";
+      } else if (
+        matchesSidebarStatusFilter(status, thread.hasActionableProposedPlan, "needs-you")
+      ) {
         counts.needsYou += 1;
+        urgency = "needs-you";
       }
     }
-    return { section, cells, total: threads.length };
+    return { section, cells, total: threads.length, urgency };
   });
 
   const columns: OverviewColumn[] = projects.map((project) => ({
@@ -128,6 +152,7 @@ export function buildOverviewGrid(input: {
     displayName: project.displayName,
     project,
     counts: stats.get(project.projectKey) ?? { open: 0, working: 0, needsYou: 0 },
+    lights: lightsByColumn.get(project.projectKey) ?? [],
   }));
   const orphanTotal = rows.reduce(
     (sum, row) => sum + (row.cells.get(NO_PROJECT_KEY)?.length ?? 0),
@@ -139,6 +164,7 @@ export function buildOverviewGrid(input: {
       displayName: "No project",
       project: null,
       counts: stats.get(NO_PROJECT_KEY) ?? { open: 0, working: 0, needsYou: 0 },
+      lights: lightsByColumn.get(NO_PROJECT_KEY) ?? [],
     });
   }
   return { columns, rows };

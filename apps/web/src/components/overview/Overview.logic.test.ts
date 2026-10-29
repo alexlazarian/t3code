@@ -238,6 +238,37 @@ describe("buildOverviewGrid", () => {
       { open: 4, working: 1, needsYou: 2 },
       { open: 1, working: 1, needsYou: 0 },
     ]);
+    expect(
+      grid.columns.map((column) => column.lights.filter((tone) => tone === "working")),
+    ).toEqual([["working"], ["working"]]);
+    for (const column of grid.columns) expect(column.lights).toHaveLength(column.counts.open);
+  });
+
+  it("marks a shelf needs-you, working or quiet by its most urgent thread", () => {
+    const projects = snapshots([makeProject()]);
+    const urgency = (threads: ReturnType<typeof makeThread>[]) =>
+      buildOverviewGrid({
+        partition: partition(threads, true),
+        projects,
+        projectKeyOf: overviewProjectKeyOf(projects),
+        workingShelfEnabled: true,
+      }).rows.map((row) => [row.section, row.urgency]);
+    expect(
+      urgency([
+        makeThread("approval", { hasPendingApprovals: true }),
+        makeThread("working", { runtime }),
+      ]),
+    ).toEqual([
+      ["pinned", null],
+      ["working", "working"],
+      ["active", "needs-you"],
+      ["snoozed", null],
+      ["settled", null],
+    ]);
+    expect(urgency([makeThread("done", { settledOverride: "settled" })])[4]).toEqual([
+      "settled",
+      null,
+    ]);
   });
 
   it("adds a No project column last only when a thread matches no project", () => {
