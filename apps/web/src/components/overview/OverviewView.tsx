@@ -28,6 +28,9 @@ import { useNewThreadHandler } from "../../hooks/useHandleNewThread";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 import { useProjectAccentColors } from "../../hooks/useProjectAccentColor";
 import { useStableCallback } from "../../hooks/useStableCallback";
+import { useThreadActionMenu } from "../../hooks/useThreadActionMenu";
+import { appAtomRegistry } from "../../rpc/atomRegistry";
+import { canShareWithGuestAtom } from "../chat/guestShareAvailability";
 import { updateClientSettings, useClientSettings } from "../../hooks/useSettings";
 import { useSidebarProjectGroups } from "../../hooks/useSidebarProjectGroups";
 import { selectProjectGroupingSettings } from "@t3tools/client-runtime/state/project-grouping";
@@ -337,6 +340,33 @@ export function OverviewView() {
     void updateClientSettings({ threadView: "list" });
     void router.navigate({ to: "/$environmentId/$threadId", params: buildThreadRouteParams(ref) });
   });
+  const threadMenu = useThreadActionMenu({
+    threadRef: null,
+    projectCwd: null,
+    canShareWithGuest: false,
+  });
+  // Rename stays out: cards have no in-place title editor.
+  const openCardMenu = useStableCallback(
+    (threadKey: string, position: { x: number; y: number }) => {
+      const threadRef = parseScopedThreadKey(threadKey);
+      if (threadRef === null) return;
+      threadMenu.openMenu(position, {
+        target: {
+          threadRef,
+          projectCwd: null,
+          canShareWithGuest: appAtomRegistry.get(canShareWithGuestAtom(threadRef.environmentId)),
+        },
+        extra: [
+          {
+            id: "open-in-list",
+            label: "Open in List view",
+            icon: "list",
+            run: () => openThread(threadKey),
+          },
+        ],
+      });
+    },
+  );
   const showThread = useStableCallback((threadKey: string) => {
     const ref = parseScopedThreadKey(threadKey);
     if (ref !== null) noteOverviewSplitOpened(ref);
@@ -644,6 +674,7 @@ export function OverviewView() {
                                 tabbable={key === tabbableKey}
                                 onOpen={openThread}
                                 onSelect={showThread}
+                                onContextMenu={openCardMenu}
                               />
                             );
                           }),

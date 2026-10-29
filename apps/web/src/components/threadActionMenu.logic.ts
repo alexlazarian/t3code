@@ -109,6 +109,7 @@ export function threadActionRequiresOperate(action: ThreadActionMenuId): boolean
 
 export function buildThreadActionMenuItems(
   state: ThreadActionMenuState,
+  omit: ReadonlySet<ThreadActionMenuId> = new Set(),
 ): ReadonlyArray<ContextMenuItem<ThreadActionMenuId>> {
   const items: ReadonlyArray<ContextMenuItem<ThreadActionMenuId>> = [
     ...(state.branch
@@ -233,7 +234,7 @@ export function buildThreadActionMenuItems(
       icon: "trash",
     },
   ];
-  return state.canOperate
+  const gated = state.canOperate
     ? items
     : items.map((item) =>
         threadActionRequiresOperate(item.id)
@@ -246,12 +247,46 @@ export function buildThreadActionMenuItems(
             }
           : item,
       );
+  return omit.size === 0 ? gated : omitMenuItems(gated, omit);
+}
+
+/** An omitted group lead hands its separator to the next kept item; the first kept item has none. */
+function omitMenuItems<T extends string>(
+  items: ReadonlyArray<ContextMenuItem<T>>,
+  omit: ReadonlySet<T>,
+): ReadonlyArray<ContextMenuItem<T>> {
+  const kept: Array<ContextMenuItem<T>> = [];
+  let pendingSeparator = false;
+  for (const item of items) {
+    if (omit.has(item.id)) {
+      pendingSeparator ||= item.separatorBefore === true;
+      continue;
+    }
+    const { separatorBefore: _separatorBefore, ...rest } = item;
+    const separated = kept.length > 0 && (pendingSeparator || item.separatorBefore === true);
+    kept.push(separated ? { ...rest, separatorBefore: true } : rest);
+    pendingSeparator = false;
+  }
+  return kept;
 }
 
 export type ThreadStripActionId = Extract<
   ThreadActionMenuId,
   "settle" | "unsettle" | "snooze" | "unsnooze" | "pin" | "unpin" | "rename" | "share-guest"
 >;
+
+/** The strip's buttons, in both directions, so its More menu lists only what the strip lacks. */
+export const THREAD_STRIP_ACTION_IDS: ReadonlySet<ThreadActionMenuId> =
+  new Set<ThreadStripActionId>([
+    "settle",
+    "unsettle",
+    "snooze",
+    "unsnooze",
+    "pin",
+    "unpin",
+    "rename",
+    "share-guest",
+  ]);
 
 export interface ThreadStripAction {
   readonly id: ThreadStripActionId;

@@ -4,7 +4,6 @@ import type { OrchestrationV2ShellSubagent } from "@t3tools/contracts";
 import { BotIcon, EyeIcon, ListIcon, RowsIcon, SquareTerminalIcon } from "lucide-react";
 import { memo, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
 
-import { readLocalApi } from "../../localApi";
 import { deriveActiveWorkStartedAt } from "../../session-logic";
 import { cn } from "~/lib/utils";
 import type { SidebarThreadSummary } from "../../types";
@@ -75,6 +74,7 @@ export const OverviewCard = memo(function OverviewCard(props: {
   readonly tabbable: boolean;
   readonly onOpen: (threadKey: string) => void;
   readonly onSelect: (threadKey: string) => void;
+  readonly onContextMenu: (threadKey: string, position: { x: number; y: number }) => void;
 }) {
   const { thread, lastVisitedAt } = props;
   const [expanded, setExpanded] = useState(false);
@@ -126,17 +126,8 @@ export const OverviewCard = memo(function OverviewCard(props: {
     }
   };
   const handleContextMenu = (event: MouseEvent) => {
-    const api = readLocalApi();
-    if (!api) return;
     event.preventDefault();
-    void api.contextMenu
-      .show([{ id: "open-in-list", label: "Open in List view" }], {
-        x: event.clientX,
-        y: event.clientY,
-      })
-      .then((action) => {
-        if (action === "open-in-list") props.onOpen(threadKey);
-      });
+    props.onContextMenu(threadKey, { x: event.clientX, y: event.clientY });
   };
   const openSubagent = (subagent: OrchestrationV2ShellSubagent) => {
     if (subagent.threadId === null) return;

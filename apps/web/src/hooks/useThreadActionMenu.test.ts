@@ -35,6 +35,10 @@ function recordEffect(action: string) {
 }
 
 vi.mock("../components/CustomSnoozeDialog", () => ({ requestCustomSnooze: vi.fn() }));
+vi.mock("../components/AppContextMenu", () => ({
+  showAppContextMenu: state.show,
+  closeAppContextMenu: () => {},
+}));
 vi.mock("react", () => ({
   useCallback: (callback: unknown) => callback,
   useMemo: (factory: () => unknown) => factory(),
@@ -71,7 +75,6 @@ vi.mock("../state/use-atom-command", () => ({
 }));
 vi.mock("../localApi", () => ({
   readLocalApi: () => ({
-    contextMenu: { show: state.show, close: () => {} },
     dialogs: {
       confirm: async () => {
         recordEffect("confirm");
@@ -165,7 +168,7 @@ beforeEach(() => {
 
 describe("thread menu permissions", () => {
   it.each(["rename", "regenerate-title", "delete", "pin", "settle", "archive"] as const)(
-    "%s rechecks after the native menu closes",
+    "%s rechecks after the menu closes",
     async (action) => {
       state.granted.add("secondary");
       const choice = deferred<ThreadActionMenuId | null>();

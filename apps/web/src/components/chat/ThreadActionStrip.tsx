@@ -92,7 +92,7 @@ export const ThreadActionStrip = memo(function ThreadActionStrip(props: {
   });
   const openMoreMenu = (event: ReactMouseEvent<HTMLButtonElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
-    openMenu({ x: rect.left, y: rect.bottom + 4 });
+    openMenu({ x: rect.left, y: rect.bottom + 4 }, { variant: "overflow" });
   };
 
   const renderAction = (action: ThreadStripAction) => {

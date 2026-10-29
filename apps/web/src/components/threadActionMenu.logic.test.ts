@@ -3,6 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   buildThreadActionMenuItems,
   buildThreadActionStrip,
+  THREAD_STRIP_ACTION_IDS,
   type ThreadActionMenuState,
 } from "./threadActionMenu.logic";
 
@@ -66,6 +67,43 @@ describe("buildThreadActionMenuItems", () => {
         items.find((item) => item.id === "snooze")?.children?.every((child) => child.disabled) ??
           true,
       ).toBe(true);
+    },
+  );
+
+  it.each([
+    [null, ["regenerate-title", "mark-unread", "auto-settle", "|copy", "project-settings"]],
+    [
+      "main",
+      [
+        "new-thread-on-branch",
+        "|regenerate-title",
+        "mark-unread",
+        "auto-settle",
+        "|copy",
+        "project-settings",
+      ],
+    ],
+  ] as const)(
+    "overflow menu omits strip actions without dangling separators (branch: %s)",
+    (branch, expected) => {
+      for (const reversed of [false, true]) {
+        const items = buildThreadActionMenuItems(
+          {
+            ...baseState,
+            branch,
+            canShareWithGuest: true,
+            isPinned: reversed,
+            isSettled: reversed,
+            isSnoozed: reversed,
+          },
+          THREAD_STRIP_ACTION_IDS,
+        );
+        expect(items.map((item) => `${item.separatorBefore ? "|" : ""}${item.id}`)).toEqual([
+          ...expected,
+          "|archive",
+          "delete",
+        ]);
+      }
     },
   );
 

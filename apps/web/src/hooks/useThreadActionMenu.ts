@@ -10,6 +10,7 @@ import {
 import { canSnooze, effectiveSnoozed } from "@t3tools/client-runtime/state/thread-settled";
 import {
   AuthOrchestrationOperateScope,
+  type ContextMenuItem,
   type ScopedThreadRef,
   type ThreadId,
 } from "@t3tools/contracts";
@@ -20,8 +21,10 @@ import {
   resolveSnoozePresets,
   type SnoozePreset,
 } from "../components/Sidebar.snooze";
+import { closeAppContextMenu, showAppContextMenu } from "../components/AppContextMenu";
 import {
   buildThreadActionMenuItems,
+  THREAD_STRIP_ACTION_IDS,
   threadActionRequiresOperate,
   type ThreadActionMenuId,
 } from "../components/threadActionMenu.logic";
@@ -61,13 +64,31 @@ function failureToast(title: string, error: unknown) {
   );
 }
 
-export function useThreadActionMenu(input: {
+/** The thread a menu acts on. Without `onStartRename` the menu leaves Rename out. */
+export interface ThreadMenuTarget {
   readonly threadRef: ScopedThreadRef | null;
   readonly projectCwd: string | null;
-  readonly onStartRename: () => void;
+  readonly onStartRename?: () => void;
   readonly canShareWithGuest: boolean;
-}) {
-  const { threadRef, projectCwd, onStartRename, canShareWithGuest } = input;
+}
+
+export interface ThreadMenuOptions {
+  /** Leaves out what the action strip already shows as buttons. */
+  readonly variant?: "overflow";
+  /** Acts on this thread instead of the hook's, so one hook can serve a whole list. */
+  readonly target?: ThreadMenuTarget;
+  /** Caller-owned items above the thread actions. */
+  readonly extra?: ReadonlyArray<{
+    readonly id: string;
+    readonly label: string;
+    readonly icon?: string;
+    readonly run: () => void;
+  }>;
+}
+
+const EXTRA_PREFIX = "extra:";
+
+export function useThreadActionMenu(input: ThreadMenuTarget) {
   const router = useRouter();
   const projects = useProjects();
   const primaryEnvironmentId = usePrimaryEnvironmentId();
@@ -116,15 +137,19 @@ export function useThreadActionMenu(input: {
     onError: (error) => failureToast("Failed to copy thread ID", error),
   });
 
-  const readSnoozePresets = (): ReadonlyArray<SnoozePreset> =>
+  const readSnoozePresets = (
+    threadRef: ScopedThreadRef | null = input.threadRef,
+  ): ReadonlyArray<SnoozePreset> =>
     threadRef === null
       ? []
       : resolveSnoozePresets(new Date(), timestampFormat, threadRef.environmentId);
 
   const runAction = async (
     action: ThreadActionMenuId,
-    shownSnoozePresets: ReadonlyArray<SnoozePreset> = readSnoozePresets(),
+    shownSnoozePresets?: ReadonlyArray<SnoozePreset>,
+    target: ThreadMenuTarget = input,
   ): Promise<void> => {
+    const { threadRef, projectCwd, onStartRename } = target;
     if (threadRef === null) return;
     if (
       threadActionRequiresOperate(action) &&
@@ -143,7 +168,7 @@ export function useThreadActionMenu(input: {
         action === "snooze:custom"
           ? await requestCustomSnooze()
           : pickSnoozePreset(
-              shownSnoozePresets,
+              shownSnoozePresets ?? readSnoozePresets(threadRef),
               action.slice("snooze:".length),
               timestampFormat,
               threadRef.environmentId,
@@ -217,7 +242,7 @@ export function useThreadActionMenu(input: {
         );
         return;
       case "rename":
-        onStartRename();
+        onStartRename?.();
         return;
       case "regenerate-title":
         if (thread.titleRegeneration != null) return;
@@ -235,7 +260,13 @@ export function useThreadActionMenu(input: {
         openGuestShareDialog(threadRef);
         return;
       case "copy-path": {
-        const workspacePath = thread.worktreePath ?? projectCwd;
+        const workspacePath =
+          thread.worktreePath ??
+          projectCwd ??
+          projects.find(
+            (project) =>
+              project.environmentId === thread.environmentId && project.id === thread.projectId,
+          )?.workspaceRoot;
         if (!workspacePath) {
           toastManager.add(
             stackedThreadToast({
@@ -314,11 +345,11 @@ export function useThreadActionMenu(input: {
     }
   };
 
-  const openMenu = (position: { x: number; y: number }) => {
+  const openMenu = (position: { x: number; y: number }, options: ThreadMenuOptions = {}) => {
+    const target = options.target ?? input;
+    const { threadRef } = target;
     if (threadRef === null) return;
     void (async () => {
-      const api = readLocalApi();
-      if (!api) return;
       const thread = readThreadShell(threadRef);
       if (!thread) return;
       const now = new Date();
@@ -331,30 +362,51 @@ export function useThreadActionMenu(input: {
         titleRegeneration: configLoaded,
       };
       const snoozePresets = resolveSnoozePresets(now, timestampFormat, threadRef.environmentId);
-      const items = buildThreadActionMenuItems({
-        canOperate: readEnvironmentScope(threadRef.environmentId, AuthOrchestrationOperateScope),
-        branch: thread.branch ?? null,
-        projectFilter: null,
-        isPinned: thread.pinnedAt != null,
-        isSettled: supports.settlement && thread.settledOverride === "settled",
-        autoSettleEnabled: thread.autoSettleDisabledAt == null,
-        isSnoozed: supports.snooze && effectiveSnoozed(thread, { now: now.toISOString() }),
-        canSnoozeNow: canSnooze(thread, { now: now.toISOString() }),
-        isRegeneratingTitle: thread.titleRegeneration != null,
-        isRunning: !threadRuntimeCanArchive(thread.runtime),
-        supports,
-        snoozePresets,
-        canShareWithGuest,
-      });
-      const clicked = await settlePromise(() => api.contextMenu.show(items, position));
+      const omit = new Set<ThreadActionMenuId>(
+        options.variant === "overflow" ? THREAD_STRIP_ACTION_IDS : [],
+      );
+      if (target.onStartRename === undefined) omit.add("rename");
+      const threadItems = buildThreadActionMenuItems(
+        {
+          canOperate: readEnvironmentScope(threadRef.environmentId, AuthOrchestrationOperateScope),
+          branch: thread.branch ?? null,
+          projectFilter: null,
+          isPinned: thread.pinnedAt != null,
+          isSettled: supports.settlement && thread.settledOverride === "settled",
+          autoSettleEnabled: thread.autoSettleDisabledAt == null,
+          isSnoozed: supports.snooze && effectiveSnoozed(thread, { now: now.toISOString() }),
+          canSnoozeNow: canSnooze(thread, { now: now.toISOString() }),
+          isRegeneratingTitle: thread.titleRegeneration != null,
+          isRunning: !threadRuntimeCanArchive(thread.runtime),
+          supports,
+          snoozePresets,
+          canShareWithGuest: target.canShareWithGuest,
+        },
+        omit,
+      );
+      const extra = options.extra ?? [];
+      const items: ReadonlyArray<ContextMenuItem<string>> = [
+        ...extra.map(({ id, label, icon }) => ({
+          id: `${EXTRA_PREFIX}${id}`,
+          label,
+          ...(icon === undefined ? {} : { icon }),
+        })),
+        ...threadItems.map((item, index) =>
+          index === 0 && extra.length > 0 ? { ...item, separatorBefore: true } : item,
+        ),
+      ];
+      const clicked = await settlePromise(() => showAppContextMenu(items, position));
       if (clicked._tag === "Failure" || clicked.value === null) return;
-      await runAction(clicked.value, snoozePresets);
+      const choice = clicked.value;
+      if (choice.startsWith(EXTRA_PREFIX)) {
+        extra.find((entry) => `${EXTRA_PREFIX}${entry.id}` === choice)?.run();
+        return;
+      }
+      await runAction(choice as ThreadActionMenuId, snoozePresets, target);
     })();
   };
 
-  const closeMenu = () => {
-    void readLocalApi()?.contextMenu.close();
-  };
+  const closeMenu = closeAppContextMenu;
 
   return { openMenu, closeMenu, runAction, readSnoozePresets };
 }
