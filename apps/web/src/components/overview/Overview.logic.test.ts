@@ -24,6 +24,7 @@ import {
   moveOverviewFocus,
   NO_PROJECT_KEY,
   overviewColumnMachines,
+  overviewMachineSpans,
   overviewProjectKeyOf,
   overviewLight,
   orderOverviewProjects,
@@ -357,6 +358,27 @@ describe("overview offline machines", () => {
       { id: envB, label: "Studio", offline: true },
       { id: "env-x", label: "Machine", offline: false },
     ]);
+  });
+});
+
+describe("overviewMachineSpans", () => {
+  const mbp = { id: "mbp", label: "MBP", offline: false };
+  const box = { id: "box", label: "Box", offline: false };
+
+  it("groups adjacent columns that share the same machines", () => {
+    expect(overviewMachineSpans([[mbp], [mbp], [mbp]])).toEqual([
+      { start: 0, length: 3, machines: [mbp], offline: false },
+    ]);
+    expect(overviewMachineSpans([[mbp], [mbp, box], [box]]).map((span) => span.start)).toEqual([
+      0, 1, 2,
+    ]);
+    expect(overviewMachineSpans([[mbp], [box], [mbp]]).map((span) => span.length)).toEqual([
+      1, 1, 1,
+    ]);
+    expect(overviewMachineSpans([[], []])).toEqual([
+      { start: 0, length: 2, machines: [], offline: false },
+    ]);
+    expect(overviewMachineSpans([[mbp, { ...box, offline: true }]])[0]?.offline).toBe(true);
   });
 });
 

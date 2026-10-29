@@ -242,6 +242,40 @@ export function overviewColumnMachines(
   }));
 }
 
+export type OverviewMachineSpan = {
+  start: number;
+  length: number;
+  machines: ReadonlyArray<OverviewMachine>;
+  offline: boolean;
+};
+
+export function overviewMachineSpans(
+  machinesByColumn: ReadonlyArray<ReadonlyArray<OverviewMachine>>,
+): OverviewMachineSpan[] {
+  const idsKey = (machines: ReadonlyArray<OverviewMachine>) =>
+    machines
+      .map((machine) => machine.id)
+      .toSorted()
+      .join("\n");
+  const spans: OverviewMachineSpan[] = [];
+  let previousKey: string | null = null;
+  for (const [index, machines] of machinesByColumn.entries()) {
+    const key = idsKey(machines);
+    const last = spans.at(-1);
+    if (last && key === previousKey) last.length += 1;
+    else {
+      spans.push({
+        start: index,
+        length: 1,
+        machines,
+        offline: machines.some((machine) => machine.offline),
+      });
+    }
+    previousKey = key;
+  }
+  return spans;
+}
+
 export type OverviewLight = StatusLightTone;
 
 const LIGHTS: Partial<Record<SidebarStatusLabel["icon"], OverviewLight>> = {
