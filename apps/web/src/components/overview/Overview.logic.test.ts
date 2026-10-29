@@ -15,6 +15,11 @@ import { describe, expect, it } from "vite-plus/test";
 import { buildSidebarProjectSnapshots } from "../../sidebarProjectGrouping";
 import { makeThreadFixture, type ThreadFixtureOverrides } from "../../test-fixtures";
 import type { Project } from "../../types";
+import {
+  DraftId,
+  type ComposerThreadDraftState,
+  type DraftSessionState,
+} from "../../composerDraftStore";
 import { partitionSidebarThreads } from "../Sidebar.logic";
 import {
   buildOverviewGrid,
@@ -24,6 +29,7 @@ import {
   moveOverviewFocus,
   NO_PROJECT_KEY,
   overviewColumnMachines,
+  overviewDraftCards,
   overviewMachineSpans,
   overviewProjectKeyOf,
   overviewLight,
@@ -379,6 +385,92 @@ describe("overviewMachineSpans", () => {
       { start: 0, length: 2, machines: [], offline: false },
     ]);
     expect(overviewMachineSpans([[mbp, { ...box, offline: true }]])[0]?.offline).toBe(true);
+  });
+});
+
+describe("overview drafts", () => {
+  const emptyComposer: ComposerThreadDraftState = {
+    prompt: "",
+    images: [],
+    files: [],
+    nonPersistedImageIds: [],
+    persistedAttachments: [],
+    terminalContexts: [],
+    previewAnnotations: [],
+    reviewComments: [],
+    threadContexts: [],
+    environmentContexts: [],
+    modelSelectionByProvider: {},
+    activeProvider: null,
+    runtimeMode: null,
+    interactionMode: null,
+  };
+  const session = (
+    threadId: string,
+    createdAt: string,
+    overrides: Partial<DraftSessionState> = {},
+  ): DraftSessionState => ({
+    threadId: ThreadId.make(threadId),
+    environmentId: envA,
+    projectId: ProjectId.make("project-1"),
+    logicalProjectKey: "project-1",
+    createdAt,
+    runtimeMode: "full-access",
+    interactionMode: "default",
+    branch: null,
+    worktreePath: null,
+    envMode: "local",
+    startFromOrigin: false,
+    ...overrides,
+  });
+  const keyOf = (draftId: string) => `${envA}:${draftId}`;
+  const projectKeyOf = (ref: { projectId: ProjectId }) =>
+    ref.projectId === "project-1" ? "P" : NO_PROJECT_KEY;
+  const build = (
+    sessions: Record<string, DraftSessionState>,
+    composers: Record<string, ComposerThreadDraftState>,
+    openThreadKey: string | null = null,
+  ) => overviewDraftCards({ sessions, composers, projectKeyOf, openThreadKey });
+
+  it("lists unsent drafts per project, newest first", () => {
+    const sessions = {
+      older: session("older", "2026-03-01T00:00:00.000Z"),
+      newer: session("newer", "2026-03-02T00:00:00.000Z"),
+      promoted: session("promoted", "2026-03-03T00:00:00.000Z", {
+        promotedTo: { environmentId: envA, threadId: ThreadId.make("promoted") },
+      }),
+      empty: session("empty", "2026-03-04T00:00:00.000Z"),
+      lost: session("lost", "2026-03-05T00:00:00.000Z", { projectId: ProjectId.make("gone") }),
+    };
+    const composers = {
+      older: { ...emptyComposer, prompt: "first\nsecond" },
+      newer: { ...emptyComposer, prompt: "hello" },
+      promoted: { ...emptyComposer, prompt: "sent" },
+      empty: emptyComposer,
+      lost: { ...emptyComposer, prompt: "orphan" },
+    };
+    expect(build(sessions, composers).get("P")).toEqual([
+      {
+        draftId: DraftId.make("newer"),
+        threadKey: keyOf("newer"),
+        preview: "hello",
+        createdAt: "2026-03-02T00:00:00.000Z",
+      },
+      {
+        draftId: DraftId.make("older"),
+        threadKey: keyOf("older"),
+        preview: "first",
+        createdAt: "2026-03-01T00:00:00.000Z",
+      },
+    ]);
+    expect(build(sessions, composers).has(NO_PROJECT_KEY)).toBe(false);
+  });
+
+  it("shows an empty draft only while it is open in the pane", () => {
+    const sessions = { empty: session("empty", "2026-03-04T00:00:00.000Z") };
+    const composers = { empty: emptyComposer };
+    expect(build(sessions, composers).size).toBe(0);
+    expect(build(sessions, composers, keyOf("empty")).get("P")?.[0]?.preview).toBe("");
   });
 });
 

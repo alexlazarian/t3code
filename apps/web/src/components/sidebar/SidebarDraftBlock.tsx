@@ -1,5 +1,5 @@
 import { discardComposerDraft } from "../../lib/discardComposerDraft";
-import { replaceComposerContextReferences } from "@t3tools/shared/composerContextReferences";
+import { draftPreviewLine } from "../../lib/draftPreview";
 import { XIcon } from "lucide-react";
 import {
   memo,
@@ -36,22 +36,7 @@ const SidebarDraftRow = memo(function SidebarDraftRow(props: {
 }) {
   const { composer, draftId, onContextMenu, onDiscard, onNavigate } = props;
   const projectAccentColor = useProjectAccentColor(props.project);
-  const promptPreview =
-    replaceComposerContextReferences(composer.prompt, (occurrence) => occurrence.label)
-      .trim()
-      .split("\n", 1)[0] ?? "";
-  // images mirrors persistedAttachments once rehydration finishes; before
-  // that only the persisted list is populated, hence max not sum.
-  const attachmentCount =
-    Math.max(composer.images.length, composer.persistedAttachments.length) +
-    composer.files.length +
-    composer.terminalContexts.length +
-    composer.previewAnnotations.length +
-    composer.reviewComments.length;
-  const preview =
-    promptPreview.length > 0
-      ? promptPreview
-      : `${attachmentCount} attachment${attachmentCount === 1 ? "" : "s"}`;
+  const preview = draftPreviewLine(composer);
   const accessibility = resolveSidebarRowAccessibility({
     title: preview,
     statusLabel: "Unsent draft",

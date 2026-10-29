@@ -1,13 +1,23 @@
 import type { EnvironmentConnectionPhase } from "@t3tools/client-runtime/connection";
+import { scopedThreadKey, scopeThreadRef } from "@t3tools/client-runtime/environment";
 import { commandDisplayText } from "@t3tools/client-runtime/work-log/command-label";
 import {
   isOrchestrationV2WorkActive,
+  type EnvironmentId,
+  type ProjectId,
   type OrchestrationV2PendingBackgroundTask,
   type OrchestrationV2ShellActivity,
   type OrchestrationV2ShellStep,
   type OrchestrationV2ShellSubagent,
 } from "@t3tools/contracts";
 
+import {
+  composerDraftHasUserContent,
+  DraftId,
+  type ComposerThreadDraftState,
+  type DraftSessionState,
+} from "../../composerDraftStore";
+import { draftPreviewLine } from "../../lib/draftPreview";
 import type { SidebarThreadSummary } from "../../types";
 import type { SidebarProjectSnapshot } from "../../sidebarProjectGrouping";
 import {
@@ -168,6 +178,43 @@ export function buildOverviewGrid(input: {
     });
   }
   return { columns, rows };
+}
+
+export type OverviewDraft = {
+  draftId: DraftId;
+  threadKey: string;
+  preview: string;
+  createdAt: string;
+};
+
+export function overviewDraftCards(input: {
+  sessions: Record<string, DraftSessionState>;
+  composers: Record<string, ComposerThreadDraftState>;
+  projectKeyOf: (ref: { environmentId: EnvironmentId; projectId: ProjectId }) => string;
+  openThreadKey: string | null;
+}): ReadonlyMap<string, ReadonlyArray<OverviewDraft>> {
+  const byProject = new Map<string, OverviewDraft[]>();
+  for (const [draftKey, session] of Object.entries(input.sessions)) {
+    if (session.promotedTo != null) continue;
+    const projectKey = input.projectKeyOf(session);
+    if (projectKey === NO_PROJECT_KEY) continue;
+    const threadKey = scopedThreadKey(scopeThreadRef(session.environmentId, session.threadId));
+    const composer = input.composers[draftKey];
+    if (!composerDraftHasUserContent(composer) && threadKey !== input.openThreadKey) continue;
+    const draft: OverviewDraft = {
+      draftId: DraftId.make(draftKey),
+      threadKey,
+      preview: composer ? draftPreviewLine(composer) : "",
+      createdAt: session.createdAt,
+    };
+    const list = byProject.get(projectKey);
+    if (list) list.push(draft);
+    else byProject.set(projectKey, [draft]);
+  }
+  for (const list of byProject.values()) {
+    list.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  }
+  return byProject;
 }
 
 export type OverviewFocusDirection = "up" | "down" | "left" | "right";
