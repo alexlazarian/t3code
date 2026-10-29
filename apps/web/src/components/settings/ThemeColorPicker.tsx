@@ -17,6 +17,8 @@ export function getThemeRoleLabel(role: ThemeColorRole): string {
     toolbarControlHover: "Toolbar control hover",
     accent: "Accent color",
     navSelected: "Selected item",
+    tabActive: "Active tab",
+    tabActiveForeground: "Active tab text",
     errorForeground: "Error text",
     errorSurface: "Error background",
     warningForeground: "Warning text",

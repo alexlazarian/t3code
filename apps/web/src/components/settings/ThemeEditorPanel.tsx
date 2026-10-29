@@ -204,6 +204,12 @@ const THEME_EDITOR_ROLE_GROUPS: ReadonlyArray<{
         roles: ["navSelected"],
       },
       {
+        id: "active-tab",
+        label: "Active tab",
+        role: "tabActive",
+        roles: ["tabActive", "tabActiveForeground"],
+      },
+      {
         id: "terminal-background",
         label: "Terminal background",
         role: "terminalBackground",

@@ -141,6 +141,8 @@ function mergeThemeColors(fallback: ThemeColors, overrides: ThemeColorOverrides)
   return {
     ...fallback,
     navSelected: overrides.sidebarRowHover ?? fallback.navSelected,
+    tabActive: overrides.sidebarForeground ?? fallback.tabActive,
+    tabActiveForeground: overrides.sidebar ?? fallback.tabActiveForeground,
     ...overrides,
   };
 }
@@ -886,6 +888,8 @@ export function createVividThemeColors(
     sidebarRowHover,
     // Neutral and one step past hover, so selection never reads as an accent or as a hover.
     navSelected: themeColor(surfaceAt(dark ? 0.11 : 0.09, 0)),
+    tabActive: foregroundOn(sidebarRgb),
+    tabActiveForeground: themeColor(sidebar),
     sidebarRowActive: themeColor(surfaceAt(dark ? 0.12 : 0.09, Math.min(0.1, accent.C * 0.55))),
     sidebarRowSelected: themeColor(surfaceAt(dark ? 0.14 : 0.1, Math.min(0.11, accent.C * 0.6))),
     sidebarBorder: themeColor(surfaceAt(dark ? 0.17 : 0.12, Math.min(0.08, accent.C * 0.4))),
@@ -1559,6 +1563,8 @@ const APP_THEME_VARIABLES: Readonly<Record<ThemeColorRole, string>> = {
   sidebarRowActive: "--app-theme-sidebar-row-active",
   sidebarRowSelected: "--app-theme-sidebar-row-selected",
   navSelected: "--app-theme-nav-selected",
+  tabActive: "--app-theme-tab-active",
+  tabActiveForeground: "--app-theme-tab-active-foreground",
   sidebarBorder: "--app-theme-sidebar-border",
   terminalBackground: "--app-theme-terminal-background",
   terminalForeground: "--app-theme-terminal-foreground",

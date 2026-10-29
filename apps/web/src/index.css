@@ -269,6 +269,8 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   --color-sidebar-row-active: var(--sidebar-row-active);
   --color-sidebar-row-selected: var(--sidebar-row-selected);
   --color-nav-selected: var(--nav-selected);
+  --color-tab-active: var(--tab-active);
+  --color-tab-active-foreground: var(--tab-active-foreground);
   --color-sidebar-border: var(--contrast-sidebar-border);
   --radius-xs: 0;
   --radius-sm: 0;
@@ -1014,6 +1016,8 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   --sidebar-row-selected: color-mix(in oklab, #ffffff, #1b4ed8 16%);
   /* The one selected-item fill for navigation lists (Library, Settings, panels): neutral, a step past hover. */
   --nav-selected: color-mix(in oklab, #ffffff, #27272a 11%);
+  --tab-active: var(--contrast-sidebar-foreground);
+  --tab-active-foreground: var(--sidebar);
   --sidebar-border: var(--border);
   --code-background: color-mix(in oklab, #ffffff, black 3%);
   --code-foreground: var(--foreground);
@@ -1172,6 +1176,8 @@ html[data-theme-id]:not([data-theme-id=""]) {
   --sidebar-row-active: var(--app-theme-sidebar-row-active);
   --sidebar-row-selected: var(--app-theme-sidebar-row-selected);
   --nav-selected: var(--app-theme-nav-selected);
+  --tab-active: var(--app-theme-tab-active);
+  --tab-active-foreground: var(--app-theme-tab-active-foreground);
   --sidebar-border: var(--app-theme-sidebar-border);
   --code-background: var(--app-theme-code-background);
   --code-foreground: var(--app-theme-code-foreground);
@@ -1357,6 +1363,8 @@ html[data-theme-id] [data-app-sidebar] {
   --sidebar-row-active: var(--app-theme-sidebar-row-active);
   --sidebar-row-selected: var(--app-theme-sidebar-row-selected);
   --nav-selected: var(--app-theme-nav-selected);
+  --tab-active: var(--app-theme-tab-active);
+  --tab-active-foreground: var(--app-theme-tab-active-foreground);
   --sidebar-border: var(--app-theme-sidebar-border);
   border-color: color-mix(in srgb, var(--contrast-sidebar-foreground) 10%, transparent);
 

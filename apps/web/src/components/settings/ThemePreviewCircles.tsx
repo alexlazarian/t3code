@@ -1,6 +1,4 @@
 import { MoonIcon, SunIcon } from "lucide-react";
-import type { CSSProperties } from "react";
-import { THEME_PREVIEW_RENDER_SPECS } from "@t3tools/shared/themePreview";
 import { cn } from "../../lib/utils";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import {
@@ -96,23 +94,6 @@ export function getThemeCardDefinition(theme: ThemeDefinition): ThemeCardDefinit
   };
 }
 
-function getThemePreviewStyle(
-  colors: ThemeCardPreviewColors,
-  mode: ThemeAppearance,
-): CSSProperties {
-  const spec = THEME_PREVIEW_RENDER_SPECS[mode];
-  const modeBase = `color-mix(in oklab, ${colors.canvas} ${spec.baseWeight * 100}%, ${spec.baseTarget})`;
-  const accentPosition = `${spec.accent.center[0] * 100}% ${spec.accent.center[1] * 100}%`;
-  const actionPosition = `${spec.action.center[0] * 100}% ${spec.action.center[1] * 100}%`;
-  return {
-    backgroundColor: modeBase,
-    backgroundImage: [
-      `radial-gradient(circle at ${accentPosition} in oklab, ${colors.accent} 0%, color-mix(in oklab, ${colors.accent} ${spec.accent.middleOpacity * 100}%, transparent) ${spec.accent.middleOffset * 100}%, transparent ${spec.accent.endOffset * 100}%)`,
-      `radial-gradient(circle at ${actionPosition} in oklab, color-mix(in oklab, ${colors.messageAction} ${spec.action.startOpacity * 100}%, transparent) 0%, transparent ${spec.action.endOffset * 100}%)`,
-    ].join(", "),
-  };
-}
-
 function themePreviewEdgeShadow(mode: ThemeAppearance): string {
   return mode === "dark"
     ? "inset 0 0 0 1px rgb(255 255 255 / 0.14), 0 1px 2px rgb(0 0 0 / 0.18)"
@@ -128,6 +109,7 @@ export function ThemePreviewCircle({
   mode: ThemeAppearance;
   className?: string;
 }) {
+  const line = mode === "dark" ? "rgb(255 255 255 / 0.12)" : "rgb(0 0 0 / 0.1)";
   return (
     <span
       aria-hidden
@@ -137,14 +119,28 @@ export function ThemePreviewCircle({
       )}
       style={{ boxShadow: themePreviewEdgeShadow(mode) }}
     >
+      <span className="absolute inset-0" style={{ backgroundColor: colors.canvas }} />
       <span
-        className="absolute inset-0 rounded-full"
-        style={{
-          ...getThemePreviewStyle(colors, mode),
-          filter: `blur(${THEME_PREVIEW_RENDER_SPECS[mode].blurAt56Px}px)`,
-          transform: `scale(${THEME_PREVIEW_RENDER_SPECS[mode].scale})`,
-        }}
+        className="absolute inset-y-0 left-0 w-[38%]"
+        style={{ backgroundColor: colors.sidebar, boxShadow: `inset -1px 0 0 ${line}` }}
       />
+      <span
+        className="absolute left-[12%] top-[40%] h-[11%] w-[22%]"
+        style={{ backgroundColor: colors.accentSurface }}
+      />
+      <span
+        className="absolute left-[48%] top-[22%] h-[13%] w-[36%]"
+        style={{ backgroundColor: colors.messageSurface, boxShadow: `inset 0 0 0 1px ${line}` }}
+      />
+      <span
+        className="absolute bottom-[20%] left-[44%] right-[10%] flex h-[18%] items-center justify-end pr-0.5"
+        style={{ backgroundColor: colors.surface, boxShadow: `inset 0 0 0 1px ${line}` }}
+      >
+        <span
+          className="block aspect-square h-[55%] rounded-full"
+          style={{ backgroundColor: colors.messageAction }}
+        />
+      </span>
     </span>
   );
 }

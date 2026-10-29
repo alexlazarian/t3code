@@ -68,6 +68,8 @@ const THEME_UTILITY_ROLES: Readonly<Partial<Record<string, ThemeColorRole>>> = {
   "sidebar-row-active": "sidebarRowActive",
   "sidebar-row-selected": "sidebarRowSelected",
   "nav-selected": "navSelected",
+  "tab-active": "tabActive",
+  "tab-active-foreground": "tabActiveForeground",
   "sidebar-border": "sidebarBorder",
   border: "border",
   input: "input",
