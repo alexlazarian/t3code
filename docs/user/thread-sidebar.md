@@ -245,6 +245,11 @@ and get the full grid back, click an empty spot in the grid, press `Esc`, or dra
 divider all the way down. A double-click or `Enter` opens the thread in List view at
 full size.
 
+Unsent drafts appear in the **Drafts** shelf until you send them. **New thread** in a
+column starts a draft and opens it below the board, so you stay in Overview. The row
+above the project names shows which machine each project runs on, and turns red when
+a machine is offline.
+
 ## Use the Library
 
 On web and desktop, the **Library** tab beside **Threads** lists every settings
