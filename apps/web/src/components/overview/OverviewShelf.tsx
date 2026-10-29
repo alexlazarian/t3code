@@ -36,10 +36,10 @@ export function OverviewShelf(props: {
       aria-expanded={expanded}
       aria-label={`${name}, ${total} threads`}
       onClick={props.onToggle}
-      style={{ gridColumn: 1, gridRow: expanded ? `${row} / span 2` : row }}
+      style={{ gridColumn: 1, gridRow: expanded ? row + 1 : row }}
       className={cn(
         "sticky left-0 z-10 flex cursor-pointer flex-col items-center overflow-hidden border-r border-b border-border bg-background text-2xs hover:bg-muted",
-        expanded ? "gap-1 pt-0.75" : "h-5 justify-center",
+        expanded ? "gap-1 pt-0.75 pb-1.5" : "h-5 justify-center",
         edge,
       )}
     >
@@ -85,6 +85,12 @@ export function OverviewShelf(props: {
   }
   return (
     <div role="row" className="contents">
+      {/* The rail sizes the cell row alone; spanning both rows stretched the count strip. */}
+      <div
+        role="presentation"
+        style={{ gridColumn: 1, gridRow: row }}
+        className={cn("sticky left-0 z-10 h-3.5 border-r border-border bg-background", edge)}
+      />
       {rail}
       {props.columns.map(({ key, count }, index) => (
         <div
