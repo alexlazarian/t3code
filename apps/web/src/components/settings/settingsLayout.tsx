@@ -1,4 +1,5 @@
 import { SettingsGroup } from "./SettingsGroup";
+import { SectionStrip } from "../SectionStrip";
 import { AuthSettingsWriteScope } from "@t3tools/contracts";
 import { usePrimaryEnvironmentId, usePrimaryEnvironment } from "../../state/environments";
 import { useEnvironmentScope, useEnvironmentsWithScope } from "../../state/session";
@@ -13,7 +14,7 @@ import {
   usePrimarySettingsAvailable,
 } from "../../hooks/useSettings";
 import { cn } from "../../lib/utils";
-import { WorkspacePageContainer, type WorkspacePageWidth } from "../WorkspacePageContainer";
+import { WorkspacePageContainer } from "../WorkspacePageContainer";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { useOptionalSettingsScope } from "./SettingsScopeContext";
@@ -223,23 +224,30 @@ export function SettingsSection({
       {...sectionProps}
       ref={targetRef}
       tabIndex={sectionProps.id ? -1 : sectionProps.tabIndex}
-      className={cn(!hideTitle && "space-y-2.5", className)}
+      className={className}
     >
       {hideTitle ? (
         <h2 className="sr-only">{title}</h2>
       ) : (
-        <div
-          data-settings-scroll-target
-          className="flex min-h-7 items-start justify-between gap-4 px-3 sm:px-4"
-        >
-          <div className="flex min-w-0 items-center gap-1">
-            <h2 className="flex min-h-7 items-center gap-2 text-base font-semibold text-foreground">
-              {icon}
-              {title}
-            </h2>
-            {titleAction}
-          </div>
-          <div className="flex min-h-7 min-w-7 items-center justify-end">{headerAction}</div>
+        <div data-settings-scroll-target>
+          <SectionStrip
+            title={
+              <span className="flex min-w-0 items-center gap-1.5">
+                {icon}
+                <span role="heading" aria-level={2} className="truncate">
+                  {title}
+                </span>
+              </span>
+            }
+            trailing={
+              titleAction || headerAction ? (
+                <span className="flex items-center gap-1">
+                  {titleAction}
+                  {headerAction}
+                </span>
+              ) : null
+            }
+          />
         </div>
       )}
       <SettingsGroup data-settings-scroll-target={hideTitle ? "" : undefined} variant={variant}>
@@ -460,15 +468,15 @@ export function SettingsRow({
       tabIndex={rowProps.id ? -1 : rowProps.tabIndex}
       data-slot="settings-row"
       className={cn(
-        "group/settings-row @container/settings-row rounded-xl px-3 sm:px-4 aria-disabled:opacity-64 aria-disabled:[&_*]:text-muted-foreground",
-        children ? "pt-3 pb-1" : "py-3",
+        "group/settings-row @container/settings-row px-3 text-xs aria-disabled:opacity-64 aria-disabled:[&_*]:text-muted-foreground",
+        children ? "pt-1.5 pb-1" : "py-1.5",
         className,
       )}
     >
-      <div className="flex flex-col gap-3 @min-[32rem]/settings-row:grid @min-[32rem]/settings-row:grid-cols-[minmax(0,1fr)_minmax(10rem,auto)] @min-[32rem]/settings-row:items-center @min-[32rem]/settings-row:gap-8">
-        <div className="min-w-0 flex-1 space-y-1">
+      <div className="flex max-w-[620px] flex-col gap-1.5 @min-[32rem]/settings-row:grid @min-[32rem]/settings-row:grid-cols-[minmax(0,1fr)_minmax(10rem,auto)] @min-[32rem]/settings-row:items-center @min-[32rem]/settings-row:gap-4">
+        <div className="min-w-0 flex-1 space-y-0.5">
           <div className="flex min-h-5 items-center gap-1.5">
-            <h3 className="text-sm font-medium text-foreground">{title}</h3>
+            <h3 className="text-xs font-medium text-foreground">{title}</h3>
             {renderedInheritance ? (
               <span
                 className={cn(
@@ -487,12 +495,12 @@ export function SettingsRow({
             </span>
           </div>
           {description ? (
-            <p className="max-w-2xl text-balance text-xs leading-normal text-muted-foreground">
+            <p className="text-balance text-2xs leading-normal text-muted-foreground">
               {description}
             </p>
           ) : null}
           {renderedStatus ? (
-            <div className="pt-0.5 text-xs text-muted-foreground">{renderedStatus}</div>
+            <div className="pt-0.5 text-2xs text-muted-foreground">{renderedStatus}</div>
           ) : null}
         </div>
         {renderedControl ? (
@@ -549,11 +557,9 @@ export function SettingResetButton({
 export function SettingsPageContainer({
   children,
   className,
-  width = "readable",
 }: {
   children: ReactNode;
   className?: string;
-  width?: WorkspacePageWidth;
 }) {
   const navigate = useNavigate();
   const hash = useLocation({ select: (location) => location.hash });
@@ -589,7 +595,7 @@ export function SettingsPageContainer({
         className="topbar-scroll-fade scrollbar-gutter-both flex-1 overflow-y-auto"
         data-settings-page-scroll
       >
-        <WorkspacePageContainer width={width} className={cn("gap-8", className)}>
+        <WorkspacePageContainer width="full" className={className}>
           <SettingsScopeSentence />
           {children}
         </WorkspacePageContainer>

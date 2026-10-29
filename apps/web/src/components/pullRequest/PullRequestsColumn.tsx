@@ -11,7 +11,6 @@ import {
   WorkspaceBreadcrumbItem,
   WorkspaceBreadcrumbSeparator,
 } from "../WorkspaceBreadcrumb";
-import { WorkspacePageContainer } from "../WorkspacePageContainer";
 import { WorkspacePageHeader } from "../WorkspacePageHeader";
 import { workspaceAreaProps } from "../../lib/workspaceFocus";
 import { PullRequestCompactFilterMenu } from "./PullRequestCompactFilterMenu";
@@ -226,33 +225,32 @@ export function PullRequestsColumn({
         ref={scrollRef}
         className="topbar-scroll-fade scrollbar-gutter-both min-h-0 flex-1 overflow-y-auto"
       >
-        <WorkspacePageContainer width="expanded" className="min-h-full gap-4">
-          <div className="flex flex-col gap-3">
-            <div ref={inFlowSearchRef} className="flex flex-wrap items-center gap-2">
-              <div className="min-w-0 basis-full @lg/pr-list:basis-0 @lg/pr-list:flex-1">
-                {searchInput}
-              </div>
-              {sortMenu}
-              {filtersMenu}
-              <PullRequestCompactFilterMenu
-                label="Filter by provider"
-                outlined
-                iconOnly={host !== undefined}
-                triggerIcon={<Plug2Icon aria-hidden className="size-4" />}
-                triggerLabel="All"
-                value={host ?? ""}
-                options={hostMenuOptions}
-                onChange={(next) => onHost(next === "" ? undefined : next)}
-              />
-              {!condensed ? (
-                <PullRequestRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-              ) : null}
-            </div>
-            <div ref={markerRef} aria-hidden className="-mt-3 h-px w-full" />
+        <div className="flex min-h-full flex-col">
+          <div
+            ref={inFlowSearchRef}
+            className="flex min-h-8 shrink-0 items-center gap-1 border-b border-border px-3 py-1"
+          >
+            {searchInput}
+            {sortMenu}
+            {filtersMenu}
+            <PullRequestCompactFilterMenu
+              label="Filter by provider"
+              outlined
+              iconOnly={host !== undefined}
+              triggerIcon={<Plug2Icon aria-hidden />}
+              triggerLabel="All"
+              value={host ?? ""}
+              options={hostMenuOptions}
+              onChange={(next) => onHost(next === "" ? undefined : next)}
+            />
+            {!condensed ? (
+              <PullRequestRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            ) : null}
           </div>
+          <div ref={markerRef} aria-hidden className="-mt-px h-px w-full" />
 
           {listBody}
-        </WorkspacePageContainer>
+        </div>
       </div>
     </div>
   );
@@ -269,13 +267,13 @@ function PullRequestRefreshControl({
 }) {
   return (
     <Button
-      size={compact ? "icon-sm" : "icon"}
+      size={compact ? "icon-sm" : "icon-xs"}
       variant={compact ? "ghost" : "outline"}
       aria-label="Refresh pull requests"
       onClick={onRefresh}
       disabled={refreshing}
     >
-      <RefreshIcon size="md" refreshing={refreshing} />
+      <RefreshIcon size={compact ? "md" : "sm"} refreshing={refreshing} />
     </Button>
   );
 }

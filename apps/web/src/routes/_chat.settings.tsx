@@ -9,7 +9,6 @@ import { useCloseAppModal } from "../components/sidebar/mainAppLocation";
 import { SidebarInset, useSidebar } from "../components/ui/sidebar";
 import { useUiStateStore, type SidebarPanel } from "../uiStateStore";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../components/ui/tooltip";
-import { SettingsBreadcrumb } from "../components/settings/SettingsBreadcrumb";
 import { SettingsSidebarNav } from "../components/settings/SettingsSidebarNav";
 import {
   SettingsScopeProvider,
@@ -32,7 +31,18 @@ import {
   getThreadAutoSettlementSearchAvailability,
   isSettingsSearchScopeAvailable,
   movedSettingsPath,
+  SETTINGS_SECTION_LABELS,
 } from "../components/settings/settingsSearch";
+
+const SETTINGS_PAGE_TITLES: Readonly<Record<string, string>> = {
+  ...SETTINGS_SECTION_LABELS,
+  "/settings/diagnostics": "Diagnostics",
+  "/settings/open-source-licenses": "Open source licenses",
+};
+
+function settingsPageTitle(pathname: string): string {
+  return SETTINGS_PAGE_TITLES[pathname.replace(/\/+$/, "")] ?? "Settings";
+}
 
 function RestoreDeviceDefaultsButton({ onRestored }: { onRestored: () => void }) {
   const { changedSettingLabels, restoreDefaults } = useSettingsRestore(onRestored);
@@ -139,8 +149,10 @@ function SettingsContentLayout() {
       <div className="relative flex min-h-0 flex-1">
         {ownNav ? <SettingsSidebarNav pathname={location.pathname} /> : null}
         <div {...contentArea} className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <header className="flex h-12 shrink-0 items-center gap-3 border-b ps-5 pe-2">
-            <SettingsBreadcrumb pathname={location.pathname} />
+          <header className="flex h-7.5 shrink-0 items-center gap-2 border-b border-border ps-3 pe-1">
+            <h1 className="min-w-0 truncate text-xs font-medium text-foreground">
+              {settingsPageTitle(location.pathname)}
+            </h1>
             <div className="ms-auto flex shrink-0 items-center gap-1">
               {location.pathname === "/settings/general" ? (
                 <RestoreDeviceDefaultsButton

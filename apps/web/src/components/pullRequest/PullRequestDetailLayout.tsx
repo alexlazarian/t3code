@@ -1,9 +1,9 @@
 import { ArrowLeftIcon, FileDiffIcon } from "lucide-react";
-import type { ComponentProps, ReactNode } from "react";
+import type { ComponentProps, KeyboardEvent, ReactNode } from "react";
 
 import { cn } from "~/lib/utils";
 
-import { Toggle, ToggleGroup } from "../ui/toggle-group";
+import { PanelTab } from "../PanelTab";
 import { PullRequestMetaLine } from "./pullRequestPresentation";
 
 export function PullRequestDetailHeaderBody({
@@ -26,17 +26,17 @@ export function PullRequestDetailHeaderBody({
   diffStat: ReactNode;
 }) {
   return (
-    <div className="col-span-2 mt-1 min-w-0 px-4 pb-4">
+    <div className="col-span-2 mt-1 min-w-0 px-3 pb-2">
       {title}
-      <div className="mt-2 flex min-h-5 min-w-0 items-center gap-2 text-xs text-muted-foreground">
+      <div className="mt-1 flex min-h-5 min-w-0 items-center gap-2 text-2xs text-muted-foreground">
         <PullRequestMetaLine className="min-w-0 whitespace-nowrap">
           {author}
           {updated}
         </PullRequestMetaLine>
         {checkout}
       </div>
-      <div className="mt-4 flex min-h-5 min-w-0 items-center gap-2 text-xs text-muted-foreground">
-        <span className="flex min-w-0 flex-1 items-center gap-1.5 font-mono text-xs text-muted-foreground/70">
+      <div className="mt-1 flex min-h-5 min-w-0 items-center gap-2 text-2xs text-muted-foreground">
+        <span className="flex min-w-0 flex-1 items-center gap-1.5 font-mono text-muted-foreground/70">
           {base}
           <ArrowLeftIcon
             aria-label="receives changes from"
@@ -77,34 +77,53 @@ export function PullRequestDetailTabBar<Tab extends string>({
   inert?: boolean;
   children?: ReactNode;
 }) {
+  const select = (tab: Tab) => {
+    if (tab !== value) onValueChange?.(tab);
+  };
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const current = tabs.findIndex((item) => item.value === value);
+    const nextIndex =
+      event.key === "ArrowRight"
+        ? (current + 1) % tabs.length
+        : event.key === "ArrowLeft"
+          ? (current - 1 + tabs.length) % tabs.length
+          : event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? tabs.length - 1
+              : null;
+    if (nextIndex === null) return;
+    event.preventDefault();
+    const next = tabs[nextIndex];
+    if (!next) return;
+    select(next.value);
+    event.currentTarget.querySelectorAll<HTMLButtonElement>("[role=tab]")[nextIndex]?.focus();
+  };
   return (
     <nav
-      className="col-span-2 flex min-w-0 flex-wrap items-center gap-2 border-t border-border/60 px-4 py-2"
+      className="col-span-2 flex h-8 min-w-0 items-stretch border-t border-border"
       aria-label="Pull request tabs"
       inert={inert}
     >
-      <ToggleGroup
-        className="shrink-0"
-        size="segmented"
-        variant="segmented"
-        value={[value]}
-        onValueChange={(next) => {
-          const nextTab = tabs.find((item) => item.value === next[0])?.value;
-          if (nextTab) onValueChange?.(nextTab);
-        }}
-      >
+      <div role="tablist" className="flex shrink-0" onKeyDown={onKeyDown}>
         {tabs.map((tab) => (
-          <Toggle
+          <PanelTab
             key={tab.value}
-            value={tab.value}
+            role="tab"
+            on={tab.value === value}
+            aria-selected={tab.value === value}
+            tabIndex={tab.value === value ? 0 : -1}
+            onClick={() => select(tab.value)}
             onPointerEnter={onTabIntent ? () => onTabIntent(tab.value) : undefined}
             onFocus={onTabIntent ? () => onTabIntent(tab.value) : undefined}
           >
             {tab.label}
-          </Toggle>
+          </PanelTab>
         ))}
-      </ToggleGroup>
-      {children}
+      </div>
+      {children ? (
+        <div className="flex min-w-0 flex-1 items-center gap-2 px-3">{children}</div>
+      ) : null}
     </nav>
   );
 }

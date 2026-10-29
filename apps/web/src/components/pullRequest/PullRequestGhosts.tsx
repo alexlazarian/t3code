@@ -53,21 +53,23 @@ const DEFAULT_DETAIL_TABS = [
 
 export function PullRequestListGhost({ rows = 7, caption }: { rows?: number; caption?: string }) {
   return (
-    <div role="status" aria-label={caption ?? "Loading pull requests"} className="space-y-0.5">
+    <div role="status" aria-label={caption ?? "Loading pull requests"}>
       {/* Outside the pulse so the explanation stays readable. */}
       {caption ? (
-        <p className="px-3 pb-1 text-xs font-medium text-muted-foreground">{caption}</p>
+        <p className="border-b border-border px-3 py-1.5 text-xs text-muted-foreground">
+          {caption}
+        </p>
       ) : null}
-      <div className="motion-safe:animate-skeleton space-y-0.5">
+      <div className="motion-safe:animate-skeleton">
         {Array.from({ length: rows }, (_, index) => (
           <div
             key={index}
-            className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-3 py-2.5"
+            className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-border px-3 py-1.5"
           >
             <GhostBar className="size-4 rounded-full" />
             <div className="min-w-0 space-y-1.5">
-              <GhostBar className={cn("h-4", TITLE_WIDTHS[index % TITLE_WIDTHS.length])} />
-              <GhostBar className={cn("h-3.5", META_WIDTHS[index % META_WIDTHS.length])} />
+              <GhostBar className={cn("h-3.5", TITLE_WIDTHS[index % TITLE_WIDTHS.length])} />
+              <GhostBar className={cn("h-3", META_WIDTHS[index % META_WIDTHS.length])} />
             </div>
             <div className="flex flex-col items-end gap-1.5">
               <GhostBar className="w-12" />

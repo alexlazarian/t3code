@@ -61,7 +61,7 @@ function PullRequestRowLabels({ labels }: { labels: EnvironmentPullRequestEntry[
   );
 }
 
-const PAGE_ROW_CLASS = "px-3 py-2.5";
+const PAGE_ROW_CLASS = "px-3 py-1.5";
 
 export type PullRequestRowTarget = Pick<
   EnvironmentPullRequestEntry,
@@ -107,8 +107,8 @@ function PullRequestRowImpl({
       data-pull-request-stats-key={statsKey}
       data-pull-request-key={statsKey}
       className={cn(
-        "flex items-center rounded-md [content-visibility:auto] [contain-intrinsic-block-size:56.5px]",
-        selected ? "bg-nav-selected" : "hover:bg-accent/60",
+        "flex items-center border-b border-border [content-visibility:auto] [contain-intrinsic-block-size:45px]",
+        selected ? "bg-nav-selected" : "hover:bg-accent/40",
       )}
     >
       <button
@@ -126,7 +126,7 @@ function PullRequestRowImpl({
           isDraft={entry.isDraft}
           mergeability={entry.mergeability}
           baseBranch={entry.baseBranch}
-          className="mt-0.75 self-start"
+          className="self-start"
         />
         <PullRequestRowLines
           number={

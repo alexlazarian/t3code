@@ -1182,7 +1182,7 @@ export function PullRequestsPage() {
       )}
 
       {listQuery.error && shownCount > 0 ? (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning-surface px-3 py-2 text-xs">
+        <div className="flex items-center justify-between gap-3 border-b border-warning/30 bg-warning-surface px-3 py-1.5 text-xs">
           <span>{listQuery.error} Showing the last pull requests loaded.</span>
           <Button size="xs" variant="outline" onClick={() => listQuery.refresh()}>
             Retry
@@ -1238,7 +1238,7 @@ export function PullRequestsPage() {
   const sortMenu = (
     <PullRequestCompactFilterMenu
       label="Sort pull requests"
-      triggerIcon={<ArrowDownUpIcon aria-hidden className="size-4" />}
+      triggerIcon={<ArrowDownUpIcon aria-hidden />}
       triggerLabel="Sort"
       outlined
       value={sort}

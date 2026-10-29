@@ -39,15 +39,8 @@ import { useLocation, useNavigate } from "@tanstack/react-router";
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
 import { Kbd } from "../ui/kbd";
-import {
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarInput,
-} from "../ui/sidebar";
+import { SidebarFooter, SidebarInput } from "../ui/sidebar";
+import { SectionStrip } from "../SectionStrip";
 import { scrollToSettingsTarget } from "./settingsLayout";
 import {
   searchSettings,
@@ -127,10 +120,11 @@ function scrollResultIntoView(row: HTMLElement | null) {
   row?.scrollIntoView({ block: "nearest" });
 }
 
-function SettingsSectionIcon({ to }: { to: SettingsPath }) {
-  const Icon = SETTINGS_SECTION_ICONS[to];
-  return <Icon className="size-4 shrink-0 text-(--sidebar-icon-color)" />;
-}
+const SECTION_ROW_CLASS =
+  "flex h-6 w-full shrink-0 items-center gap-1.5 border-b border-sidebar-border px-3 text-left text-xs outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70";
+const SECTION_ROW_IDLE_CLASS = "text-sidebar-foreground hover:bg-sidebar-row-hover";
+// Below md the page's own nav is an icon rail, the one place these rows keep an icon.
+const RAIL_ROW_CLASS = "max-md:h-9 max-md:justify-center max-md:px-0";
 
 /** `library` is the Library panel's list; `page` is the Settings page's own rail when Library is hidden. */
 export function SettingsSidebarNav({
@@ -158,7 +152,7 @@ export function SettingsSidebarNav({
   );
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
-  // Below md the nav is an icon rail; searching expands it over the page.
+  // Below md the page nav is an icon rail; searching expands it over the page.
   const [compactSearchOpenState, setCompactSearchOpen] = useState(false);
   // The Library panel is never an icon rail.
   const compactSearchOpen = inLibrary || compactSearchOpenState;
@@ -285,189 +279,181 @@ export function SettingsSidebarNav({
           "max-md:absolute max-md:inset-y-0 max-md:start-0 max-md:z-10 max-md:w-full",
       )}
     >
-      <SidebarContent className="overflow-x-hidden">
-        <SidebarGroup>
-          <div className="flex flex-col gap-2">
-            <div
-              className={cn(
-                "flex h-8 items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-sidebar-muted-foreground hover:bg-sidebar-row-hover hover:text-sidebar-foreground",
-                !compactSearchOpen && "max-md:hidden",
-              )}
+      <div
+        className={cn("border-b border-sidebar-border p-1", !compactSearchOpen && "max-md:hidden")}
+      >
+        <div className="flex h-6 min-w-0 items-center gap-1 border border-sidebar-border bg-background px-1.5 focus-within:border-primary">
+          <SidebarInput
+            ref={searchInputRef}
+            nativeInput
+            type="search"
+            value={query}
+            onChange={(event) => {
+              setQuery(event.currentTarget.value);
+              setActiveResultIndex(0);
+            }}
+            onKeyDown={handleSearchKeyDown}
+            onFocus={() => setCompactSearchOpen(true)}
+            onBlur={() => {
+              if (!isSearching) setCompactSearchOpen(false);
+            }}
+            placeholder="Search settings"
+            aria-label="Search settings"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={isSearching && hasResults}
+            aria-controls={isSearching && hasResults ? "settings-search-results" : undefined}
+            aria-activedescendant={
+              isSearching && results[activeResultIndex]
+                ? `settings-search-result-${results[activeResultIndex].id}`
+                : undefined
+            }
+            className="min-w-0 flex-1"
+          />
+          {isSearching ? (
+            <Button
+              type="button"
+              size="icon-micro"
+              variant="ghost-muted"
+              className="shrink-0"
+              aria-label="Clear settings search"
+              onClick={() => {
+                clearSearch();
+                searchInputRef.current?.focus();
+              }}
             >
-              <SearchIcon className="size-4 shrink-0 text-sidebar-muted-foreground/80" />
-              <SidebarInput
-                ref={searchInputRef}
-                nativeInput
-                type="search"
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.currentTarget.value);
-                  setActiveResultIndex(0);
-                }}
-                onKeyDown={handleSearchKeyDown}
-                onFocus={() => setCompactSearchOpen(true)}
-                onBlur={() => {
-                  if (!isSearching) setCompactSearchOpen(false);
-                }}
-                placeholder="Search"
-                aria-label="Search settings"
-                role="combobox"
-                aria-autocomplete="list"
-                aria-expanded={isSearching && hasResults}
-                aria-controls={isSearching && hasResults ? "settings-search-results" : undefined}
-                aria-activedescendant={
-                  isSearching && results[activeResultIndex]
-                    ? `settings-search-result-${results[activeResultIndex].id}`
-                    : undefined
-                }
-                className="min-w-0 flex-1"
-              />
-              {isSearching ? (
-                <Button
-                  type="button"
-                  size="icon-micro"
-                  variant="ghost-muted"
-                  className="shrink-0"
-                  aria-label="Clear settings search"
-                  onClick={() => {
-                    clearSearch();
-                    searchInputRef.current?.focus();
-                  }}
+              <XIcon className="size-3" />
+            </Button>
+          ) : (
+            <Kbd>/</Kbd>
+          )}
+        </div>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
+        {isSearching && results.length === 0 ? (
+          <p role="status" className="px-3 py-1.5 text-2xs text-muted-foreground">
+            No settings found
+          </p>
+        ) : null}
+        {isSearching ? (
+          <ul
+            id={hasResults ? "settings-search-results" : undefined}
+            role={hasResults ? "listbox" : undefined}
+            aria-label={hasResults ? "Settings search results" : undefined}
+          >
+            {results.map((item, index) => {
+              const isActive = index === activeResultIndex;
+              return (
+                <li
+                  key={item.id}
+                  role="presentation"
+                  ref={isActive ? scrollResultIntoView : undefined}
                 >
-                  <XIcon className="size-3" />
-                </Button>
-              ) : (
-                <Kbd>/</Kbd>
-              )}
-            </div>
-            {isSearching && results.length === 0 ? (
-              <p
-                role="status"
-                className="px-2 py-6 text-center text-xs text-sidebar-muted-foreground"
-              >
-                No settings found
-              </p>
-            ) : null}
-            {isSearching ? (
-              <SidebarMenu
-                id={hasResults ? "settings-search-results" : undefined}
-                role={hasResults ? "listbox" : undefined}
-                aria-label={hasResults ? "Settings search results" : undefined}
-              >
-                {results.map((item, index) => (
-                  <SidebarMenuItem
-                    key={item.id}
-                    role="presentation"
-                    ref={index === activeResultIndex ? scrollResultIntoView : undefined}
+                  <button
+                    type="button"
+                    id={`settings-search-result-${item.id}`}
+                    role="option"
+                    aria-selected={isActive}
+                    tabIndex={-1}
+                    className={cn(
+                      "flex w-full flex-col border-b border-sidebar-border px-3 py-1 text-left",
+                      isActive ? "bg-nav-selected" : "hover:bg-sidebar-row-hover",
+                    )}
+                    onMouseMove={() => setActiveResultIndex(index)}
+                    onClick={() => handleSearchResultClick(item)}
                   >
-                    <SidebarMenuButton
-                      id={`settings-search-result-${item.id}`}
-                      role="option"
-                      aria-selected={index === activeResultIndex}
-                      tabIndex={-1}
-                      size="sm"
-                      isActive={index === activeResultIndex}
-                      className="h-auto min-h-10 items-start"
-                      onMouseMove={() => setActiveResultIndex(index)}
-                      onClick={() => handleSearchResultClick(item)}
-                    >
-                      <SettingsSectionIcon to={item.to} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium text-sidebar-foreground">
-                          {item.title}
-                        </span>
-                        <span className="block truncate text-2xs text-sidebar-muted-foreground/75">
-                          {SETTINGS_SECTION_LABELS[item.to]}
-                        </span>
-                      </span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            ) : (
-              <div className="flex flex-col gap-4">
-                {compactSearchOpen ? null : (
-                  <SidebarMenu className="md:hidden">
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        aria-label="Search settings"
-                        onClick={() => setCompactSearchOpen(true)}
-                      >
-                        <SearchIcon />
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  </SidebarMenu>
+                    <span className="block w-full truncate text-xs text-sidebar-foreground">
+                      {item.title}
+                    </span>
+                    <span className="block w-full truncate text-2xs text-muted-foreground">
+                      {SETTINGS_SECTION_LABELS[item.to]}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <>
+            {compactSearchOpen ? null : (
+              <button
+                type="button"
+                aria-label="Search settings"
+                className={cn(
+                  SECTION_ROW_CLASS,
+                  SECTION_ROW_IDLE_CLASS,
+                  RAIL_ROW_CLASS,
+                  "md:hidden",
                 )}
-                <div
-                  {...sectionNavigation.containerProps}
-                  role="tree"
-                  aria-label="Settings sections"
-                  className="flex flex-col gap-4"
-                >
-                  {SETTINGS_NAV_GROUPS.map((group, index) => (
-                    <div
-                      key={group.heading ?? index}
-                      role="group"
-                      aria-label={group.heading ?? undefined}
-                      className="flex flex-col gap-1 max-md:border-t max-md:border-sidebar-border max-md:pt-4 max-md:first:border-t-0 max-md:first:pt-0"
-                    >
-                      {group.heading ? (
-                        // The group carries this label; a heading is not a valid tree child.
-                        <h3
-                          aria-hidden="true"
-                          className={cn(
-                            "px-2 text-xs font-medium text-sidebar-muted-foreground/80",
-                            !compactSearchOpen && "max-md:hidden",
-                          )}
-                        >
-                          {group.heading}
-                        </h3>
-                      ) : null}
-                      <SidebarMenu role="presentation">
-                        {group.paths.map((to) => {
-                          const Icon = SETTINGS_SECTION_ICONS[to];
-                          const isActive = activePath === to || activePath.startsWith(`${to}/`);
-                          return (
-                            <SidebarMenuItem key={to} role="presentation">
-                              <SidebarMenuButton
-                                data-settings-section={to}
-                                role="treeitem"
-                                tabIndex={sectionNavigation.tabIndexFor(to)}
-                                aria-selected={isActive}
-                                aria-current={isActive ? "page" : undefined}
-                                isActive={isActive}
-                                onClick={() => handleSectionClick(to)}
-                              >
-                                <Icon />
-                                <span
-                                  className={cn("truncate", !compactSearchOpen && "max-md:sr-only")}
-                                >
-                                  {SETTINGS_SECTION_LABELS[to]}
-                                </span>
-                                {to === "/settings/providers" ? (
-                                  <ProviderUpdateIndicator className="ms-auto" />
-                                ) : null}
-                              </SidebarMenuButton>
-                            </SidebarMenuItem>
-                          );
-                        })}
-                      </SidebarMenu>
-                    </div>
-                  ))}
-                </div>
-              </div>
+                onClick={() => setCompactSearchOpen(true)}
+              >
+                <SearchIcon className="size-4" />
+              </button>
             )}
-          </div>
-        </SidebarGroup>
-      </SidebarContent>
-      <SidebarFooter className="max-md:hidden">
-        <Suspense fallback={null}>
-          <T3ConnectSidebarSignIn />
-        </Suspense>
-        <Suspense fallback={null}>
-          <T3ConnectSidebarAvatar />
-        </Suspense>
-      </SidebarFooter>
+            <div
+              {...sectionNavigation.containerProps}
+              role="tree"
+              aria-label="Settings sections"
+              className="flex flex-col"
+            >
+              {SETTINGS_NAV_GROUPS.map((group, index) => (
+                <div
+                  key={group.heading ?? index}
+                  role="group"
+                  aria-label={group.heading ?? undefined}
+                  className="flex flex-col"
+                >
+                  {group.heading ? (
+                    // The group carries this label; a heading is not a valid tree child.
+                    <div aria-hidden="true" className={cn(!compactSearchOpen && "max-md:hidden")}>
+                      <SectionStrip title={group.heading} />
+                    </div>
+                  ) : null}
+                  {group.paths.map((to) => {
+                    const Icon = SETTINGS_SECTION_ICONS[to];
+                    const isActive = activePath === to || activePath.startsWith(`${to}/`);
+                    return (
+                      <button
+                        key={to}
+                        type="button"
+                        data-settings-section={to}
+                        role="treeitem"
+                        tabIndex={sectionNavigation.tabIndexFor(to)}
+                        aria-selected={isActive}
+                        aria-current={isActive ? "page" : undefined}
+                        className={cn(
+                          SECTION_ROW_CLASS,
+                          isActive ? "bg-sidebar-foreground text-sidebar" : SECTION_ROW_IDLE_CLASS,
+                          !compactSearchOpen && RAIL_ROW_CLASS,
+                        )}
+                        onClick={() => handleSectionClick(to)}
+                      >
+                        {compactSearchOpen ? null : <Icon className="size-4 shrink-0 md:hidden" />}
+                        <span className={cn("truncate", !compactSearchOpen && "max-md:sr-only")}>
+                          {SETTINGS_SECTION_LABELS[to]}
+                        </span>
+                        {to === "/settings/providers" ? (
+                          <ProviderUpdateIndicator className="ms-auto" />
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+      {inLibrary ? null : (
+        <SidebarFooter className="max-md:hidden">
+          <Suspense fallback={null}>
+            <T3ConnectSidebarSignIn />
+          </Suspense>
+          <Suspense fallback={null}>
+            <T3ConnectSidebarAvatar />
+          </Suspense>
+        </SidebarFooter>
+      )}
     </nav>
   );
 }

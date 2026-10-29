@@ -40,7 +40,7 @@ export function PullRequestCompactFilterMenu<Value extends string>({
         title={iconOnly ? `${label}: ${current.label}` : undefined}
         render={
           outlined ? (
-            <Button variant="outline" size={iconOnly ? "icon" : "default"} />
+            <Button variant="outline" size={iconOnly ? "icon-xs" : "xs"} />
           ) : (
             <Button variant="ghost-muted" size="sm" />
           )
@@ -48,7 +48,7 @@ export function PullRequestCompactFilterMenu<Value extends string>({
         className={cn("min-w-0", className)}
       >
         {iconOnly ? (
-          <current.Icon aria-hidden className="size-4" />
+          <current.Icon aria-hidden className={outlined ? "size-3.5" : "size-4"} />
         ) : triggerLabel ? (
           <>
             {triggerIcon}

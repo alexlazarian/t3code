@@ -1,6 +1,6 @@
 import { settingsScopeEnvironmentLabels } from "./settingsScopeAxis";
 import { Spinner } from "~/components/ui/spinner";
-import { ArchiveIcon, ArchiveX } from "lucide-react";
+import { ArchiveX } from "lucide-react";
 import { type ScopedThreadRef } from "@t3tools/contracts";
 import { scopeThreadRef } from "@t3tools/client-runtime/environment";
 import { presentThreadShell } from "@t3tools/client-runtime/state/shell";
@@ -180,11 +180,7 @@ export function ArchivedThreadsPanel() {
           <SettingsRow
             title={
               <span className="inline-flex items-center gap-2">
-                {isLoadingArchive ? (
-                  <Spinner size="sm" tone="muted" />
-                ) : (
-                  <ArchiveIcon className="size-3.5 text-muted-foreground" />
-                )}
+                {isLoadingArchive ? <Spinner size="sm" tone="muted" /> : null}
                 {isLoadingArchive
                   ? "Loading archived threads"
                   : archiveError

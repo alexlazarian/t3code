@@ -27,7 +27,6 @@ import { getSourceControlPresentationForKind } from "~/sourceControlPresentation
 import { useDebouncedValue } from "~/state/queries";
 import { type EnvironmentQueryTarget, usePullRequestFilterOptions } from "~/state/pullRequests";
 import { ProjectFavicon, type ProjectFaviconProject } from "../ProjectFavicon";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "../ui/input-group";
 import { Button } from "../ui/button";
 
 import {
@@ -106,11 +105,13 @@ export function PullRequestSearchInput({
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   return (
-    <InputGroup className="min-w-0 flex-1 **:[input]:h-9 sm:**:[input]:h-8">
-      <InputGroupAddon>
-        {busy ? <Spinner aria-hidden /> : <SearchIcon aria-hidden />}
-      </InputGroupAddon>
-      <InputGroupInput
+    <div className="flex h-6 min-w-0 flex-1 items-center gap-1.5 border border-border bg-background px-1.5 text-muted-foreground focus-within:border-primary">
+      {busy ? (
+        <Spinner aria-hidden size="xs" />
+      ) : (
+        <SearchIcon aria-hidden className="size-3 shrink-0" />
+      )}
+      <input
         type="search"
         value={draft ?? value}
         onFocus={() => setDraft(value)}
@@ -129,8 +130,9 @@ export function PullRequestSearchInput({
         }}
         placeholder="Search pull requests, or label:bug"
         aria-label="Search pull requests"
+        className="h-full min-w-0 flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
       />
-    </InputGroup>
+    </div>
   );
 }
 
@@ -562,11 +564,11 @@ export function PullRequestFiltersMenu({
   ];
   return (
     <Menu onOpenChange={onOpenChange}>
-      <MenuTrigger render={<Button variant="outline" />}>
-        <ListFilterIcon className="size-4" />
+      <MenuTrigger render={<Button variant="outline" size="xs" />}>
+        <ListFilterIcon />
         <span>Filters</span>
         {filterCount > 0 ? (
-          <span className="rounded-none bg-muted px-1.5 text-xs text-muted-foreground tabular-nums">
+          <span className="bg-muted px-1 text-2xs text-muted-foreground tabular-nums">
             {filterCount}
           </span>
         ) : null}
