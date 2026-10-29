@@ -11,8 +11,10 @@ import {
 import { ChevronDownIcon, PlusIcon } from "lucide-react";
 import {
   Fragment,
+  useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type FocusEvent,
   type KeyboardEvent,
   type MouseEvent,
@@ -20,6 +22,7 @@ import {
 } from "react";
 
 import { openCommandPalette } from "../../commandPaletteBus";
+import { DraftId, useComposerDraftStore } from "../../composerDraftStore";
 import { isElectron } from "../../env";
 import { useNewThreadHandler } from "../../hooks/useHandleNewThread";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
@@ -42,6 +45,7 @@ import {
   noteOverviewSplitClosed,
   noteOverviewSplitOpened,
   overviewSplitThreadKey,
+  subscribeOverviewSplit,
 } from "../../threadView";
 import { useThreadSelectionStore } from "../../threadSelectionStore";
 import { useUiStateStore } from "../../uiStateStore";
@@ -80,12 +84,14 @@ import {
   overviewColumnMachines,
   overviewProjectKeyOf,
   overviewSplitDragFraction,
+  resolveOverviewPaneTarget,
   resolveOverviewSplitRelease,
   type OverviewColumn,
   type OverviewFocusDirection,
 } from "./Overview.logic";
 import { OverviewCard } from "./OverviewCard";
 import { OverviewColumnHeader } from "./OverviewColumnHeader";
+import { OverviewColumnDrafts } from "./OverviewDraftCard";
 
 const SECTION_NAMES: Record<SidebarSection, string> = {
   pinned: "Pinned",
@@ -166,7 +172,9 @@ export function OverviewView() {
   const expansion = useOverviewRowExpansion();
   // Both start from the thread List showed last, so switching views does not lose it.
   const [focusKey, setFocusKey] = useState(currentThreadKey);
-  const [openKey, setOpenKey] = useState(overviewSplitThreadKey);
+  const openKey = useSyncExternalStore(subscribeOverviewSplit, overviewSplitThreadKey);
+  const draftSessions = useComposerDraftStore((store) => store.draftThreadsByThreadKey);
+  const draftRedirects = useComposerDraftStore((store) => store.promotedDraftRedirects);
   const [columnDrag, setColumnDrag] = useState<{
     readonly from: string;
     readonly over: string | null;
@@ -213,13 +221,14 @@ export function OverviewView() {
   });
   const settledTotal = partition.settledThreads.length;
   const hiddenSettledCount = Math.max(0, settledTotal - settledTail.count);
+  const projectKeyOf = overviewProjectKeyOf(projects);
   const { columns, rows } = buildOverviewGrid({
     partition: {
       ...partition,
       settledThreads: partition.settledThreads.slice(0, settledTail.count),
     },
     projects,
-    projectKeyOf: overviewProjectKeyOf(projects),
+    projectKeyOf,
     workingShelfEnabled,
   });
   const cardCount = rows.reduce((sum, row) => sum + row.total, 0) + hiddenSettledCount;
@@ -268,22 +277,32 @@ export function OverviewView() {
   const allKeys = focusGrid.flat(2);
   const tabbableKey = focusKey !== null && allKeys.includes(focusKey) ? focusKey : allKeys[0];
   // A subagent row can open a child thread that has no card, and idle children have no shell.
-  const openRef =
-    openKey !== null &&
-    threads.some(
-      (thread) =>
-        threadShellKey(thread) === openKey ||
-        thread.source.activity?.subagents.some(
-          (subagent) =>
-            subagent.threadId !== null &&
-            scopedThreadKey(scopeThreadRef(thread.environmentId, subagent.threadId)) === openKey,
-        ),
-    )
-      ? parseScopedThreadKey(openKey)
-      : null;
-  if (openKey !== null && openRef === null) {
-    setOpenKey(null);
-  }
+  const serverThreadKeys = new Set(
+    threads.flatMap((thread) => [
+      threadShellKey(thread),
+      ...(thread.source.activity?.subagents ?? []).flatMap((subagent) =>
+        subagent.threadId === null
+          ? []
+          : [scopedThreadKey(scopeThreadRef(thread.environmentId, subagent.threadId))],
+      ),
+    ]),
+  );
+  const paneTarget = resolveOverviewPaneTarget(openKey, {
+    serverThreadKeys,
+    draftIdByThreadKey: new Map(
+      Object.entries(draftSessions).map(([draftKey, session]) => [
+        scopedThreadKey(scopeThreadRef(session.environmentId, session.threadId)),
+        DraftId.make(draftKey),
+      ]),
+    ),
+    promotedThreadKeys: new Set(Object.values(draftRedirects).map(scopedThreadKey)),
+  });
+  const openRef = paneTarget === null ? null : parseScopedThreadKey(paneTarget.threadKey);
+  const paneMissing = openKey !== null && paneTarget === null;
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- closes the shared split store once its thread or draft is gone
+  useEffect(() => {
+    if (paneMissing) noteOverviewSplitClosed();
+  }, [paneMissing]);
   const findCard = (threadKey: string) =>
     gridRef.current?.querySelector<HTMLElement>(`[data-thread-key="${CSS.escape(threadKey)}"]`) ??
     null;
@@ -298,14 +317,11 @@ export function OverviewView() {
     const ref = parseScopedThreadKey(threadKey);
     if (ref !== null) noteOverviewSplitOpened(ref);
     setFocusKey(threadKey);
-    setOpenKey(threadKey);
   });
   const closeSplit = () => {
     noteOverviewSplitClosed();
-    setOpenKey(null);
   };
   const startThreadIn = (project: NonNullable<OverviewColumn["project"]>) => {
-    void updateClientSettings({ threadView: "list" });
     void handleNewThread(scopeProjectRef(project.environmentId, project.id));
   };
   const clearFilters = () => {
@@ -553,6 +569,14 @@ export function OverviewView() {
                                   role="gridcell"
                                   className="flex min-h-2.5 min-w-0 flex-col gap-0.75 border-r border-b border-border p-0.75"
                                 >
+                                  {row.section === "active" ? (
+                                    <OverviewColumnDrafts
+                                      projectKey={column.projectKey}
+                                      projectKeyOf={projectKeyOf}
+                                      openKey={openKey}
+                                      onOpen={showThread}
+                                    />
+                                  ) : null}
                                   {cellThreads.length === 0 && column.project !== null ? (
                                     <NewThreadInColumnButton
                                       projectName={column.displayName}
@@ -631,7 +655,7 @@ export function OverviewView() {
                 })}
               </div>
             </div>
-            {openRef === null ? null : (
+            {paneTarget === null || openRef === null ? null : (
               <>
                 <div
                   role="separator"
@@ -654,11 +678,22 @@ export function OverviewView() {
                   className="flex min-h-0 shrink-0 flex-col overflow-hidden"
                   style={{ height: `${splitFraction * 100}%` }}
                 >
-                  <ChatView
-                    environmentId={openRef.environmentId}
-                    threadId={openRef.threadId}
-                    routeKind="server"
-                  />
+                  {paneTarget.kind === "draft" ? (
+                    <ChatView
+                      key={paneTarget.threadKey}
+                      draftId={paneTarget.draftId}
+                      environmentId={openRef.environmentId}
+                      threadId={openRef.threadId}
+                      routeKind="draft"
+                    />
+                  ) : (
+                    <ChatView
+                      key={paneTarget.threadKey}
+                      environmentId={openRef.environmentId}
+                      threadId={openRef.threadId}
+                      routeKind="server"
+                    />
+                  )}
                 </div>
               </>
             )}
