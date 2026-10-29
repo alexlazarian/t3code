@@ -1,4 +1,4 @@
-import { useRouter } from "@tanstack/react-router";
+import { useLocation, useRouter } from "@tanstack/react-router";
 import { SettingsIcon } from "lucide-react";
 
 import { cn } from "../../lib/utils";
@@ -7,19 +7,22 @@ import { useUiStateStore } from "../../uiStateStore";
 import { openSettings } from "../sidebar/mainAppLocation";
 import { LIBRARY_CATEGORIES, LIBRARY_GROUPS, type LibraryCategory } from "./Library.logic";
 import { LibraryAccess } from "./LibraryAccess";
+import { LibraryContext } from "./LibraryContext";
 import { LibraryMachines } from "./LibraryMachines";
 import { LibraryModels } from "./LibraryModels";
 import { LibraryProjects } from "./LibraryProjects";
 import { LibraryProviders } from "./LibraryProviders";
 import { LibraryScheduled } from "./LibraryScheduled";
-import { LibrarySkills } from "./LibrarySkills";
 import { LibraryStash } from "./LibraryStash";
 import { useLibraryContext } from "./useLibrary";
+import { useContextPageStore } from "../context/contextPageStore";
 
 export function LibraryPanel() {
   const router = useRouter();
   const category = useUiStateStore((store) => store.libraryCategory);
   const setCategory = useUiStateStore((store) => store.setLibraryCategory);
+  const pathname = useLocation({ select: (location) => location.pathname });
+  const openContextPage = useContextPageStore((store) => store.open);
   const active = LIBRARY_CATEGORIES.find((entry) => entry.id === category) ?? LIBRARY_CATEGORIES[0];
 
   return (
@@ -35,7 +38,10 @@ export function LibraryPanel() {
                 key={entry.id}
                 type="button"
                 aria-current={entry.id === active?.id ? "true" : undefined}
-                onClick={() => setCategory(entry.id)}
+                onClick={() => {
+                  setCategory(entry.id);
+                  if (entry.id === "context") openContextPage(pathname);
+                }}
                 className={cn(
                   "h-6 cursor-pointer px-2 text-left text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
                   entry.id === active?.id
@@ -80,8 +86,8 @@ export function LibraryPanel() {
 function LibraryCategoryItems(props: { readonly category: LibraryCategory }) {
   const ctx = useLibraryContext();
   switch (props.category) {
-    case "skills":
-      return <LibrarySkills ctx={ctx} />;
+    case "context":
+      return <LibraryContext ctx={ctx} />;
     case "models":
       return <LibraryModels ctx={ctx} />;
     case "providers":

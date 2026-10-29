@@ -252,11 +252,30 @@ returns to where you were.
 
 ## Use the Library
 
-On web and desktop, the **Library** tab beside **Threads** gathers skills and
-commands, models, providers, access modes, your prompt stash, scheduled tasks,
-projects, and machines in one place. Skills, commands, and stashed prompts go into
-the open thread's composer. Models and access modes apply to the open thread, and
-projects start a new thread. Each category explains what its items do.
+On web and desktop, the **Library** tab beside **Threads** gathers context,
+models, providers, access modes, your prompt stash, scheduled tasks, projects,
+and machines in one place. Skills, commands, and stashed prompts go into the open
+thread's composer. Models and access modes apply to the open thread, and projects
+start a new thread. Each category explains what its items do.
+
+### See and edit what Claude loads
+
+**Library → Context** opens a page with everything Claude loads for the open
+thread's project: its memories, its instruction files, and its skills and
+commands. You can also open it from the command palette.
+
+Claude saves memories per folder, so the page combines the memories from the
+project's main checkout and all its worktrees, and tags each one with its folder.
+Memories from a worktree you have deleted stay listed. You can view, edit,
+delete, and add memories. **New memory** asks which folder the memory belongs
+to, because only sessions in that folder load it. Deleting a memory shows
+**Undo** for a few seconds. Each change also updates that folder's `MEMORY.md`
+index. Claude picks up changes at the start of its next session.
+
+Your own `~/.claude/CLAUDE.md` can be edited on the page. Project and local
+instruction files are shown read-only; edit them in the repository. The page
+reads and writes files on the machine that runs the thread, including remote
+machines. Only Claude is supported for now.
 
 ## Find and reference work
 

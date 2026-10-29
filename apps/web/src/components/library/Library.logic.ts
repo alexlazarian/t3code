@@ -17,7 +17,7 @@ import { isProviderInstancePickerReady, type ProviderInstanceEntry } from "../..
 import type { ThreadRouteTarget } from "../../threadRoutes";
 
 export type LibraryCategory =
-  | "skills"
+  | "context"
   | "models"
   | "providers"
   | "access"
@@ -41,9 +41,9 @@ export const LIBRARY_GROUPS: ReadonlyArray<{
     group: "Library",
     categories: [
       {
-        id: "skills",
-        name: "Skills & commands",
-        tip: "From the open thread's provider and machine. Same list as typing / or $ in the composer.",
+        id: "context",
+        name: "Context",
+        tip: "What the agent loads for the open thread's project: memories, instruction files, skills and commands. Opens in the main area.",
       },
       {
         id: "models",
@@ -128,11 +128,20 @@ export function appendComposerText(current: string, text: string): string {
   return current.length === 0 || /\s$/.test(current) ? current + text : `${current} ${text}`;
 }
 
+export type LibrarySkillSource = "yours" | "project" | "plugin" | "built in";
+
 export type LibrarySkillEntry = {
   readonly name: string;
   readonly kind: "command" | "skill";
+  readonly source: LibrarySkillSource;
   readonly description: string | null;
 };
+
+/** Plugin skills are namespaced `plugin:skill`; the rest are the user's or the project's. */
+function skillSource(skill: ServerProvider["skills"][number]): LibrarySkillSource {
+  if (skill.name.includes(":")) return "plugin";
+  return skill.scope === "project" || skill.scope === "local" ? "project" : "yours";
+}
 
 /** The composer's / and $ lists: user-invocable skills, and commands not shadowed by one. */
 export function librarySkillEntries(
@@ -144,11 +153,13 @@ export function librarySkillEntries(
     ...getProviderSlashCommandsForSlashMenu(commands, visibleSkills).map((command) => ({
       name: `/${command.name}`,
       kind: "command" as const,
+      source: "built in" as const,
       description: command.description ?? null,
     })),
     ...visibleSkills.map((skill) => ({
       name: `$${skill.name}`,
       kind: "skill" as const,
+      source: skillSource(skill),
       description: skill.shortDescription ?? skill.description ?? null,
     })),
   ];

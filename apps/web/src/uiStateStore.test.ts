@@ -22,7 +22,7 @@ function makeUiState(overrides: Partial<UiState> = {}): UiState {
     sidebarProjectScopeKeys: [],
     sidebarStatusFilter: "all",
     sidebarPanel: "threads",
-    libraryCategory: "skills",
+    libraryCategory: "context",
     threadLastVisitedAtById: {},
     threadChangedFilesExpandedById: {},
     defaultAdvertisedEndpointKey: null,
@@ -131,7 +131,7 @@ describe("parsePersistedState", () => {
       sidebarProjectScopeKeys: [],
       sidebarStatusFilter: "all",
       sidebarPanel: "threads",
-      libraryCategory: "skills",
+      libraryCategory: "context",
       pullRequestMergeMethod: "merge",
       threadChangedFilesExpandedById: {
         "environment:thread-1": {
@@ -164,17 +164,17 @@ describe("parsePersistedState", () => {
     });
     expect(parsePersistedState({ sidebarPanel: "nope", libraryCategory: "sched" })).toMatchObject({
       sidebarPanel: "threads",
-      libraryCategory: "skills",
+      libraryCategory: "context",
     });
   });
 
   it("falls back to skills for the dropped actions and settings categories", () => {
     expect(
       parsePersistedState({ sidebarPanel: "library", libraryCategory: "actions" }),
-    ).toMatchObject({ libraryCategory: "skills" });
+    ).toMatchObject({ libraryCategory: "context" });
     expect(
       parsePersistedState({ sidebarPanel: "library", libraryCategory: "settings" }),
-    ).toMatchObject({ sidebarPanel: "library", libraryCategory: "skills" });
+    ).toMatchObject({ sidebarPanel: "library", libraryCategory: "context" });
   });
 
   it("migrates legacy CWD project preferences into local alias keys", () => {
@@ -262,7 +262,7 @@ describe("uiStateStore persistence", () => {
       sidebarProjectScopeKey: null,
       sidebarStatusFilter: "all",
       sidebarPanel: "threads",
-      libraryCategory: "skills",
+      libraryCategory: "context",
       threadChangedFilesExpansionVersion: 2,
       threadChangedFilesExpandedById: {
         "environment:thread-1": {

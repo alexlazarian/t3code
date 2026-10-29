@@ -1,3 +1,4 @@
+import { ContextPageOverlay } from "./context/ContextPage";
 import { useAtomValue } from "@effect/atom-react";
 import { SearchIcon, SettingsIcon } from "lucide-react";
 import * as Schema from "effect/Schema";
@@ -660,11 +661,12 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
             <SidebarRail onDoubleClick={resetSidebarWidth} />
           </Sidebar>
           <div
-            className="flex min-h-0 min-w-0 flex-1 flex-col [--main-header-height:1.875rem]"
+            className="relative flex min-h-0 min-w-0 flex-1 flex-col [--main-header-height:1.875rem]"
             style={mainHeightStyle}
           >
             <MainViewHeader />
             {children}
+            <ContextPageOverlay />
           </div>
           <BackgroundThreadAnnouncer />
           <AppTopBar windowControlsInsetStyle={windowControlsInsetStyle} />

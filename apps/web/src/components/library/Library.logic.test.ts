@@ -43,7 +43,7 @@ describe("libraryInsertTarget", () => {
 describe("LIBRARY_GROUPS", () => {
   it("categories keep the prototype order", () => {
     expect(LIBRARY_GROUPS.map((g) => [g.group, g.categories.map((c) => c.id)])).toEqual([
-      ["Library", ["skills", "models", "providers", "access", "stash", "scheduled"]],
+      ["Library", ["context", "models", "providers", "access", "stash", "scheduled"]],
       ["Places", ["projects", "machines"]],
     ]);
   });
@@ -110,15 +110,19 @@ describe("librarySkillEntries", () => {
     expect(
       librarySkillEntries(
         [
-          skill("code-review", { shortDescription: "Review the diff." }),
+          skill("code-review", { shortDescription: "Review the diff.", scope: "user" }),
+          skill("test-app", { scope: "project" }),
+          skill("figma:use", { scope: "user" }),
           skill("agent-only", { userInvocable: false }),
           skill("off", { enabled: false }),
         ],
         [{ name: "goal", description: "Keep working." }, { name: "code-review" }],
       ),
     ).toEqual([
-      { name: "/goal", kind: "command", description: "Keep working." },
-      { name: "$code-review", kind: "skill", description: "Review the diff." },
+      { name: "/goal", kind: "command", source: "built in", description: "Keep working." },
+      { name: "$code-review", kind: "skill", source: "yours", description: "Review the diff." },
+      { name: "$test-app", kind: "skill", source: "project", description: null },
+      { name: "$figma:use", kind: "skill", source: "plugin", description: null },
     ]);
   });
 });

@@ -71,7 +71,7 @@ const initialState: UiState = {
   sidebarProjectScopeKeys: [],
   sidebarStatusFilter: "all",
   sidebarPanel: "threads",
-  libraryCategory: "skills",
+  libraryCategory: "context",
   threadLastVisitedAtById: {},
   threadChangedFilesExpandedById: {},
   defaultAdvertisedEndpointKey: null,
