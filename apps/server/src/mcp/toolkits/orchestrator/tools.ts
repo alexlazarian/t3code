@@ -211,7 +211,7 @@ const RequestSecretTool = Tool.make("request_secret", {
 
 const SuggestThreadsTool = Tool.make("suggest_threads", {
   description:
-    "Offer the user separate top-level threads for independent topics. Creates a durable suggestion card, never threads or turns. Returns immediately; continue answering. Include a reason and useful starting prompts; optional skill names are included in those prompts on acceptance. Provider and model inherit unless target is supplied. Always uses this project and environment; omit target.environmentId and target.projectId. The user alone chooses Create drafts, Create and start, or Dismiss, even after this turn ends. Do not poll or accept your own suggestions. Explicit requests to create threads use create_threads or t3_thread_launch instead.",
+    "Offer the user separate top-level threads for independent topics. Creates a durable suggestion card, never threads or turns. Returns immediately; continue answering. Include a reason and useful starting prompts; optional skill names are included in those prompts on acceptance. Provider and model inherit unless target is supplied. Uses this environment and, by default, this project; set a thread's `projectId` (from `t3_project_list`) to suggest it in another project. Omit target.environmentId and target.projectId. The user alone chooses Create drafts, Create and start, or Dismiss, even after this turn ends. Do not poll or accept your own suggestions. Explicit requests to create threads use create_threads or t3_thread_launch instead.",
   parameters: OrchestratorMcpSuggestThreadsInput,
   success: OrchestratorMcpSuggestThreadsResult,
   failure: OrchestratorMcpFailure,

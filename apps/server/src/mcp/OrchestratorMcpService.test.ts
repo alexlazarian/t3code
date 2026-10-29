@@ -1809,7 +1809,9 @@ describe("OrchestratorMcpService provider resolution", () => {
                   providerSnapshot({ instanceId: codexInstanceId, driver, model: "gpt-5.4" }),
                   providerSnapshot({ instanceId: altInstanceId, driver, model: "gpt-5.5" }),
                 ]),
-                Layer.mock(ProjectService.ProjectService)({}),
+                Layer.mock(ProjectService.ProjectService)({
+                  getById: () => Effect.succeedNone,
+                }),
                 Layer.mock(SecretRequests.SecretRequests)({}),
                 Layer.mock(RemoteDelegation.RemoteDelegation)({}),
                 Layer.mock(ScheduledTaskService.ScheduledTaskService)({}),
@@ -1862,6 +1864,20 @@ describe("OrchestratorMcpService provider resolution", () => {
                 .pipe(Effect.flip);
               assert.equal(rejected.code, "invalid_request");
             }
+            const unknownProject = yield* service
+              .suggestThreads(scope, {
+                reason: "Separate investigations.",
+                threads: [
+                  {
+                    title: "Investigate",
+                    prompt: "Inspect the issue.",
+                    projectId: ProjectId.make("elsewhere"),
+                  },
+                ],
+                clientRequestId: "suggest-unknown-project",
+              })
+              .pipe(Effect.flip);
+            assert.equal(unknownProject.code, "invalid_request");
             const suggested = yield* service.suggestThreads(scope, {
               reason: "Separate investigations.",
               threads: [

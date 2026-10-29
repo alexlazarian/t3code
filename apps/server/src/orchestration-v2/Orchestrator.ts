@@ -8358,19 +8358,22 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
     const now = yield* DateTime.now;
     if (command.action !== "dismiss") {
       for (const suggestion of item.threads) {
+        const sameProject =
+          suggestion.projectId === undefined ||
+          suggestion.projectId === projection.thread.projectId;
         yield* dispatchThreadCreate(
           {
             type: "thread.create",
             commandId: command.commandId,
             threadId: suggestion.threadId,
-            projectId: projection.thread.projectId,
+            projectId: suggestion.projectId ?? projection.thread.projectId,
             title: suggestion.title,
             modelSelection: suggestion.modelSelection,
             runtimeMode: projection.thread.runtimeMode,
             interactionMode: projection.thread.interactionMode,
-            branch: projection.thread.branch,
-            worktreePath: projection.thread.worktreePath,
-            ...(projection.thread.linkOrigin === undefined
+            branch: sameProject ? projection.thread.branch : null,
+            worktreePath: sameProject ? projection.thread.worktreePath : null,
+            ...(!sameProject || projection.thread.linkOrigin === undefined
               ? {}
               : { linkOrigin: projection.thread.linkOrigin }),
             createdBy: "user",

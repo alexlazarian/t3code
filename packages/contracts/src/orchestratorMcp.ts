@@ -283,6 +283,12 @@ export const OrchestratorMcpSuggestThreadsInput = Schema.Struct({
       title: OrchestratorMcpTitle,
       prompt: OrchestratorMcpPrompt,
       skill: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(512))),
+      projectId: Schema.optional(
+        ProjectId.annotate({
+          description:
+            "Project from `t3_project_list` to start in. Default: this thread's project.",
+        }),
+      ),
       target: Schema.optional(OrchestratorMcpTarget),
     }),
   ).check(Schema.isMinLength(1), Schema.isMaxLength(10)),

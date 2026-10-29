@@ -2623,7 +2623,7 @@ const make = Effect.gen(function* () {
         ) {
           return yield* failure(
             "invalid_request",
-            "Suggested threads use this thread's project and environment. Omit target.environmentId and target.projectId.",
+            "Suggested threads use this thread's environment. Omit target.environmentId and target.projectId; pass projectId to pick another project.",
           );
         }
         const key = yield* requestKey(input.clientRequestId);
@@ -2635,13 +2635,28 @@ const make = Effect.gen(function* () {
           input.threads,
           (request, index) =>
             Effect.gen(function* () {
+              const projectId = request.projectId ?? parent.thread.projectId;
+              if (projectId !== parent.thread.projectId) yield* requireProject(projectId);
               const target = yield* resolveTargetRechecking({
                 parent,
                 target: request.target,
                 providers,
               });
+              if (
+                projectId !== parent.thread.projectId &&
+                !(yield* threadManagement.isProviderInstanceEnabledForProject({
+                  projectId,
+                  instanceId: target.modelSelection.instanceId,
+                }))
+              ) {
+                return yield* failure(
+                  "invalid_request",
+                  `Provider ${target.modelSelection.instanceId} is not enabled for project ${projectId}.`,
+                );
+              }
               return {
                 threadId: stableThreadId({ scope, requestKey: `suggestion:${key}`, index }),
+                projectId,
                 title: request.title,
                 prompt: request.prompt,
                 ...(request.skill === undefined ? {} : { skill: request.skill }),

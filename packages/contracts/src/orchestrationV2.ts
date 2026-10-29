@@ -440,6 +440,7 @@ export const OrchestrationV2InitialPrompt = Schema.Struct({
 
 export const OrchestrationV2ThreadSuggestion = Schema.Struct({
   threadId: ThreadId,
+  projectId: Schema.optional(ProjectId),
   title: TrimmedNonEmptyString.check(Schema.isMaxLength(512)),
   prompt: TrimmedNonEmptyString.check(Schema.isMaxLength(120_000)),
   skill: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(512))),
