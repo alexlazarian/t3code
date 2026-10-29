@@ -11,6 +11,9 @@ query PullRequestSummary($owner: String!, $name: String!, $number: Int!, $stacks
       state
       isDraft
       mergeable
+      mergeQueueEntry {
+        position
+      }
       reviewDecision
       additions
       deletions

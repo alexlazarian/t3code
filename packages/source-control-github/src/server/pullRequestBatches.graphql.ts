@@ -3,6 +3,13 @@ import { GraphQL, GraphQLGroup } from "effect/graphql"
 import * as Schema from "effect/Schema"
 import * as Shared from "../../schema/github.graphql.ts"
 
+/** Entries in a MergeQueue */
+export const MergeQueueEntry = Schema.Struct({
+  /** The position of this entry in the queue */
+  position: Shared.Int
+})
+export interface MergeQueueEntry extends Schema.Struct.Type<typeof MergeQueueEntry.fields> {}
+
 /** A user is an individual's account on GitHub that owns repositories and can make new content. */
 export const User = Schema.Struct({
   __typename: Schema.Literal("User"),
@@ -109,6 +116,8 @@ export const PullRequestSummaryRepositoryPullRequestPullRequest = Schema.Struct(
   isDraft: Schema.Boolean,
   /** Whether or not the pull request can be merged based on the existence of merge conflicts. */
   mergeable: GraphQL.enumLiterals(Shared.MergeableState.literals),
+  /** The merge queue entry of the pull request in the base branch's merge queue */
+  mergeQueueEntry: Schema.NullOr(MergeQueueEntry),
   /** The current status of this pull request with respect to code review. */
   reviewDecision: Schema.NullOr(GraphQL.enumLiterals(Shared.PullRequestReviewDecision.literals)),
   /** The number of additions in this pull request. */
@@ -160,7 +169,7 @@ export const PullRequestSummary = GraphQL.query("PullRequestSummary", {
       { name: "stacks", body: "Boolean!" }
     ],
     selections: [
-      { name: "repository", body: ["(owner:$", "owner", " name:$", "name", "){pullRequest(number:$", "number", "){number title url state isDraft mergeable reviewDecision additions deletions changedFiles updatedAt mergedAt closedAt headRefName baseRefName author{__typename login avatarUrl...on User{name}}latestReviews(first:20){nodes{state author{__typename login}}}commits(last:1){nodes{commit{statusCheckRollup{state}}}}stack@include(if:$", "stacks", "){number size baseRefName}stackEntry@include(if:$", "stacks", "){position}}}"] }
+      { name: "repository", body: ["(owner:$", "owner", " name:$", "name", "){pullRequest(number:$", "number", "){number title url state isDraft mergeable mergeQueueEntry{position}reviewDecision additions deletions changedFiles updatedAt mergedAt closedAt headRefName baseRefName author{__typename login avatarUrl...on User{name}}latestReviews(first:20){nodes{state author{__typename login}}}commits(last:1){nodes{commit{statusCheckRollup{state}}}}stack@include(if:$", "stacks", "){number size baseRefName}stackEntry@include(if:$", "stacks", "){position}}}"] }
     ],
     fragments: []
   },

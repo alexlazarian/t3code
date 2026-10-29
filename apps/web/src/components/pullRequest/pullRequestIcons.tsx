@@ -5,6 +5,7 @@ import {
   GitPullRequestDraftIcon,
   LayersIcon,
   Link2Icon,
+  ListOrderedIcon,
   Unlink2Icon,
   TriangleAlertIcon,
 } from "lucide-react";
@@ -18,6 +19,7 @@ export const PullRequestGlyph = {
   merged: GitMergeIcon,
   conflicting: TriangleAlertIcon,
   stack: LayersIcon,
+  queued: ListOrderedIcon,
   link: Link2Icon,
   unlink: Unlink2Icon,
 } as const;

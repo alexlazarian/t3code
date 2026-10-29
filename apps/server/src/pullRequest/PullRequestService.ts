@@ -305,6 +305,7 @@ const ACTION_ACCESS_REFUSALS: Record<PullRequestAction, string> = {
     "Auto-merge needs write access on this repository, and the repository has to allow it.",
   "disable-auto-merge":
     "You need write access on this repository to stop it being merged for you once it is ready.",
+  dequeue: "You need write access on this repository to remove it from the merge queue.",
   revert: "You need write access on this repository to open a revert pull request.",
   "delete-branch": "You need write access on the source repository to delete its branch.",
   "approve-workflows":
@@ -1197,6 +1198,9 @@ export const make = Effect.gen(function* () {
       state: input.item.state,
       isDraft: input.item.isDraft,
       mergeability: input.item.mergeability,
+      ...(input.item.mergeQueuePosition === undefined
+        ? {}
+        : { mergeQueuePosition: input.item.mergeQueuePosition }),
       additions: input.item.additions,
       deletions: input.item.deletions,
       createdAt: input.item.createdAt,
@@ -1652,6 +1656,9 @@ export const make = Effect.gen(function* () {
             ...(changeRequest.mergeability === undefined
               ? {}
               : { mergeability: changeRequest.mergeability }),
+            ...(changeRequest.mergeQueuePosition === undefined
+              ? {}
+              : { mergeQueuePosition: changeRequest.mergeQueuePosition }),
             ...(changeRequest.stack === undefined ? {} : { stack: changeRequest.stack }),
           })),
         );
@@ -1723,6 +1730,9 @@ export const make = Effect.gen(function* () {
             state: changeRequest.state,
             isDraft: changeRequest.isDraft,
             mergeability: changeRequest.mergeability,
+            ...(changeRequest.mergeQueuePosition === undefined
+              ? {}
+              : { mergeQueuePosition: changeRequest.mergeQueuePosition }),
             additions: changeRequest.additions,
             deletions: changeRequest.deletions,
             changedFiles: changeRequest.changedFiles,
@@ -3104,6 +3114,9 @@ export const make = Effect.gen(function* () {
     deletions: detail.deletions,
     changedFiles: detail.changedFiles,
     mergeability: detail.mergeability,
+    ...(detail.mergeQueuePosition === undefined
+      ? {}
+      : { mergeQueuePosition: detail.mergeQueuePosition }),
     headBranch: detail.headBranch,
     baseBranch: detail.baseBranch,
     closedAt: detail.closedAt,

@@ -129,6 +129,7 @@ describe("gitHubViewerPermissions", () => {
         "merge",
         "enable-auto-merge",
         "disable-auto-merge",
+        "dequeue",
         "revert",
         "approve-workflows",
         "ready",

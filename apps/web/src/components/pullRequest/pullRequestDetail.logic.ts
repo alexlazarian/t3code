@@ -77,6 +77,7 @@ type PullRequestPrimaryControl =
   | "merge"
   | "enable-auto-merge"
   | "auto-merge-armed"
+  | "merge-queued"
   | "merged"
   | "closed"
   | null;
@@ -87,6 +88,7 @@ export function resolvePullRequestPrimaryControl(input: {
   readonly mergeability: PullRequestMergeability;
   readonly checksState: ContractPullRequestChecksState | null;
   readonly autoMergeEnabled: boolean | undefined;
+  readonly mergeQueuePosition?: number | null | undefined;
   readonly hasMergeMethod: boolean;
   readonly canMerge: boolean;
   readonly canMarkReady: boolean;
@@ -94,6 +96,7 @@ export function resolvePullRequestPrimaryControl(input: {
 }): PullRequestPrimaryControl {
   if (input.state === "merged") return "merged";
   if (input.state === "closed") return "closed";
+  if (input.mergeQueuePosition != null) return "merge-queued";
   if (input.mergeability === "conflicting") return "resolve";
   if (input.isDraft) return input.canMarkReady ? "ready" : null;
   if (input.autoMergeEnabled) return "auto-merge-armed";
@@ -1276,6 +1279,7 @@ const ACTION_NEEDS_HOST_REFRESH: Record<PullRequestAction, boolean> = {
   reopen: false,
   "enable-auto-merge": false,
   "disable-auto-merge": false,
+  dequeue: false,
   revert: false,
   "delete-branch": false,
   "approve-workflows": true,

@@ -91,6 +91,7 @@ interface ListItemFields {
   readonly state?: string | null | undefined;
   readonly isDraft?: boolean | undefined;
   readonly mergeable?: string | null | undefined;
+  readonly mergeQueueEntry?: { readonly position: number } | null | undefined;
   readonly reviewDecision?: string | null | undefined;
   readonly additions?: number | undefined;
   readonly deletions?: number | undefined;
@@ -333,6 +334,7 @@ export interface GitHubPullRequestListItem {
   readonly state: PullRequestState;
   readonly isDraft: boolean;
   readonly mergeability: PullRequestMergeability;
+  readonly mergeQueuePosition?: number | null;
   readonly reviewDecision: PullRequestReviewDecision | null;
   readonly additions: number;
   readonly deletions: number;
@@ -710,6 +712,9 @@ function toListItem(raw: ListItemFields): GitHubPullRequestListItem {
     state: toState(raw),
     isDraft: raw.isDraft ?? false,
     mergeability: toMergeability(raw.mergeable),
+    ...(raw.mergeQueueEntry === undefined
+      ? {}
+      : { mergeQueuePosition: raw.mergeQueueEntry?.position ?? null }),
     reviewDecision: toReviewDecisionWithReviews(raw.reviewDecision, raw.latestReviews),
     additions: raw.additions ?? 0,
     deletions: raw.deletions ?? 0,
@@ -906,6 +911,7 @@ export interface GitHubPullRequestSummary {
   readonly reviewDecision: PullRequestReviewDecision | null;
   readonly checksState: PullRequestChecksState | null;
   readonly mergeability: PullRequestMergeability;
+  readonly mergeQueuePosition: number | null;
   /** Null means no stack; absent means not requested. */
   readonly stack?: PullRequestStackMembership | null;
 }
@@ -929,6 +935,7 @@ export function toPullRequestSummary(pr: SummarizedPullRequest): GitHubPullReque
     reviewDecision: toReviewDecisionWithReviews(pr.reviewDecision, nodesOf(pr.latestReviews)),
     checksState: rollupChecksState(rollupStates(pr.commits)),
     mergeability: toMergeability(pr.mergeable),
+    mergeQueuePosition: pr.mergeQueueEntry?.position ?? null,
     ...(pr.stack === undefined ? {} : { stack: toStackMembership(pr) ?? null }),
   };
 }

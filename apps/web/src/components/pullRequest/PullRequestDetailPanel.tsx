@@ -167,6 +167,7 @@ const actionFailureLabels = (term: string): Record<PullRequestAction, string> =>
   "update-branch": "Could not update this branch",
   "enable-auto-merge": "Could not turn on auto-merge",
   "disable-auto-merge": "Could not turn off auto-merge",
+  dequeue: "Could not remove it from the merge queue",
   revert: `Could not open a revert ${term}`,
   "delete-branch": "Could not delete this branch",
   "approve-workflows": "Could not approve workflows",
@@ -186,6 +187,8 @@ const actionFailureHints = (term: string): Record<PullRequestAction, string> => 
     "The host refused it. Check that this repository allows auto-merge, that you have write access, and that there is something left for it to wait on.",
   "disable-auto-merge":
     "The host refused it. Check that you have write access, and that the merge has not already happened.",
+  dequeue:
+    "The host refused it. Check that you have write access, and that it is still in the merge queue.",
   revert: `The host refused it. Check that you have write access and that this ${term} was merged on the host.`,
   "delete-branch":
     "The host refused it. Check that you have write access to the source repository and that the branch has not moved since this page loaded.",
@@ -1138,6 +1141,7 @@ export function PullRequestDetailPanel({
         mergeability: detail.mergeability,
         checksState,
         autoMergeEnabled: detail.autoMergeEnabled,
+        mergeQueuePosition: detail.mergeQueuePosition,
         hasMergeMethod: allowedMergeMethods.length > 0,
         canMerge: canMergeSinglePullRequest && can("merge"),
         canMarkReady: can("ready"),
@@ -1154,6 +1158,7 @@ export function PullRequestDetailPanel({
     ((autoMergeArmed && can("disable-auto-merge")) ||
       (!autoMergeArmed &&
         primaryAction !== "enable-auto-merge" &&
+        primaryAction !== "merge-queued" &&
         !detail.isDraft &&
         !conflicting &&
         can("enable-auto-merge") &&
@@ -1168,6 +1173,7 @@ export function PullRequestDetailPanel({
     allowedMergeMethods.length > 0;
   const showsMergeMethods =
     detail?.state === "open" &&
+    primaryAction !== "merge-queued" &&
     can("merge") &&
     !detail.isDraft &&
     !conflicting &&
@@ -1333,6 +1339,7 @@ export function PullRequestDetailPanel({
                 pullRequestKey={pullRequestKey}
                 primaryAction={primaryAction}
                 autoMergeArmed={autoMergeArmed}
+                mergeQueuePosition={detail.mergeQueuePosition}
                 armedAutoMergeLabel={armedAutoMergeLabel}
                 pendingAutoMergeLabel={pendingAutoMergeLabel}
                 selectedMergeMethod={selectedMergeMethod}
@@ -1372,6 +1379,7 @@ export function PullRequestDetailPanel({
                 onActingEnvironmentChange={selectActingEnvironment}
                 can={can}
                 autoMergeArmed={autoMergeArmed}
+                mergeQueued={primaryAction === "merge-queued"}
                 showsDraftToggle={showsDraftToggle}
                 showsMergeNow={showsMergeNow}
                 showsAutoMerge={showsAutoMerge}

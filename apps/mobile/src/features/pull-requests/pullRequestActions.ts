@@ -13,7 +13,12 @@ import { PullRequestGlyph } from "./pullRequestGlyphs";
 
 type ActionDetail = Pick<
   PullRequestDetail,
-  "state" | "isDraft" | "mergeability" | "autoMergeEnabled" | "workflowApprovalsRequired"
+  | "state"
+  | "isDraft"
+  | "mergeability"
+  | "autoMergeEnabled"
+  | "mergeQueuePosition"
+  | "workflowApprovalsRequired"
 > & {
   readonly capabilities: Pick<
     PullRequestDetail["capabilities"],
@@ -56,6 +61,8 @@ export function pullRequestActionLabel(
       return "Enable auto-merge";
     case "disable-auto-merge":
       return "Disable auto-merge";
+    case "dequeue":
+      return "Remove from merge queue";
     case "revert":
       return `Create revert ${terminology.singular}`;
     case "delete-branch":
@@ -74,6 +81,7 @@ export const PR_ACTION_ICONS = {
   "update-branch": "arrow.up.circle",
   "enable-auto-merge": "clock",
   "disable-auto-merge": "xmark",
+  dequeue: "xmark",
   revert: "arrow.uturn.backward",
   "delete-branch": "trash",
   "approve-workflows": "checkmark",
@@ -107,9 +115,21 @@ export function canPerformPullRequestAction(pr: ActionDetail, action: PullReques
     case "draft":
       return !pr.isDraft;
     case "merge":
-      return !pr.isDraft && pr.mergeability !== "conflicting" && allowedMergeMethods(pr).length > 0;
+      return (
+        !pr.isDraft &&
+        pr.mergeQueuePosition == null &&
+        pr.mergeability !== "conflicting" &&
+        allowedMergeMethods(pr).length > 0
+      );
     case "enable-auto-merge":
-      return !pr.isDraft && pr.autoMergeEnabled === false && allowedMergeMethods(pr).length > 0;
+      return (
+        !pr.isDraft &&
+        pr.mergeQueuePosition == null &&
+        pr.autoMergeEnabled === false &&
+        allowedMergeMethods(pr).length > 0
+      );
+    case "dequeue":
+      return pr.mergeQueuePosition != null;
     case "disable-auto-merge":
       return pr.autoMergeEnabled === true;
     default:
@@ -132,6 +152,7 @@ export function mergeUnavailableReason(
   if (!pr.viewerPermissions.actions.includes("merge"))
     return `Your account cannot merge this ${terminology.singular}.`;
   if (pr.isDraft) return "Mark this draft ready for review before merging.";
+  if (pr.mergeQueuePosition != null) return `In merge queue (position ${pr.mergeQueuePosition}).`;
   if (pr.mergeability === "conflicting") return MERGE_CONFLICT_REASON;
   if (!allowedMergeMethods(pr).length) return "This repository has no available merge methods.";
   return null;

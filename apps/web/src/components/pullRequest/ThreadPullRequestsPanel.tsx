@@ -50,6 +50,7 @@ import {
 } from "./PullRequestListRow";
 import {
   PullRequestDiffStat,
+  PullRequestMergeQueueGlyph,
   PullRequestReviewDecisionGlyph,
   pullRequestChecksStatePresentation,
 } from "./pullRequestPresentation";
@@ -201,6 +202,9 @@ function LinkRowImpl({
                       branch has conflicts.
                     </TooltipPopup>
                   </Tooltip>
+                ) : null}
+                {snapshot?.mergeQueuePosition != null ? (
+                  <PullRequestMergeQueueGlyph position={snapshot.mergeQueuePosition} />
                 ) : null}
                 {snapshot?.checksState ? <ChecksGlyph state={snapshot.checksState} /> : null}
                 {snapshot?.reviewDecision ? (

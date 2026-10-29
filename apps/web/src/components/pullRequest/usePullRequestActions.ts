@@ -84,6 +84,7 @@ const actionSuccessLabels = (term: string): Record<PullRequestAction, string> =>
   "update-branch": "Branch updated with the base branch",
   "enable-auto-merge": "Auto-merge enabled",
   "disable-auto-merge": "Auto-merge disabled",
+  dequeue: "Removed from the merge queue",
   revert: `Revert ${term} opened`,
   "delete-branch": "Branch deleted",
   "approve-workflows": "Workflows approved",
@@ -98,6 +99,7 @@ const actionFailureLabels = (term: string): Record<PullRequestAction, string> =>
   "update-branch": "Could not update this branch",
   "enable-auto-merge": "Could not enable auto-merge",
   "disable-auto-merge": "Could not disable auto-merge",
+  dequeue: "Could not remove it from the merge queue",
   revert: `Could not open a revert ${term}`,
   "delete-branch": "Could not delete this branch",
   "approve-workflows": "Could not approve workflows",
@@ -116,6 +118,8 @@ const actionFailureHints = (term: string): Record<PullRequestAction, string> => 
   "enable-auto-merge":
     "The host refused it. Check that auto-merge is enabled for this repository and that you have write access.",
   "disable-auto-merge": "The host refused it. Check that you have write access to this repository.",
+  dequeue:
+    "The host refused it. Check that you have write access, and that it is still in the merge queue.",
   revert: `The host refused it. Check that you have write access and that this ${term} was merged on the host.`,
   "delete-branch":
     "The host refused it. Check that you have write access to the source repository and that the branch has not moved since this page loaded.",

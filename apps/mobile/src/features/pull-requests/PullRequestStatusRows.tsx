@@ -37,6 +37,7 @@ import { usePullRequestAgentActions } from "./usePullRequestAgentActions";
 
 type RowProps = { readonly pr: PullRequestDetail; readonly params: PullRequestParams };
 const STATUS_ACTIONS: readonly PullRequestAction[] = [
+  "dequeue",
   "ready",
   "draft",
   "close",

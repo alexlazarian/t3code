@@ -85,6 +85,7 @@ export function gitHubViewerPermissions(
               ? (["enable-auto-merge"] as const)
               : []),
             "disable-auto-merge",
+            "dequeue",
             "revert",
             "approve-workflows",
           ] as const)

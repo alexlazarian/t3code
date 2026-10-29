@@ -86,6 +86,7 @@ export function PullRequestActionsMenu({
   onActingEnvironmentChange,
   can,
   autoMergeArmed,
+  mergeQueued,
   showsDraftToggle,
   showsMergeNow,
   showsAutoMerge,
@@ -138,6 +139,7 @@ export function PullRequestActionsMenu({
   onActingEnvironmentChange: (environmentId: EnvironmentId) => void;
   can: (action: PullRequestAction) => boolean;
   autoMergeArmed: boolean;
+  mergeQueued: boolean;
   showsDraftToggle: boolean;
   showsMergeNow: boolean;
   showsAutoMerge: boolean;
@@ -336,6 +338,12 @@ export function PullRequestActionsMenu({
               >
                 <PullRequestGlyph.merged className="size-3.5" />
                 {inlineConfirm.isArmed("merge") ? "Confirm merge?" : "Merge now"}
+              </MenuItem>
+            ) : null}
+            {mergeQueued && can("dequeue") ? (
+              <MenuItem disabled={actionPending} onClick={() => void perform("dequeue")}>
+                <PullRequestGlyph.queued className="size-3.5" />
+                Remove from merge queue
               </MenuItem>
             ) : null}
             {autoMergeArmed && can("disable-auto-merge") ? (

@@ -110,6 +110,7 @@ export const definition = defineSourceControl({
     "update-branch",
     "enable-auto-merge",
     "disable-auto-merge",
+    "dequeue",
     "revert",
     "approve-workflows",
   ] as const),

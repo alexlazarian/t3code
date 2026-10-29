@@ -205,6 +205,13 @@ describe("pull request primary control", () => {
       }),
     ).toBe("merge");
   });
+
+  it("shows a queued pull request as queued instead of offering a merge", () => {
+    expect(resolvePullRequestPrimaryControl({ ...open, mergeQueuePosition: 9 })).toBe(
+      "merge-queued",
+    );
+    expect(resolvePullRequestPrimaryControl({ ...open, mergeQueuePosition: null })).toBe("merge");
+  });
 });
 
 describe("stacked pull request classification", () => {

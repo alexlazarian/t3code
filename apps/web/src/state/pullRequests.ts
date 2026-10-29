@@ -83,6 +83,9 @@ export function pullRequestListEntryToSummary(entry: PullRequestListEntry): Pull
     ...(entry.reviewDecision === undefined ? {} : { reviewDecision: entry.reviewDecision }),
     ...(entry.checksState === undefined ? {} : { checksState: entry.checksState }),
     mergeability: entry.mergeability,
+    ...(entry.mergeQueuePosition === undefined
+      ? {}
+      : { mergeQueuePosition: entry.mergeQueuePosition }),
   };
 }
 
@@ -118,6 +121,10 @@ export function newestPullRequestObservation(
       ...incoming.summary,
       isDraft: incoming.summary.isDraft ?? current.summary.isDraft,
       mergeability: incoming.summary.mergeability ?? current.summary.mergeability,
+      mergeQueuePosition:
+        incoming.summary.mergeQueuePosition === undefined
+          ? current.summary.mergeQueuePosition
+          : incoming.summary.mergeQueuePosition,
       reviewDecision:
         incoming.summary.reviewDecision === undefined
           ? current.summary.reviewDecision

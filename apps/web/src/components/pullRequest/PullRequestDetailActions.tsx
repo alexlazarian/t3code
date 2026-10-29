@@ -24,7 +24,10 @@ import {
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import type { resolvePullRequestPrimaryControl } from "./pullRequestDetail.logic";
 import { PullRequestGlyph } from "./pullRequestIcons";
-import type { resolvePullRequestState } from "./pullRequestPresentation";
+import {
+  pullRequestMergeQueueLabel,
+  type resolvePullRequestState,
+} from "./pullRequestPresentation";
 import type { PickableEnvironment } from "./pullRequestProjectAssignment.logic";
 import { useInlineActionConfirm } from "./useInlineActionConfirm";
 
@@ -192,6 +195,7 @@ export function PullRequestPrimaryAction({
   pullRequestKey,
   primaryAction,
   autoMergeArmed,
+  mergeQueuePosition,
   armedAutoMergeLabel,
   pendingAutoMergeLabel,
   selectedMergeMethod,
@@ -204,6 +208,7 @@ export function PullRequestPrimaryAction({
   pullRequestKey: string;
   primaryAction: ReturnType<typeof resolvePullRequestPrimaryControl> | null;
   autoMergeArmed: boolean;
+  mergeQueuePosition: number | null | undefined;
   armedAutoMergeLabel: string;
   pendingAutoMergeLabel: string;
   selectedMergeMethod: PullRequestMergeMethod;
@@ -304,6 +309,28 @@ export function PullRequestPrimaryAction({
               : inlineConfirm.isArmed("enable-auto-merge")
                 ? "Confirm auto-merge?"
                 : pendingAutoMergeLabel}
+          </TooltipPopup>
+        </Tooltip>
+      ) : primaryAction === "merge-queued" && mergeQueuePosition != null ? (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Badge
+                size="control"
+                variant="info"
+                role="img"
+                aria-label={pullRequestMergeQueueLabel(mergeQueuePosition)}
+              >
+                <PullRequestGlyph.queued aria-hidden className="size-3.5" />
+                <span className="@max-[30rem]/pr-header:hidden">
+                  {pullRequestMergeQueueLabel(mergeQueuePosition)}
+                </span>
+              </Badge>
+            }
+          />
+          <TooltipPopup side="top">
+            {pullRequestMergeQueueLabel(mergeQueuePosition)}: the host will merge it once the queue
+            reaches it and its checks pass
           </TooltipPopup>
         </Tooltip>
       ) : primaryAction === "auto-merge-armed" ? (

@@ -83,6 +83,8 @@ export interface ProviderChangeRequest {
   readonly state: PullRequestState;
   readonly isDraft: boolean;
   readonly mergeability: PullRequestMergeability;
+  /** 1-based; null when not queued, absent when the host has no merge queue. */
+  readonly mergeQueuePosition?: number | null | undefined;
   readonly additions: number;
   readonly deletions: number;
   readonly createdAt: string;
@@ -113,6 +115,7 @@ export interface ProviderChangeRequestSummary {
   readonly reviewDecision?: PullRequestReviewDecision | null | undefined;
   readonly checksState?: PullRequestChecksState | null | undefined;
   readonly mergeability?: PullRequestMergeability | undefined;
+  readonly mergeQueuePosition?: number | null | undefined;
   /** Null means no stack; absent means not requested. */
   readonly stack?: PullRequestStackMembership | null | undefined;
 }

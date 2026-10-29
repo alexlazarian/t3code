@@ -155,6 +155,27 @@ export function PullRequestStateGlyph({
   );
 }
 
+export function pullRequestMergeQueueLabel(position: number): string {
+  return `In merge queue (position ${position})`;
+}
+
+export function PullRequestMergeQueueGlyph({ position }: { position: number }) {
+  const label = pullRequestMergeQueueLabel(position);
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span className="inline-flex shrink-0 items-center gap-0.5 font-mono text-2xs tabular-nums text-info-foreground" />
+        }
+      >
+        <PullRequestGlyph.queued role="img" aria-label={label} className="size-3.5" />
+        <span aria-hidden>{position}</span>
+      </TooltipTrigger>
+      <TooltipPopup>{label}</TooltipPopup>
+    </Tooltip>
+  );
+}
+
 export function PullRequestConflictGlyph({
   state,
   isDraft,

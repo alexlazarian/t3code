@@ -33,6 +33,9 @@ fragment PullRequestRow on PullRequest {
   state
   isDraft
   mergeable
+  mergeQueueEntry {
+    position
+  }
   reviewDecision
   latestReviews(first: 20) {
     nodes {

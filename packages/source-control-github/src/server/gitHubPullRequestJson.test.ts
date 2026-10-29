@@ -60,6 +60,7 @@ const row = (fields: Record<string, unknown>) => ({
   state: "OPEN",
   isDraft: false,
   mergeable: "UNKNOWN",
+  mergeQueueEntry: null,
   reviewDecision: null,
   latestReviews: { nodes: [] },
   createdAt: "2026-07-01T00:00:00Z",
@@ -349,6 +350,7 @@ describe("pull request detail decoding", () => {
             state: "OPEN",
             isDraft: false,
             mergeable: "MERGEABLE",
+            mergeQueueEntry: null,
             mergeStateStatus: "BLOCKED",
             reviewDecision: null,
             additions: 0,
@@ -516,6 +518,11 @@ describe("pull request detail decoding", () => {
       autoMergeMethod: "squash",
     });
     expect(detailOf([], { autoMergeRequest: null }).autoMergeEnabled).toBe(false);
+  });
+
+  it("reads a merge queue entry's position, and its null as not queued", () => {
+    expect(detailOf([], { mergeQueueEntry: { position: 9 } }).mergeQueuePosition).toBe(9);
+    expect(detailOf([], { mergeQueueEntry: null }).mergeQueuePosition).toBeNull();
   });
 
   it("shows a re-running check once, as the run that is happening now", () => {
@@ -1648,6 +1655,7 @@ describe("pull request watch fingerprints", () => {
     }) => ({
       state: "OPEN",
       mergeable: "MERGEABLE",
+      mergeQueueEntry: null,
       headRefOid: "abc123",
       comments: { totalCount: 1, nodes: [{ lastEditedAt: input.commentEditedAt }] },
       reviews: { totalCount: input.reviews, nodes: [] },

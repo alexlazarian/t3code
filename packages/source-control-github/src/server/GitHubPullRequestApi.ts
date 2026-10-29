@@ -1583,6 +1583,8 @@ export const make = Effect.gen(function* () {
   const simpleActionMutations = {
     "disable-auto-merge": (pullRequestId: string) =>
       client.DisablePullRequestAutoMerge({ pullRequestId }).pipe(Effect.asVoid),
+    dequeue: (pullRequestId: string) =>
+      client.DequeuePullRequest({ id: pullRequestId }).pipe(Effect.asVoid),
     ready: (pullRequestId: string) =>
       client.MarkPullRequestReadyForReview({ pullRequestId }).pipe(Effect.asVoid),
     draft: (pullRequestId: string) =>

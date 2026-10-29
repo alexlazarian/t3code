@@ -211,6 +211,9 @@ function snapshotFieldsOf(summary: PullRequestSummary): SnapshotFields {
     ...(summary.reviewDecision === undefined ? {} : { reviewDecision: summary.reviewDecision }),
     ...(summary.checksState === undefined ? {} : { checksState: summary.checksState }),
     ...(summary.mergeability === undefined ? {} : { mergeability: summary.mergeability }),
+    ...(summary.mergeQueuePosition === undefined
+      ? {}
+      : { mergeQueuePosition: summary.mergeQueuePosition }),
   };
 }
 
@@ -242,7 +245,8 @@ function snapshotFieldsEqual(left: SnapshotFields, right: SnapshotFields): boole
     left.changedFiles === right.changedFiles &&
     (left.reviewDecision ?? null) === (right.reviewDecision ?? null) &&
     (left.checksState ?? null) === (right.checksState ?? null) &&
-    left.mergeability === right.mergeability
+    left.mergeability === right.mergeability &&
+    (left.mergeQueuePosition ?? null) === (right.mergeQueuePosition ?? null)
   );
 }
 

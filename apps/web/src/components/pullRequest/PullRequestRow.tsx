@@ -23,7 +23,11 @@ import {
   PullRequestRowGlyph,
   PullRequestRowLines,
 } from "./PullRequestListRow";
-import { PullRequestLabelChip, PullRequestReviewDecisionGlyph } from "./pullRequestPresentation";
+import {
+  PullRequestLabelChip,
+  PullRequestMergeQueueGlyph,
+  PullRequestReviewDecisionGlyph,
+} from "./pullRequestPresentation";
 
 const LABEL_SLOTS = [
   { overflow: "@xl/pr-row-meta:hidden" },
@@ -148,6 +152,9 @@ function PullRequestRowImpl({
           title={entry.title}
           signals={
             <>
+              {entry.state === "open" && entry.mergeQueuePosition != null ? (
+                <PullRequestMergeQueueGlyph position={entry.mergeQueuePosition} />
+              ) : null}
               {entry.checksState === undefined ? null : (
                 <PullRequestChecksPopover
                   checksState={entry.checksState}

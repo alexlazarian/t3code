@@ -67,6 +67,7 @@ export const PullRequestAction = Schema.Literals([
   "update-branch",
   "enable-auto-merge",
   "disable-auto-merge",
+  "dequeue",
   "revert",
   "approve-workflows",
 ]);
@@ -331,6 +332,8 @@ export const PullRequestListEntry = Schema.Struct({
   state: PullRequestState,
   isDraft: Schema.Boolean,
   mergeability: PullRequestMergeability,
+  /** 1-based merge queue position; null when not queued, absent when the host has no queue. */
+  mergeQueuePosition: Schema.optional(Schema.NullOr(PositiveInt)),
   /** Zero until fetched through `PullRequestListStatsInput`; GitHub listings omit counts. */
   additions: NonNegativeInt,
   deletions: NonNegativeInt,
@@ -473,6 +476,7 @@ export const PullRequestSummary = Schema.Struct({
   reviewDecision: Schema.optional(Schema.NullOr(PullRequestReviewDecision)),
   checksState: Schema.optional(Schema.NullOr(PullRequestChecksState)),
   mergeability: Schema.optional(PullRequestMergeability),
+  mergeQueuePosition: Schema.optional(Schema.NullOr(PositiveInt)),
   /** Null when the host says the pull request is in no stack; absent when the read did not ask. */
   stack: Schema.optional(Schema.NullOr(PullRequestStackMembership)),
 });
@@ -590,6 +594,7 @@ export const PullRequestDetail = Schema.Struct({
   /** Absent means the host does not report auto-merge state, not that it is off. */
   autoMergeEnabled: Schema.optional(Schema.Boolean),
   autoMergeMethod: Schema.optional(PullRequestMergeMethod),
+  mergeQueuePosition: Schema.optional(Schema.NullOr(PositiveInt)),
   workflowApprovalsRequired: Schema.optional(NonNegativeInt),
   maintainerCanModify: Schema.optional(Schema.Boolean),
 });

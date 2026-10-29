@@ -121,6 +121,12 @@ mutation DisablePullRequestAutoMerge($pullRequestId: ID!) {
   }
 }
 
+mutation DequeuePullRequest($id: ID!) {
+  dequeuePullRequest(input: { id: $id }) {
+    clientMutationId
+  }
+}
+
 mutation UpdatePullRequestBranch(
   $pullRequestId: ID!
   $expectedHeadOid: GitObjectID!
