@@ -1,5 +1,5 @@
 import { CLAUDE_DRIVER_KIND } from "./contextPage.logic";
-import { scopeProjectRef } from "@t3tools/client-runtime/environment";
+import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime/environment";
 import {
   resolveProviderSkillsForCwd,
   resolveProviderSlashCommandsForCwd,
@@ -11,11 +11,17 @@ import { useState, type KeyboardEvent, type ReactNode } from "react";
 
 import { cn } from "../../lib/utils";
 import { serverEnvironment } from "../../state/server";
-import { useProject, useThreadShellsForProjectRefs } from "../../state/entities";
+import {
+  useProject,
+  useProjects,
+  useQuietThreadShell,
+  useThreadShellsForProjectRefs,
+} from "../../state/entities";
 import { useEnvironmentQuery } from "../../state/query";
 import {
   librarySkillEntries,
   libraryInsertTarget,
+  type LibraryContext,
   type LibrarySkillEntry,
 } from "../library/Library.logic";
 import { useInsertInComposer, useLibraryContext, useLibraryProvider } from "../library/useLibrary";
@@ -45,14 +51,46 @@ export function ContextPageOverlay() {
 
 const NO_THREADS: ReadonlyArray<never> = [];
 
+function projectKey(environmentId: string, projectId: string): string {
+  return `${environmentId}:${projectId}`;
+}
+
 function ContextPage() {
   const close = useContextPageStore((store) => store.close);
-  const ctx = useLibraryContext();
-  const { environmentId, entries, entry, threadShell } = useLibraryProvider(ctx);
-  const projectRef =
-    ctx.environmentId !== null && ctx.projectId !== null
-      ? scopeProjectRef(ctx.environmentId, ctx.projectId)
-      : null;
+  const openedThread = useContextPageStore((store) => store.thread);
+  const routeCtx = useLibraryContext();
+  const thread =
+    routeCtx.threadRef ??
+    (openedThread ? scopeThreadRef(openedThread.environmentId, openedThread.threadId) : null);
+  const threadShell = useQuietThreadShell(thread);
+  const threadProjectKey =
+    routeCtx.environmentId !== null && routeCtx.projectId !== null
+      ? projectKey(routeCtx.environmentId, routeCtx.projectId)
+      : threadShell
+        ? projectKey(threadShell.environmentId, threadShell.projectId)
+        : null;
+  const projects = useProjects();
+  const [pickedProjectKey, setPickedProjectKey] = useState<string | null>(null);
+  const selectedKey =
+    pickedProjectKey ??
+    threadProjectKey ??
+    (projects[0] ? projectKey(projects[0].environmentId, projects[0].id) : null);
+  const selectedProject =
+    projects.find(
+      (candidate) => projectKey(candidate.environmentId, candidate.id) === selectedKey,
+    ) ?? null;
+  const sameProjectAsThread = selectedKey !== null && selectedKey === threadProjectKey;
+  const ctx: LibraryContext = {
+    threadRef: sameProjectAsThread ? thread : null,
+    draftId: sameProjectAsThread ? routeCtx.draftId : null,
+    projectId: selectedProject?.id ?? null,
+    environmentId: selectedProject?.environmentId ?? null,
+  };
+  const { environmentId, entries, entry } = useLibraryProvider(ctx);
+  const threadFolder = sameProjectAsThread ? (threadShell?.worktreePath ?? null) : null;
+  const projectRef = selectedProject
+    ? scopeProjectRef(selectedProject.environmentId, selectedProject.id)
+    : null;
   const project = useProject(projectRef);
   const threads = useThreadShellsForProjectRefs(projectRef ? [projectRef] : NO_THREADS);
   const claudeEntry =
@@ -100,7 +138,24 @@ function ContextPage() {
         <span className="text-muted-foreground">Library</span>
         <span className="text-muted-foreground/60">/</span>
         <span className="font-semibold">Context</span>
-        {project ? <span className="truncate text-muted-foreground">{project.title}</span> : null}
+        {projects.length > 0 ? (
+          <select
+            aria-label="Project"
+            value={selectedKey ?? ""}
+            onChange={(event) => setPickedProjectKey(event.target.value)}
+            className="h-6 max-w-64 border border-input bg-popover px-1.5 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+          >
+            {projects.map((candidate) => {
+              const key = projectKey(candidate.environmentId, candidate.id);
+              return (
+                <option key={key} value={key}>
+                  {candidate.title}
+                  {key === threadProjectKey ? " (this thread)" : ""}
+                </option>
+              );
+            })}
+          </select>
+        ) : null}
         <span className="flex-1" />
         <Button size="xs" variant="ghost" onClick={close}>
           Close
@@ -140,7 +195,7 @@ function ContextPage() {
           Not supported yet. Only Claude's memories and instruction files show here for now.
         </ContextEmpty>
       ) : projectRoot === null || environmentId === null ? (
-        <ContextEmpty>Open a thread in a project to see what Claude loads for it.</ContextEmpty>
+        <ContextEmpty>Add a project to see what Claude loads for it.</ContextEmpty>
       ) : claudeEntry === null ? (
         <ContextEmpty>Claude is not set up on this machine.</ContextEmpty>
       ) : query.data === null ? (
@@ -151,16 +206,10 @@ function ContextPage() {
           providerInstanceId={claudeEntry.instanceId}
           snapshot={query.data}
           refresh={query.refresh}
-          currentFolder={threadShell?.worktreePath ?? projectRoot}
+          currentFolder={threadFolder ?? projectRoot}
           skills={librarySkillEntries(
-            resolveProviderSkillsForCwd(
-              claudeEntry.snapshot,
-              threadShell?.worktreePath ?? projectRoot,
-            ),
-            resolveProviderSlashCommandsForCwd(
-              claudeEntry.snapshot,
-              threadShell?.worktreePath ?? projectRoot,
-            ),
+            resolveProviderSkillsForCwd(claudeEntry.snapshot, threadFolder ?? projectRoot),
+            resolveProviderSlashCommandsForCwd(claudeEntry.snapshot, threadFolder ?? projectRoot),
           )}
           insert={insert}
           onInserted={close}
