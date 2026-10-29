@@ -22,11 +22,12 @@ const testState = vi.hoisted(() => {
   let draftsWithUserText = new Set<string>();
   const router = {
     state: {
-      location: { href: "/" },
+      location: { href: "/", pathname: "/" },
       matches: [{ params: {} }],
     },
     navigate: vi.fn(async (request: { readonly params: { readonly draftId: string } }) => {
       router.state.location.href = `/draft/${request.params.draftId}`;
+      router.state.location.pathname = `/draft/${request.params.draftId}`;
     }),
   };
   const draftStore = {
@@ -103,6 +104,7 @@ const testState = vi.hoisted(() => {
         defaultRuntimeMode: "full-access",
       };
       router.state.location.href = "/";
+      router.state.location.pathname = "/";
       router.navigate.mockClear();
       draftStore.setDraftThreadContext.mockClear();
       draftStore.setLogicalProjectDraftThreadId.mockClear();
@@ -110,6 +112,10 @@ const testState = vi.hoisted(() => {
       projectFileRead = new Promise<null>((resolve) => {
         completeProjectFileRead = resolve;
       });
+    },
+    at(path: string) {
+      router.state.location.href = path;
+      router.state.location.pathname = path;
     },
     router,
   };
@@ -146,6 +152,8 @@ vi.mock("@effect/atom-react", () => ({
 }));
 vi.mock("@t3tools/client-runtime/environment", () => ({
   scopedProjectKey: () => "remote-project",
+  scopedThreadKey: (ref: { environmentId: string; threadId: string }) =>
+    `${ref.environmentId}:${ref.threadId}`,
   scopeProjectRef: (environmentId: string, projectId: string) => ({ environmentId, projectId }),
   scopeThreadRef: (environmentId: string, threadId: string) => ({ environmentId, threadId }),
 }));
@@ -247,6 +255,7 @@ vi.mock("../uiStateStore", () => ({
 }));
 vi.mock("./useSettings", () => ({ getClientSettings: () => ({}) }));
 
+import { __resetCurrentThreadForTests, overviewSplitThreadKey } from "../threadView";
 import { useNewThreadHandler } from "./useHandleNewThread";
 
 describe.each([
@@ -295,6 +304,40 @@ describe.each([
     expect(testState.draftStore.setPrompt.mock.invocationCallOrder[0]).toBeLessThan(
       testState.router.navigate.mock.invocationCallOrder[0] ?? 0,
     );
+  });
+
+  it("opens the new draft in the Overview split instead of navigating", async () => {
+    testState.reset(draft);
+    __resetCurrentThreadForTests();
+    testState.at("/overview");
+    const pendingOpen = useNewThreadHandler()({
+      environmentId: "environment-ssh",
+      projectId: "project-remote",
+    } as never);
+
+    testState.completeProjectFileRead(null);
+    const opened = await pendingOpen;
+
+    expect(testState.router.navigate).not.toHaveBeenCalled();
+    expect(overviewSplitThreadKey()).toBe(`environment-ssh:${opened?.threadId}`);
+  });
+
+  it("still navigates to the draft from a thread route", async () => {
+    testState.reset(draft);
+    __resetCurrentThreadForTests();
+    testState.at("/environment-ssh/thread-other");
+    const pendingOpen = useNewThreadHandler()({
+      environmentId: "environment-ssh",
+      projectId: "project-remote",
+    } as never);
+
+    testState.completeProjectFileRead(null);
+    const opened = await pendingOpen;
+
+    expect(testState.router.navigate).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "/draft/$draftId", params: { draftId: opened?.draftId } }),
+    );
+    expect(overviewSplitThreadKey()).toBeNull();
   });
 
   it("abandons a delayed draft open when the project is removed meanwhile", async () => {
