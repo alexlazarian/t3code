@@ -4,14 +4,12 @@ import type { DragEvent } from "react";
 import { cn } from "~/lib/utils";
 
 import { ProjectFavicon } from "../ProjectFavicon";
-import { projectTagColorProps } from "../sidebar/SidebarThreadRow";
 import { StatusLight } from "../StatusLight";
 import type { OverviewColumn, OverviewMachine } from "./Overview.logic";
 
 export function OverviewColumnHeader(props: {
   readonly column: OverviewColumn;
   readonly columnIndex: number;
-  readonly accentColor: string | null;
   readonly machines: ReadonlyArray<OverviewMachine>;
   /** Where a dragged column would land relative to this one, while one hovers it. */
   readonly dropSide: "before" | "after" | null;
@@ -22,7 +20,6 @@ export function OverviewColumnHeader(props: {
 }) {
   const { column } = props;
   const { open, needsYou } = column.counts;
-  const nameColor = projectTagColorProps(props.accentColor, false);
   const allOffline =
     props.machines.length > 0 && props.machines.every((machine) => machine.offline);
   const movable = column.project !== null;
@@ -72,23 +69,20 @@ export function OverviewColumnHeader(props: {
         ) : (
           <FolderIcon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
         )}
-        <span
-          className={cn("min-w-0 truncate text-xs font-semibold", nameColor.className)}
-          style={nameColor.style}
-        >
-          {column.displayName}
-        </span>
+        <span className="min-w-0 truncate text-xs font-semibold">{column.displayName}</span>
         <span
           className="ml-auto flex shrink-0 items-center gap-1.5 text-3xs text-muted-foreground"
           data-info={`${open} open`}
         >
           {needsYou > 0 ? <span className="text-status-needs-you">{needsYou} need you</span> : null}
-          <span className="flex items-center gap-0.75">
-            {column.lights.map((tone, index) => (
-              // oxlint-disable-next-line react/no-array-index-key -- lights are an ordered list without identity
-              <StatusLight key={index} tone={tone} size="small" />
-            ))}
-          </span>
+          {column.lights.length > 0 ? (
+            <span className="flex items-center gap-0.75">
+              {column.lights.map((tone, index) => (
+                // oxlint-disable-next-line react/no-array-index-key -- lights are an ordered list without identity
+                <StatusLight key={index} tone={tone} size="small" />
+              ))}
+            </span>
+          ) : null}
           <span className="min-w-2 text-right text-2xs text-foreground tabular-nums">{open}</span>
         </span>
       </div>

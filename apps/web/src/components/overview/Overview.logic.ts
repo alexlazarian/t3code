@@ -200,9 +200,12 @@ export function buildOverviewGrid(input: {
     const counts = stats.get(key) ?? { open: 0, working: 0, needsYou: 0 };
     stats.set(key, counts);
     counts.open += 1;
-    const lights = lightsByColumn.get(key);
-    if (lights) lights.push(overviewLight(label?.icon ?? null));
-    else lightsByColumn.set(key, [overviewLight(label?.icon ?? null)]);
+    const light = overviewLight(label?.icon ?? null);
+    if (light !== "done" && light !== "idle") {
+      const lights = lightsByColumn.get(key);
+      if (lights) lights.push(light);
+      else lightsByColumn.set(key, [light]);
+    }
     if (status === "working") {
       counts.working += 1;
     } else if (matchesSidebarStatusFilter(status, thread.hasActionableProposedPlan, "needs-you")) {

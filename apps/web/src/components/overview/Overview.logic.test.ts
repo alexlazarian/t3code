@@ -321,10 +321,8 @@ describe("buildOverviewGrid", () => {
       { open: 4, working: 1, needsYou: 2 },
       { open: 1, working: 1, needsYou: 0 },
     ]);
-    expect(
-      board.columns.map((column) => column.lights.filter((tone) => tone === "working")),
-    ).toEqual([["working"], ["working"]]);
-    for (const column of board.columns) expect(column.lights).toHaveLength(column.counts.open);
+    expect(board.columns[1]?.lights).toEqual(["working"]);
+    expect(board.columns[0]?.lights.toSorted()).toEqual(["needs-you", "needs-you", "working"]);
   });
 
   it("marks the Failed, Needs you and Working rows when they hold a card", () => {

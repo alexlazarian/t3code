@@ -26,7 +26,6 @@ import { DraftId, useComposerDraftStore } from "../../composerDraftStore";
 import { isElectron } from "../../env";
 import { useNewThreadHandler } from "../../hooks/useHandleNewThread";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
-import { useProjectAccentColors } from "../../hooks/useProjectAccentColor";
 import { useStableCallback } from "../../hooks/useStableCallback";
 import { useThreadActionMenu } from "../../hooks/useThreadActionMenu";
 import { appAtomRegistry } from "../../rpc/atomRegistry";
@@ -282,7 +281,6 @@ export function OverviewView() {
       ),
     ]),
   );
-  const accentColors = useProjectAccentColors(columns.map((column) => column.project));
   const machineSpans = overviewMachineSpans(
     columns.map((column) => machinesByColumn.get(column.projectKey) ?? []),
   );
@@ -615,7 +613,6 @@ export function OverviewView() {
                       key={column.projectKey}
                       column={column}
                       columnIndex={index}
-                      accentColor={accentColors[index] ?? null}
                       machines={machinesByColumn.get(column.projectKey) ?? []}
                       dropSide={
                         columnDrag?.over === column.projectKey
