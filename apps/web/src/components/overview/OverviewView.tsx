@@ -293,6 +293,12 @@ export function OverviewView() {
       ),
     ]),
   );
+  const [seenServerThreadKeys, setSeenServerThreadKeys] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  if (openKey !== null && serverThreadKeys.has(openKey) && !seenServerThreadKeys.has(openKey)) {
+    setSeenServerThreadKeys(new Set([...seenServerThreadKeys, openKey]));
+  }
   const paneTarget = resolveOverviewPaneTarget(openKey, {
     serverThreadKeys,
     draftIdByThreadKey: new Map(
@@ -302,6 +308,7 @@ export function OverviewView() {
       ]),
     ),
     promotedThreadKeys: new Set(Object.values(draftRedirects).map(scopedThreadKey)),
+    seenServerThreadKeys,
   });
   const openRef = paneTarget === null ? null : parseScopedThreadKey(paneTarget.threadKey);
   const paneMissing = openKey !== null && paneTarget === null;

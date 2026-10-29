@@ -59,9 +59,11 @@ export function OverviewShelf(props: {
       <div role="row" className="contents">
         {rail}
         {props.columns.map(({ key, count }, index) => (
-          <div
+          <button
+            type="button"
             key={key}
-            role="presentation"
+            aria-expanded={false}
+            aria-label={`Expand ${name}`}
             onClick={props.onToggle}
             style={{ gridColumn: index + 2, gridRow: row }}
             className="flex h-5 min-w-0 cursor-pointer items-center gap-1.5 border-r border-b border-border bg-background px-2 text-3xs whitespace-nowrap hover:bg-muted"
@@ -75,7 +77,7 @@ export function OverviewShelf(props: {
             {count > 0 ? (
               <span className="ml-auto text-muted-foreground tabular-nums">{count}</span>
             ) : null}
-          </div>
+          </button>
         ))}
       </div>
     );

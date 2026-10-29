@@ -474,6 +474,7 @@ describe("overview drafts", () => {
       serverThreadKeys: new Set<string>(),
       draftIdByThreadKey: new Map<string, DraftId>(),
       promotedThreadKeys: new Set<string>(),
+      seenServerThreadKeys: new Set<string>(),
     };
     expect(
       resolveOverviewPaneTarget(threadKey, {
@@ -489,8 +490,16 @@ describe("overview drafts", () => {
         serverThreadKeys: new Set([threadKey]),
         draftIdByThreadKey: new Map([[threadKey, draftId]]),
         promotedThreadKeys: new Set([threadKey]),
+        seenServerThreadKeys: new Set<string>(),
       }),
     ).toEqual({ kind: "server", threadKey });
+    expect(
+      resolveOverviewPaneTarget(threadKey, {
+        ...none,
+        promotedThreadKeys: new Set([threadKey]),
+        seenServerThreadKeys: new Set([threadKey]),
+      }),
+    ).toBeNull();
     expect(resolveOverviewPaneTarget(threadKey, none)).toBeNull();
     expect(resolveOverviewPaneTarget(null, none)).toBeNull();
   });

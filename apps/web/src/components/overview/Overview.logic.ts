@@ -222,20 +222,23 @@ export type OverviewPaneTarget =
   | { kind: "draft"; threadKey: string; draftId: DraftId }
   | { kind: "pending"; threadKey: string };
 
-/** A promoted draft resolves as pending until its server shell arrives, so the pane never closes. */
+/** A promoted draft is pending only until its server shell first arrives. */
 export function resolveOverviewPaneTarget(
   openKey: string | null,
   input: {
     serverThreadKeys: ReadonlySet<string>;
     draftIdByThreadKey: ReadonlyMap<string, DraftId>;
     promotedThreadKeys: ReadonlySet<string>;
+    seenServerThreadKeys: ReadonlySet<string>;
   },
 ): OverviewPaneTarget | null {
   if (openKey === null) return null;
   if (input.serverThreadKeys.has(openKey)) return { kind: "server", threadKey: openKey };
   const draftId = input.draftIdByThreadKey.get(openKey);
   if (draftId !== undefined) return { kind: "draft", threadKey: openKey, draftId };
-  if (input.promotedThreadKeys.has(openKey)) return { kind: "pending", threadKey: openKey };
+  if (input.promotedThreadKeys.has(openKey) && !input.seenServerThreadKeys.has(openKey)) {
+    return { kind: "pending", threadKey: openKey };
+  }
   return null;
 }
 
