@@ -596,7 +596,20 @@ function SidebarRail({
             tabIndex={-1}
             type="button"
             {...props}
-          />
+          >
+            {canResize ? (
+              <span
+                aria-hidden
+                data-slot="sidebar-rail-grip"
+                className="pointer-events-none absolute top-1/2 left-1/2 grid -translate-x-1/2 -translate-y-1/2 grid-rows-[repeat(6,2px)] gap-0.75 p-1"
+              >
+                {Array.from({ length: 6 }, (_, index) => (
+                  <i key={index} className="block size-0.5 bg-icon-muted" />
+                ))}
+              </span>
+            ) : null}
+            {props.children}
+          </button>
         }
       />
       <TooltipPopup side="right">{railTitle}</TooltipPopup>
