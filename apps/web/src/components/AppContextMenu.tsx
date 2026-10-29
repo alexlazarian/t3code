@@ -38,6 +38,7 @@ import {
   MenuSub,
   MenuSubPopup,
   MenuSubTrigger,
+  MenuTrigger,
 } from "./ui/menu";
 
 const ICONS: Record<string, LucideIcon> = {
@@ -207,7 +208,6 @@ export function AppContextMenuHost() {
   }, []);
   if (request === null) return null;
   const { x, y } = request.position;
-  const anchor = { getBoundingClientRect: () => new DOMRect(x, y, 0, 0) };
   return (
     <Menu
       key={request.id}
@@ -220,8 +220,19 @@ export function AppContextMenuHost() {
         if (!nextOpen) settle(request);
       }}
     >
+      {/*
+        A menu with no trigger closes itself with "sibling-open" the moment one of its submenus
+        opens, so hovering Snooze or Copy dismissed the whole menu. This zero-size trigger at the
+        pointer gives Base UI the trigger it expects and anchors the popup to the same point.
+      */}
+      <MenuTrigger
+        aria-hidden
+        tabIndex={-1}
+        nativeButton={false}
+        render={<span />}
+        style={{ position: "fixed", left: x, top: y, width: 0, height: 0, pointerEvents: "none" }}
+      />
       <MenuPopup
-        anchor={anchor}
         side="bottom"
         align="start"
         sideOffset={0}
