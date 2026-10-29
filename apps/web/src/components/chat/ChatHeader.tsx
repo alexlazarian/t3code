@@ -303,11 +303,6 @@ export const ChatHeader = memo(function ChatHeader({
             ) : null}
           </WorkspaceBreadcrumbItem>
         </WorkspaceBreadcrumb>
-        {status ? (
-          <span className={cn("shrink-0 text-xs font-semibold", status.className)}>
-            {status.label}
-          </span>
-        ) : null}
         <ThreadHeaderTools {...tools} isServerThread={isServerThread} />
       </div>
     </header>

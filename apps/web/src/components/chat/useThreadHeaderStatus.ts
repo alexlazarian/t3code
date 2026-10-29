@@ -3,7 +3,6 @@ import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell
 import { effectiveSnoozed, threadWokeAt } from "@t3tools/client-runtime/state/thread-settled";
 
 import { useNowAfter } from "../../hooks/useDeadline";
-import { useNowMinute } from "../../hooks/useNowMinute";
 import { useUiStateStore } from "../../uiStateStore";
 import {
   hasUnseenCompletion,
@@ -27,13 +26,11 @@ export function useThreadHeaderStatus(
           scopedThreadKey(scopeThreadRef(thread.environmentId, thread.id))
         ],
   );
-  // The wake deadline flips the snooze exactly; the minute keeps "left" from going stale.
+  // The wake deadline flips the snooze exactly.
   const wakeAtMs = Date.parse(thread?.snoozedUntil ?? "") || null;
-  const nowMinute = useNowMinute();
-  const nowMs = Math.max(useNowAfter(wakeAtMs), Date.parse(`${nowMinute}:00.000Z`));
+  const nowMs = useNowAfter(wakeAtMs);
   if (thread === null) return null;
-  const now = new Date(nowMs);
-  const nowIso = now.toISOString();
+  const nowIso = new Date(nowMs).toISOString();
   const lastVisitedAt = resolveThreadLastVisitedAt(thread.lastVisitedAt, localLastVisitedAt);
   const live = resolveSidebarStatusLabel({
     status: resolveSidebarThreadStatus(thread),
@@ -51,6 +48,5 @@ export function useThreadHeaderStatus(
     live,
     snoozedUntil: effectiveSnoozed(thread, { now: nowIso }) ? (thread.snoozedUntil ?? null) : null,
     isSettled: thread.settledOverride === "settled",
-    now,
   });
 }
