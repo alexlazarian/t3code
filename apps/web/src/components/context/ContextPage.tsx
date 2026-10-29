@@ -1,3 +1,4 @@
+import { CLAUDE_DRIVER_KIND } from "./contextPage.logic";
 import { scopeProjectRef } from "@t3tools/client-runtime/environment";
 import {
   resolveProviderSkillsForCwd,
@@ -55,13 +56,15 @@ function ContextPage() {
   const project = useProject(projectRef);
   const threads = useThreadShellsForProjectRefs(projectRef ? [projectRef] : NO_THREADS);
   const claudeEntry =
-    (entry?.driverKind === "claude" ? entry : null) ??
-    entries.find((candidate) => candidate.driverKind === "claude") ??
+    (entry?.driverKind === CLAUDE_DRIVER_KIND ? entry : null) ??
+    entries.find((candidate) => candidate.driverKind === CLAUDE_DRIVER_KIND) ??
     null;
   const tabs = [
     ...new Map(entries.map((candidate) => [candidate.driverKind, candidate])).values(),
-  ].toSorted((a, b) => (a.driverKind === "claude" ? -1 : b.driverKind === "claude" ? 1 : 0));
-  const [tab, setTab] = useState<string>("claude");
+  ].toSorted((a, b) =>
+    a.driverKind === CLAUDE_DRIVER_KIND ? -1 : b.driverKind === CLAUDE_DRIVER_KIND ? 1 : 0,
+  );
+  const [tab, setTab] = useState<string>(CLAUDE_DRIVER_KIND);
   const projectRoot = project?.workspaceRoot ?? null;
   const worktreePaths = projectRoot ? projectWorktreePaths(projectRoot, threads) : [];
   const queryAtom =
@@ -124,15 +127,15 @@ function ContextPage() {
                 setEditor(null);
               }}
             >
-              {candidate.driverKind === "claude" ? "Claude" : candidate.displayName}
-              {candidate.driverKind === "claude" && query.data ? (
+              {candidate.driverKind === CLAUDE_DRIVER_KIND ? "Claude" : candidate.displayName}
+              {candidate.driverKind === CLAUDE_DRIVER_KIND && query.data ? (
                 <span className="text-2xs opacity-70">{query.data.memories.length}</span>
               ) : null}
             </PanelTab>
           ))
         )}
       </div>
-      {tab !== "claude" ? (
+      {tab !== CLAUDE_DRIVER_KIND ? (
         <ContextEmpty>
           Not supported yet. Only Claude's memories and instruction files show here for now.
         </ContextEmpty>

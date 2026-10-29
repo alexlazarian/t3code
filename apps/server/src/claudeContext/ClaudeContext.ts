@@ -69,6 +69,7 @@ export class ClaudeContext extends Context.Service<
 const decodeClaudeSettings = Schema.decodeUnknownOption(ClaudeSettings);
 const isMemoryFileName = Schema.is(ClaudeMemoryFileName);
 const MAX_IMPORT_DEPTH = 4;
+const CLAUDE_DRIVER = "claudeAgent";
 
 function managedInstructionsPath(platform: NodeJS.Platform): string {
   if (platform === "darwin") return "/Library/Application Support/ClaudeCode/CLAUDE.md";
@@ -134,8 +135,9 @@ export const make = Effect.gen(function* () {
       (providerInstanceId === undefined
         ? undefined
         : instances.find(
-            ([id, entry]) => id === providerInstanceId && entry.driver === "claude",
-          )) ?? instances.find(([, entry]) => entry.driver === "claude" && entry.enabled !== false);
+            ([id, entry]) => id === providerInstanceId && entry.driver === CLAUDE_DRIVER,
+          )) ??
+      instances.find(([, entry]) => entry.driver === CLAUDE_DRIVER && entry.enabled !== false);
     const config = Option.getOrUndefined(decodeClaudeSettings(instance?.[1].config ?? {}));
     const environment = yield* mergeProviderInstanceEnvironment(
       instance?.[1].environment,

@@ -6,6 +6,9 @@ import type {
   ClaudeMemoryType,
 } from "@t3tools/contracts";
 
+/** The Claude provider's driver kind; the only provider this page supports. */
+export const CLAUDE_DRIVER_KIND = "claudeAgent";
+
 export const MEMORY_TYPES: ReadonlyArray<{
   readonly id: ClaudeMemoryType;
   readonly label: string;

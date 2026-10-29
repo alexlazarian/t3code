@@ -1,4 +1,5 @@
 import { ContextPageOverlay } from "./context/ContextPage";
+import { useContextPageStore } from "./context/contextPageStore";
 import { useAtomValue } from "@effect/atom-react";
 import { SearchIcon, SettingsIcon } from "lucide-react";
 import * as Schema from "effect/Schema";
@@ -508,8 +509,14 @@ function MainViewHeader() {
     select: (location) => isSettingsPath(location.pathname),
   });
   const pullRequestsSupported = usePullRequestsSupported();
-  const shownView = settingsRouteOpen ? "settings" : routeView;
+  const pathname = useLocation({ select: (location) => location.pathname });
+  const contextPageOpen = useContextPageStore((store) => store.openOn === pathname);
+  const closeContextPage = useContextPageStore((store) => store.close);
+  // The Context page covers the main area, so no view tab is the one showing.
+  const shownView = contextPageOpen ? null : settingsRouteOpen ? "settings" : routeView;
   const pickView = (view: TopBarView) => {
+    closeContextPage();
+    if (view === routeView && !settingsRouteOpen) return;
     // Leaving Settings for the view that opened it goes back to the exact place.
     if (settingsRouteOpen && topBarViewForPathname(appModalReturnPathname()) === view) {
       void router.navigate({ href: appModalReturnLocation() });
@@ -557,7 +564,9 @@ function MainViewHeader() {
                 on={shownView === "settings"}
                 aria-pressed={shownView === "settings"}
                 onClick={() => {
-                  if (shownView !== "settings") openSettings(router);
+                  if (shownView === "settings") return;
+                  closeContextPage();
+                  if (!settingsRouteOpen) openSettings(router);
                 }}
               >
                 Settings

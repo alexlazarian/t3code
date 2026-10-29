@@ -1,3 +1,4 @@
+import { CLAUDE_DRIVER_KIND } from "../context/contextPage.logic";
 import { useLocation } from "@tanstack/react-router";
 
 import { useContextPageStore } from "../context/contextPageStore";
@@ -14,7 +15,7 @@ export function LibraryContext(props: { readonly ctx: LibraryContextValue }) {
     <LibraryItemList
       empty="No provider is set up on this machine."
       items={providers.map((entry) => {
-        const supported = entry.driverKind === "claude";
+        const supported = entry.driverKind === CLAUDE_DRIVER_KIND;
         return {
           key: entry.driverKind,
           name: supported ? "Claude" : entry.displayName,

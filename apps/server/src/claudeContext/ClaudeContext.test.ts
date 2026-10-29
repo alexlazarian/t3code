@@ -1,4 +1,5 @@
 import { ProviderInstanceId } from "@t3tools/contracts";
+import * as HostProcess from "@t3tools/shared/HostProcess";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
@@ -28,7 +29,10 @@ const setup = Effect.fn(function* () {
       Layer.merge(
         ServerSettings.layerTest({
           providerInstances: {
-            [ProviderInstanceId.make("claude")]: { driver: "claude", config: { homePath: home } },
+            [ProviderInstanceId.make("claudeAgent")]: {
+              driver: "claudeAgent",
+              config: { homePath: home },
+            },
           },
         }),
         ServerConfig.layerTest(root, path.join(root, "t3")),
@@ -38,7 +42,10 @@ const setup = Effect.fn(function* () {
   return { fs, path, home, projectRoot, worktree, key, memoryDir, write, service };
 });
 
-it.layer(Layer.mergeAll(NodeServices.layer))("ClaudeContext", (it) => {
+// A missed Claude instance falls back to <home>/.claude; point home nowhere so tests never touch a real one.
+const testHome = Layer.succeed(HostProcess.HomeDirectory, "/nonexistent/t3-claude-context-home");
+
+it.layer(Layer.mergeAll(NodeServices.layer, testHome))("ClaudeContext", (it) => {
   it.effect(
     "lists a project's folders, including a deleted worktree's memory, and its imports",
     () =>
