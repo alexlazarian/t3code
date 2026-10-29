@@ -6,6 +6,7 @@ import { cn } from "~/lib/utils";
 import type { OverviewRow } from "./Overview.logic";
 
 const URGENCY_EDGE: Record<NonNullable<OverviewRow["urgency"]>, string> = {
+  failed: "border-l-2 border-l-status-failed",
   "needs-you": "border-l-2 border-l-status-needs-you",
   working: "border-l-2 border-l-status-working",
 };

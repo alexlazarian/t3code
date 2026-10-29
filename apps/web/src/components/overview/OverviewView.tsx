@@ -58,19 +58,12 @@ import {
   partitionSidebarThreads,
   resolveThreadLastVisitedAt,
   threadShellKey,
-  type SidebarSection,
 } from "../Sidebar.logic";
 import { sidebarProviderEntriesAtom } from "../sidebar/sidebarProviderEntries";
 import {
-  ACTIVE_SECTION_EXPANDED_KEY,
   DRAFTS_SHELF_EXPANDED_KEY,
-  PINNED_SECTION_EXPANDED_KEY,
-  SETTLED_SHELF_EXPANDED_KEY,
   SETTLED_TAIL_INITIAL_COUNT,
   SETTLED_TAIL_PAGE_COUNT,
-  SIDEBAR_SHELF_EXPANDED_DEFAULT,
-  SNOOZED_SHELF_EXPANDED_KEY,
-  WORKING_SHELF_EXPANDED_KEY,
   useSidebarPartitionClockKey,
 } from "../sidebar/sidebarShelves";
 import { ClearFiltersButton } from "../sidebar/SidebarListMarkers";
@@ -94,7 +87,7 @@ import {
   resolveOverviewSplitRelease,
   type OverviewColumn,
   type OverviewFocusDirection,
-  type OverviewRow,
+  type OverviewRowKey,
 } from "./Overview.logic";
 import { OverviewCard } from "./OverviewCard";
 import { OverviewColumnHeader } from "./OverviewColumnHeader";
@@ -103,12 +96,12 @@ import { OverviewMachineRow } from "./OverviewMachineRow";
 import { OverviewPaneHandle } from "./OverviewPaneHandle";
 import { OverviewShelf } from "./OverviewShelf";
 
-const SECTION_NAMES: Record<SidebarSection, string> = {
-  pinned: "Pinned",
+const ROW_NAMES: Record<OverviewRowKey, string> = {
+  failed: "Failed",
+  "needs-you": "Needs you",
   working: "Working",
-  active: "Active",
-  snoozed: "Snoozed",
-  settled: "Settled",
+  waiting: "Waiting",
+  done: "Done",
 };
 
 const SPLIT_FRACTION_KEY = "t3code:overview:split-fraction";
@@ -134,30 +127,20 @@ const ARROW_DIRECTIONS: Partial<Record<string, OverviewFocusDirection>> = {
   ArrowRight: "right",
 };
 
-// Working, Snoozed and Settled share the sidebar shelves' keys, so collapsing one collapses both.
+type Expansion = readonly [boolean, (v: boolean) => void];
+
+// Board-only keys: the sidebar keeps its own shelves and their collapse state.
 function useOverviewRowExpansion(): {
-  drafts: readonly [boolean, (v: boolean) => void];
-  sections: Record<SidebarSection, readonly [boolean, (v: boolean) => void]>;
+  drafts: Expansion;
+  rows: Record<OverviewRowKey, Expansion>;
 } {
   const drafts = useLocalStorage(DRAFTS_SHELF_EXPANDED_KEY, true, Schema.Boolean);
-  const pinned = useLocalStorage(PINNED_SECTION_EXPANDED_KEY, true, Schema.Boolean);
-  const active = useLocalStorage(ACTIVE_SECTION_EXPANDED_KEY, true, Schema.Boolean);
-  const working = useLocalStorage(
-    WORKING_SHELF_EXPANDED_KEY,
-    SIDEBAR_SHELF_EXPANDED_DEFAULT,
-    Schema.Boolean,
-  );
-  const snoozed = useLocalStorage(
-    SNOOZED_SHELF_EXPANDED_KEY,
-    SIDEBAR_SHELF_EXPANDED_DEFAULT,
-    Schema.Boolean,
-  );
-  const settled = useLocalStorage(
-    SETTLED_SHELF_EXPANDED_KEY,
-    SIDEBAR_SHELF_EXPANDED_DEFAULT,
-    Schema.Boolean,
-  );
-  return { drafts, sections: { pinned, active, working, snoozed, settled } };
+  const failed = useLocalStorage("t3code:overview:row-failed-expanded", true, Schema.Boolean);
+  const needsYou = useLocalStorage("t3code:overview:row-needs-you-expanded", true, Schema.Boolean);
+  const working = useLocalStorage("t3code:overview:row-working-expanded", true, Schema.Boolean);
+  const waiting = useLocalStorage("t3code:overview:row-waiting-expanded", true, Schema.Boolean);
+  const done = useLocalStorage("t3code:overview:row-done-expanded", false, Schema.Boolean);
+  return { drafts, rows: { failed, "needs-you": needsYou, working, waiting, done } };
 }
 
 export function OverviewView() {
@@ -226,24 +209,31 @@ export function OverviewView() {
     delegatedUnderParent,
     serverConfigs,
     optimisticDrop: null,
+    // The board has no Working shelf, but the inbox tracker is shared with the sidebar.
     workingShelfEnabled,
     statusFilter,
     routeRowThreadKey: null,
     clockKey,
   });
-  const settledTotal = partition.settledThreads.length;
-  const hiddenSettledCount = Math.max(0, settledTotal - settledTail.count);
   const projectKeyOf = overviewProjectKeyOf(projects);
-  const { columns, rows } = buildOverviewGrid({
-    partition: {
-      ...partition,
-      settledThreads: partition.settledThreads.slice(0, settledTail.count),
-    },
+  const { columns, rows, hiddenSettledCount } = buildOverviewGrid({
+    partition,
     projects,
     projectKeyOf,
-    workingShelfEnabled,
+    visitOf: (thread) => ({
+      lastVisitedAt: resolveThreadLastVisitedAt(
+        thread.lastVisitedAt,
+        lastVisitedById[threadShellKey(thread)],
+      ),
+      wokeAt: threadWokeAt(thread, { now: partition.snoozeNow }),
+    }),
+    settledDoneLimit: settledTail.count,
   });
-  const cardCount = rows.reduce((sum, row) => sum + row.total, 0) + hiddenSettledCount;
+  const restingByKey = new Map<string, "snoozed" | "settled">([
+    ...partition.snoozedThreads.map((thread) => [threadShellKey(thread), "snoozed"] as const),
+    ...partition.settledThreads.map((thread) => [threadShellKey(thread), "settled"] as const),
+  ]);
+  const cardCount = rows.reduce((sum, row) => sum + row.total, 0);
   const unreadShown = rows.flatMap((row) =>
     [...row.cells.values()].flat().flatMap((thread) =>
       isThreadUnread({
@@ -298,7 +288,7 @@ export function OverviewView() {
   );
   const focusGrid = columns.map((column) =>
     rows
-      .filter((row) => expansion.sections[row.section][0])
+      .filter((row) => expansion.rows[row.key][0])
       .map((row) => (row.cells.get(column.projectKey) ?? []).map(threadShellKey)),
   );
   const allKeys = focusGrid.flat(2);
@@ -338,7 +328,7 @@ export function OverviewView() {
       : resolveOverviewPaneNav({
           rows,
           columns,
-          isExpanded: (section) => expansion.sections[section][0],
+          isExpanded: (row) => expansion.rows[row][0],
           key: openKey,
         });
   const paneMissing = openKey !== null && paneTarget === null;
@@ -394,10 +384,10 @@ export function OverviewView() {
   const startThreadIn = (project: NonNullable<OverviewColumn["project"]>) => {
     void handleNewThread(scopeProjectRef(project.environmentId, project.id));
   };
-  const settledMoreShown = (row: OverviewRow) =>
-    row.section === "settled" && hiddenSettledCount > 0 && expansion.sections.settled[0];
+  const settledMoreShown = (row: OverviewRowKey) =>
+    row === "done" && hiddenSettledCount > 0 && expansion.rows.done[0];
   const shelfSizes = rows.map(
-    (row) => (expansion.sections[row.section][0] ? 2 : 1) + (settledMoreShown(row) ? 1 : 0),
+    (row) => (expansion.rows[row.key][0] ? 2 : 1) + (settledMoreShown(row.key) ? 1 : 0),
   );
   const shelfRows = shelfSizes.map(
     (_, index) =>
@@ -405,10 +395,10 @@ export function OverviewView() {
       (expansion.drafts[0] ? 2 : 1) +
       shelfSizes.slice(0, index).reduce((sum, size) => sum + size, 0),
   );
-  const allExpanded = expansion.drafts[0] || rows.some((row) => expansion.sections[row.section][0]);
+  const allExpanded = expansion.drafts[0] || rows.some((row) => expansion.rows[row.key][0]);
   const toggleAll = () => {
     expansion.drafts[1](!allExpanded);
-    for (const row of rows) expansion.sections[row.section][1](!allExpanded);
+    for (const row of rows) expansion.rows[row.key][1](!allExpanded);
   };
   const clearFilters = () => {
     setStatusFilter("all");
@@ -652,14 +642,14 @@ export function OverviewView() {
                   onNewThread={startThreadIn}
                 />
                 {rows.map((row, rowIndex) => {
-                  const [expanded, setExpanded] = expansion.sections[row.section];
+                  const [expanded, setExpanded] = expansion.rows[row.key];
                   const shelfRow = shelfRows[rowIndex]!;
-                  const showMore = expanded && row.section === "settled" && hiddenSettledCount > 0;
+                  const showMore = settledMoreShown(row.key);
                   return (
-                    <Fragment key={row.section}>
+                    <Fragment key={row.key}>
                       <OverviewShelf
-                        name={SECTION_NAMES[row.section]}
-                        total={row.section === "settled" ? settledTotal : row.total}
+                        name={ROW_NAMES[row.key]}
+                        total={row.total}
                         expanded={expanded}
                         onToggle={() => setExpanded(!expanded)}
                         urgency={row.urgency}
@@ -679,7 +669,7 @@ export function OverviewView() {
                               <OverviewCard
                                 key={key}
                                 thread={thread}
-                                section={row.section}
+                                resting={restingByKey.get(key) ?? null}
                                 projectName={column.displayName}
                                 machineLabel={
                                   machineLabelsByColumn
@@ -740,7 +730,7 @@ export function OverviewView() {
               <>
                 <OverviewPaneHandle
                   nav={paneNav}
-                  sectionName={paneNav === null ? null : SECTION_NAMES[paneNav.section]}
+                  rowName={paneNav === null ? null : ROW_NAMES[paneNav.row]}
                   onStep={showThread}
                   onOpenFull={
                     paneTarget.kind === "draft" ? null : () => openThread(paneTarget.threadKey)

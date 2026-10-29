@@ -1,5 +1,6 @@
 import type { EnvironmentConnectionPhase } from "@t3tools/client-runtime/connection";
 import { scopedThreadKey, scopeThreadRef } from "@t3tools/client-runtime/environment";
+import { sortWorkingThreadsBySend } from "@t3tools/client-runtime/state/thread-inbox";
 import { commandDisplayText } from "@t3tools/client-runtime/work-log/command-label";
 import {
   isOrchestrationV2WorkActive,
@@ -22,16 +23,17 @@ import type { SidebarThreadSummary } from "../../types";
 import type { SidebarProjectSnapshot } from "../../sidebarProjectGrouping";
 import {
   isSidebarThreadCompleted,
+  isSidebarThreadWoke,
   resolveSidebarStatusLabel,
   type SidebarStatusLabel,
 } from "../sidebar/threadStatusLabel";
 import type { StatusLightTone } from "../StatusLight";
 import {
+  isThreadUnread,
   matchesSidebarStatusFilter,
   resolveSidebarThreadStatus,
   threadShellKey,
   type partitionSidebarThreads,
-  type SidebarSection,
 } from "../Sidebar.logic";
 
 export const NO_PROJECT_KEY = "overview:no-project";
@@ -44,12 +46,60 @@ export type OverviewColumn = {
   lights: ReadonlyArray<StatusLightTone>;
 };
 
+/** The board's rows, top to bottom: one per thread status, matching the card's light. */
+const OVERVIEW_ROW_KEYS = ["failed", "needs-you", "working", "waiting", "done"] as const;
+export type OverviewRowKey = (typeof OVERVIEW_ROW_KEYS)[number];
+
 export type OverviewRow = {
-  section: SidebarSection;
+  key: OverviewRowKey;
   cells: ReadonlyMap<string, ReadonlyArray<SidebarThreadSummary>>;
+  /** Includes settled threads held back by the Done row's cap. */
   total: number;
-  urgency: "needs-you" | "working" | null;
+  urgency: "failed" | "needs-you" | "working" | null;
 };
+
+type OverviewThreadVisit = {
+  readonly lastVisitedAt: string | undefined;
+  readonly wokeAt: string | null;
+};
+
+/** The card's status, from the same read and wake state the card shows. */
+export function resolveOverviewThreadStatus(
+  thread: SidebarThreadSummary,
+  visit: OverviewThreadVisit,
+) {
+  const status = resolveSidebarThreadStatus(thread);
+  const isUnread = isThreadUnread({ ...thread, lastVisitedAt: visit.lastVisitedAt });
+  const isWoke = isSidebarThreadWoke({
+    wokeAt: visit.wokeAt,
+    lastVisitedAt: visit.lastVisitedAt,
+    settledOverride: thread.settledOverride,
+  });
+  const label = resolveSidebarStatusLabel({
+    status,
+    goalActive: thread.goal?.status === "active",
+    hasActionableProposedPlan: thread.hasActionableProposedPlan,
+    isUnread,
+    isCompleted: isSidebarThreadCompleted(thread),
+    isWoke,
+  });
+  return { status, isUnread, isWoke, label };
+}
+
+const ROW_BY_ICON: Partial<Record<SidebarStatusLabel["icon"], OverviewRowKey>> = {
+  failed: "failed",
+  approval: "needs-you",
+  input: "needs-you",
+  request: "needs-you",
+  plan: "needs-you",
+  woke: "needs-you",
+  working: "working",
+  waiting: "waiting",
+};
+
+export function overviewRowOf(icon: SidebarStatusLabel["icon"] | null): OverviewRowKey {
+  return (icon === null ? undefined : ROW_BY_ICON[icon]) ?? "done";
+}
 
 export function overviewProjectKeyOf(projects: ReadonlyArray<SidebarProjectSnapshot>) {
   const byMemberRef = new Map<string, string>();
@@ -106,57 +156,59 @@ export function buildOverviewGrid(input: {
   >;
   projects: ReadonlyArray<SidebarProjectSnapshot>;
   projectKeyOf: (thread: SidebarThreadSummary) => string;
-  workingShelfEnabled: boolean;
-}): { columns: OverviewColumn[]; rows: OverviewRow[] } {
+  visitOf: (thread: SidebarThreadSummary) => OverviewThreadVisit;
+  /** How many settled threads the Done row shows; settled threads elsewhere always show. */
+  settledDoneLimit: number;
+}): { columns: OverviewColumn[]; rows: OverviewRow[]; hiddenSettledCount: number } {
   const { partition, projects, projectKeyOf } = input;
-  const sections: ReadonlyArray<readonly [SidebarSection, ReadonlyArray<SidebarThreadSummary>]> = [
-    ["pinned", partition.pinnedThreads],
-    ...(input.workingShelfEnabled ? ([["working", partition.workingThreads]] as const) : []),
-    ["active", partition.activeThreads],
-    ["snoozed", partition.snoozedThreads],
-    ["settled", partition.settledThreads],
+  // Pinned first, then the inbox by latest send, then the dimmed snoozed and settled threads.
+  const ordered = [
+    ...partition.pinnedThreads,
+    ...sortWorkingThreadsBySend([...partition.workingThreads, ...partition.activeThreads]),
+    ...partition.snoozedThreads,
+    ...partition.settledThreads,
   ];
 
   const known = new Set(projects.map((project) => project.projectKey));
   const stats = new Map<string, OverviewColumn["counts"]>();
   const lightsByColumn = new Map<string, StatusLightTone[]>();
-  const rows: OverviewRow[] = sections.map(([section, threads]) => {
-    const cells = new Map<string, SidebarThreadSummary[]>();
-    let urgency: OverviewRow["urgency"] = null;
-    for (const thread of threads) {
-      const projectKey = projectKeyOf(thread);
-      const key = known.has(projectKey) ? projectKey : NO_PROJECT_KEY;
-      const cell = cells.get(key);
-      if (cell) cell.push(thread);
-      else cells.set(key, [thread]);
-      if (section === "settled") continue;
-      const counts = stats.get(key) ?? { open: 0, working: 0, needsYou: 0 };
-      stats.set(key, counts);
-      counts.open += 1;
-      const status = resolveSidebarThreadStatus(thread);
-      const label = resolveSidebarStatusLabel({
-        status,
-        goalActive: thread.goal?.status === "active",
-        hasActionableProposedPlan: thread.hasActionableProposedPlan,
-        isUnread: false,
-        isCompleted: isSidebarThreadCompleted(thread),
-        isWoke: false,
-      });
-      const lights = lightsByColumn.get(key);
-      if (lights) lights.push(overviewLight(label?.icon ?? null));
-      else lightsByColumn.set(key, [overviewLight(label?.icon ?? null)]);
-      if (status === "working") {
-        counts.working += 1;
-        urgency ??= "working";
-      } else if (
-        matchesSidebarStatusFilter(status, thread.hasActionableProposedPlan, "needs-you")
-      ) {
-        counts.needsYou += 1;
-        urgency = "needs-you";
-      }
+  const rows = new Map<
+    OverviewRowKey,
+    Omit<OverviewRow, "cells"> & { cells: Map<string, SidebarThreadSummary[]> }
+  >(OVERVIEW_ROW_KEYS.map((key) => [key, { key, cells: new Map(), total: 0, urgency: null }]));
+  let settledDoneShown = 0;
+  let hiddenSettledCount = 0;
+  for (const thread of ordered) {
+    const projectKey = projectKeyOf(thread);
+    const key = known.has(projectKey) ? projectKey : NO_PROJECT_KEY;
+    const { status, label } = resolveOverviewThreadStatus(thread, input.visitOf(thread));
+    const row = rows.get(overviewRowOf(label?.icon ?? null))!;
+    row.total += 1;
+    const settled = thread.settledOverride === "settled";
+    if (settled && row.key === "done" && settledDoneShown >= input.settledDoneLimit) {
+      hiddenSettledCount += 1;
+      continue;
     }
-    return { section, cells, total: threads.length, urgency };
-  });
+    if (settled && row.key === "done") settledDoneShown += 1;
+    const cell = row.cells.get(key);
+    if (cell) cell.push(thread);
+    else row.cells.set(key, [thread]);
+    if (row.key === "failed" || row.key === "needs-you" || row.key === "working") {
+      row.urgency = row.key;
+    }
+    if (settled) continue;
+    const counts = stats.get(key) ?? { open: 0, working: 0, needsYou: 0 };
+    stats.set(key, counts);
+    counts.open += 1;
+    const lights = lightsByColumn.get(key);
+    if (lights) lights.push(overviewLight(label?.icon ?? null));
+    else lightsByColumn.set(key, [overviewLight(label?.icon ?? null)]);
+    if (status === "working") {
+      counts.working += 1;
+    } else if (matchesSidebarStatusFilter(status, thread.hasActionableProposedPlan, "needs-you")) {
+      counts.needsYou += 1;
+    }
+  }
 
   const columns: OverviewColumn[] = projects.map((project) => ({
     projectKey: project.projectKey,
@@ -165,7 +217,7 @@ export function buildOverviewGrid(input: {
     counts: stats.get(project.projectKey) ?? { open: 0, working: 0, needsYou: 0 },
     lights: lightsByColumn.get(project.projectKey) ?? [],
   }));
-  const orphanTotal = rows.reduce(
+  const orphanTotal = [...rows.values()].reduce(
     (sum, row) => sum + (row.cells.get(NO_PROJECT_KEY)?.length ?? 0),
     0,
   );
@@ -178,7 +230,7 @@ export function buildOverviewGrid(input: {
       lights: lightsByColumn.get(NO_PROJECT_KEY) ?? [],
     });
   }
-  return { columns, rows };
+  return { columns, rows: [...rows.values()], hiddenSettledCount };
 }
 
 export type OverviewDraft = {
@@ -219,7 +271,7 @@ export function overviewDraftCards(input: {
 }
 
 export interface OverviewPaneNav {
-  readonly section: SidebarSection;
+  readonly row: OverviewRowKey;
   readonly index: number;
   readonly count: number;
   readonly previousKey: string | null;
@@ -230,25 +282,25 @@ export interface OverviewPaneNav {
 export function resolveOverviewPaneNav(input: {
   readonly rows: ReadonlyArray<OverviewRow>;
   readonly columns: ReadonlyArray<OverviewColumn>;
-  readonly isExpanded: (section: SidebarSection) => boolean;
+  readonly isExpanded: (row: OverviewRowKey) => boolean;
   readonly key: string;
 }): OverviewPaneNav | null {
   const cards = input.rows.flatMap((row) =>
     input.columns.flatMap((column) =>
       (row.cells.get(column.projectKey) ?? []).map((thread) => ({
         key: threadShellKey(thread),
-        section: row.section,
+        row: row.key,
       })),
     ),
   );
   const at = cards.findIndex((card) => card.key === input.key);
   const current = cards[at];
   if (current === undefined) return null;
-  const visible = (card: (typeof cards)[number]) => input.isExpanded(card.section);
+  const visible = (card: (typeof cards)[number]) => input.isExpanded(card.row);
   return {
-    section: current.section,
-    index: cards.slice(0, at + 1).filter((card) => card.section === current.section).length,
-    count: cards.filter((card) => card.section === current.section).length,
+    row: current.row,
+    index: cards.slice(0, at + 1).filter((card) => card.row === current.row).length,
+    count: cards.filter((card) => card.row === current.row).length,
     previousKey: cards.slice(0, at).findLast(visible)?.key ?? null,
     nextKey: cards.slice(at + 1).find(visible)?.key ?? null,
   };

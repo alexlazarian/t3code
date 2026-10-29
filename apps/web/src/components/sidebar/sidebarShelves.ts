@@ -3,7 +3,7 @@ import { useSyncExternalStore } from "react";
 import { useNowMinute } from "../../hooks/useNowMinute";
 import { inboxReturns, useSnoozeWakeClock } from "../Sidebar.logic";
 
-// Keys predate the sidebar headers; the sidebar and Overview collapse these sections together.
+// Keys predate the sidebar headers. Overview shares only the Drafts key; its status rows have their own.
 export const PINNED_SECTION_EXPANDED_KEY = "t3code:overview:pinned-expanded";
 export const DRAFTS_SHELF_EXPANDED_KEY = "t3code:overview:drafts-expanded";
 export const ACTIVE_SECTION_EXPANDED_KEY = "t3code:overview:active-expanded";

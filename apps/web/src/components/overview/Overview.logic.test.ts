@@ -38,8 +38,10 @@ import {
   sidebarStepLine,
   overviewWaitStrip,
   overviewSplitDragFraction,
+  overviewRowOf,
   resolveOverviewPaneNav,
   resolveOverviewPaneTarget,
+  resolveOverviewThreadStatus,
   resolveOverviewSplitRelease,
 } from "./Overview.logic";
 
@@ -121,6 +123,26 @@ function partition(threads: ReadonlyArray<ReturnType<typeof makeThread>>, workin
 
 const FUTURE = "2099-01-01T00:00:00.000Z";
 
+function grid(
+  projects: ReturnType<typeof snapshots>,
+  threads: ReadonlyArray<ReturnType<typeof makeThread>>,
+  options: { workingShelf?: boolean; settledDoneLimit?: number; wokeAt?: string } = {},
+) {
+  return buildOverviewGrid({
+    partition: partition(threads, options.workingShelf),
+    projects,
+    projectKeyOf: overviewProjectKeyOf(projects),
+    visitOf: (thread) => ({
+      lastVisitedAt: thread.lastVisitedAt ?? undefined,
+      wokeAt: options.wokeAt ?? null,
+    }),
+    settledDoneLimit: options.settledDoneLimit ?? Number.POSITIVE_INFINITY,
+  });
+}
+
+const ids = (row: { cells: ReadonlyMap<string, ReadonlyArray<{ id: string }>> } | undefined) =>
+  [...(row?.cells.values() ?? [])].flat().map((thread) => thread.id);
+
 describe("partitionSidebarThreads", () => {
   it("keeps snoozed > settled > pinned precedence", () => {
     const pinned = "2026-03-09T10:00:00.000Z";
@@ -190,39 +212,95 @@ describe("buildOverviewGrid", () => {
         projectId: ProjectId.make("project-remote"),
       }),
     ];
-    const grid = buildOverviewGrid({
-      partition: partition(threads),
-      projects,
-      projectKeyOf: overviewProjectKeyOf(projects),
-      workingShelfEnabled: false,
-    });
-    expect(grid.columns).toHaveLength(1);
-    expect(grid.columns[0]?.counts.open).toBe(2);
+    const board = grid(projects, threads);
+    expect(board.columns).toHaveLength(1);
+    expect(board.columns[0]?.counts.open).toBe(2);
     expect(
-      grid.rows.find((row) => row.section === "active")?.cells.get(projects[0]!.projectKey),
+      board.rows.find((row) => row.key === "done")?.cells.get(projects[0]!.projectKey),
     ).toHaveLength(2);
   });
 
-  it("follows sidebar section order and keeps empty rows", () => {
+  it("puts each thread in its status row, in status order, and keeps empty rows", () => {
     const projects = snapshots([makeProject()]);
-    const build = (workingShelfEnabled: boolean) =>
-      buildOverviewGrid({
-        partition: partition([makeThread("only")], workingShelfEnabled),
-        projects,
-        projectKeyOf: overviewProjectKeyOf(projects),
-        workingShelfEnabled,
-      }).rows;
-    expect(build(true).map((row) => row.section)).toEqual([
+    const { rows } = grid(projects, [
+      makeThread("done"),
+      makeThread("waiting", { runtime: { ...runtime, status: "idle" } }),
+      makeThread("working", { runtime }),
+      makeThread("plan", { hasActionableProposedPlan: true }),
+      makeThread("approval", { hasPendingApprovals: true }),
+      makeThread("limited", {
+        runtime: { ...runtime, status: "failed" as const, lastErrorClass: "usage_limit" as const },
+      }),
+      makeThread("failed", { runtime: { ...runtime, status: "failed" } }),
+    ]);
+    expect(rows.map((row) => [row.key, ids(row).toSorted()])).toEqual([
+      ["failed", ["failed", "limited"]],
+      ["needs-you", ["approval", "plan"]],
+      ["working", ["working"]],
+      ["waiting", ["waiting"]],
+      ["done", ["done"]],
+    ]);
+    expect(grid(projects, []).rows.map((row) => [row.key, row.total])).toEqual([
+      ["failed", 0],
+      ["needs-you", 0],
+      ["working", 0],
+      ["waiting", 0],
+      ["done", 0],
+    ]);
+  });
+
+  it("keeps pinned and snoozed threads in their status row, pinned first", () => {
+    const projects = snapshots([makeProject()]);
+    const { rows } = grid(
+      projects,
+      [
+        makeThread("working", { runtime, latestUserAuthoredMessageAt: "2026-03-09T12:00:00.000Z" }),
+        makeThread("snoozed", { runtime, snoozedUntil: FUTURE }),
+        makeThread("pinned", { runtime, pinnedAt: "2026-03-09T10:00:00.000Z" }),
+      ],
+      { workingShelf: true },
+    );
+    expect(ids(rows.find((row) => row.key === "working"))).toEqual([
       "pinned",
       "working",
-      "active",
       "snoozed",
-      "settled",
     ]);
-    expect(build(true).find((row) => row.section === "working")?.total).toBe(0);
-    const rows = build(false);
-    expect(rows.map((row) => row.section)).toEqual(["pinned", "active", "snoozed", "settled"]);
-    expect(rows.map((row) => row.total)).toEqual([0, 1, 0, 0]);
+  });
+
+  it("puts a woke thread under Needs you, from the same visit the card reads", () => {
+    const projects = snapshots([makeProject()]);
+    const wokeAt = "2026-03-09T10:00:00.000Z";
+    const thread = makeThread("woke", { lastVisitedAt: "2026-03-09T09:00:00.000Z" });
+    const { label } = resolveOverviewThreadStatus(thread, {
+      lastVisitedAt: thread.lastVisitedAt ?? undefined,
+      wokeAt,
+    });
+    expect(label?.icon).toBe("woke");
+    expect(overviewRowOf(label?.icon ?? null)).toBe("needs-you");
+    expect(ids(grid(projects, [thread], { wokeAt }).rows[1])).toEqual(["woke"]);
+  });
+
+  it("caps settled threads only in the Done row", () => {
+    const projects = snapshots([makeProject()]);
+    const settled = { settledOverride: "settled" as const };
+    const board = grid(
+      projects,
+      [
+        makeThread("s1", settled),
+        makeThread("s2", settled),
+        makeThread("s-failed", { ...settled, runtime: { ...runtime, status: "failed" } }),
+      ],
+      { settledDoneLimit: 1 },
+    );
+    expect(board.hiddenSettledCount).toBe(1);
+    expect(board.rows.map((row) => [row.key, ids(row).length, row.total])).toEqual([
+      ["failed", 1, 1],
+      ["needs-you", 0, 0],
+      ["working", 0, 0],
+      ["waiting", 0, 0],
+      ["done", 1, 2],
+    ]);
+    expect(board.columns[0]?.counts.open).toBe(0);
   });
 
   it("counts working and needs-you per column", () => {
@@ -236,71 +314,56 @@ describe("buildOverviewGrid", () => {
       makeThread("working", { runtime }),
       makeThread("done"),
       makeThread("elsewhere", { projectId: ProjectId.make("project-2"), runtime }),
+      makeThread("settled-working", { runtime, settledOverride: "settled" }),
     ];
-    const grid = buildOverviewGrid({
-      partition: partition(threads),
-      projects,
-      projectKeyOf: overviewProjectKeyOf(projects),
-      workingShelfEnabled: false,
-    });
-    expect(grid.columns.map((column) => column.counts)).toEqual([
+    const board = grid(projects, threads);
+    expect(board.columns.map((column) => column.counts)).toEqual([
       { open: 4, working: 1, needsYou: 2 },
       { open: 1, working: 1, needsYou: 0 },
     ]);
     expect(
-      grid.columns.map((column) => column.lights.filter((tone) => tone === "working")),
+      board.columns.map((column) => column.lights.filter((tone) => tone === "working")),
     ).toEqual([["working"], ["working"]]);
-    for (const column of grid.columns) expect(column.lights).toHaveLength(column.counts.open);
+    for (const column of board.columns) expect(column.lights).toHaveLength(column.counts.open);
   });
 
-  it("marks a shelf needs-you, working or quiet by its most urgent thread", () => {
+  it("marks the Failed, Needs you and Working rows when they hold a card", () => {
     const projects = snapshots([makeProject()]);
     const urgency = (threads: ReturnType<typeof makeThread>[]) =>
-      buildOverviewGrid({
-        partition: partition(threads, true),
-        projects,
-        projectKeyOf: overviewProjectKeyOf(projects),
-        workingShelfEnabled: true,
-      }).rows.map((row) => [row.section, row.urgency]);
+      grid(projects, threads).rows.map((row) => [row.key, row.urgency]);
     expect(
       urgency([
+        makeThread("failed", { runtime: { ...runtime, status: "failed" } }),
         makeThread("approval", { hasPendingApprovals: true }),
         makeThread("working", { runtime }),
+        makeThread("waiting", { runtime: { ...runtime, status: "idle" } }),
+        makeThread("done"),
       ]),
     ).toEqual([
-      ["pinned", null],
+      ["failed", "failed"],
+      ["needs-you", "needs-you"],
       ["working", "working"],
-      ["active", "needs-you"],
-      ["snoozed", null],
-      ["settled", null],
+      ["waiting", null],
+      ["done", null],
     ]);
-    expect(urgency([makeThread("done", { settledOverride: "settled" })])[4]).toEqual([
-      "settled",
-      null,
-    ]);
+    expect(urgency([makeThread("done")])[0]).toEqual(["failed", null]);
   });
 
   it("adds a No project column last only when a thread matches no project", () => {
     const projects = snapshots([makeProject()]);
-    const build = (threads: ReturnType<typeof makeThread>[]) =>
-      buildOverviewGrid({
-        partition: partition(threads),
-        projects,
-        projectKeyOf: overviewProjectKeyOf(projects),
-        workingShelfEnabled: false,
-      });
+    const build = (threads: ReturnType<typeof makeThread>[]) => grid(projects, threads);
     expect(build([makeThread("a")]).columns.map((column) => column.projectKey)).toEqual([
       projects[0]!.projectKey,
     ]);
-    const grid = build([
+    const board = build([
       makeThread("a"),
       makeThread("lost", { projectId: ProjectId.make("gone") }),
     ]);
-    expect(grid.columns.map((column) => column.projectKey)).toEqual([
+    expect(board.columns.map((column) => column.projectKey)).toEqual([
       projects[0]!.projectKey,
       NO_PROJECT_KEY,
     ]);
-    expect(grid.columns[1]?.counts.open).toBe(1);
+    expect(board.columns[1]?.counts.open).toBe(1);
   });
 });
 
@@ -754,31 +817,28 @@ describe("overview pane nav", () => {
   const inProject2 = { projectId: ProjectId.make("project-2") };
   const key = (id: string) => `${envA}:${id}`;
   const board = (threads: ReadonlyArray<ReturnType<typeof makeThread>>) => {
-    const { rows, columns } = buildOverviewGrid({
-      partition: partition(threads),
-      projects,
-      projectKeyOf: overviewProjectKeyOf(projects),
-      workingShelfEnabled: false,
-    });
+    const { rows, columns } = grid(projects, threads);
     return (id: string, collapsed: ReadonlyArray<string> = []) =>
       resolveOverviewPaneNav({
         rows,
         columns,
-        isExpanded: (section) => !collapsed.includes(section),
+        isExpanded: (row) => !collapsed.includes(row),
         key: key(id),
       });
   };
   const settled = { settledOverride: "settled" as const };
+  const working = (id: string, overrides: ThreadFixtureOverrides = {}) =>
+    makeThread(id, { runtime, ...overrides });
 
-  it("walks a section column by column, then into the next section", () => {
+  it("walks a row column by column, then into the next row", () => {
     const nav = board([
-      makeThread("a1"),
-      makeThread("a2"),
-      makeThread("b1", inProject2),
+      working("a1"),
+      working("a2"),
+      working("b1", inProject2),
       makeThread("s1", settled),
     ]);
     expect(nav("a2")).toMatchObject({
-      section: "active",
+      row: "working",
       index: 2,
       count: 3,
       previousKey: key("a1"),
@@ -788,21 +848,21 @@ describe("overview pane nav", () => {
   });
 
   it("stops at the first and last card", () => {
-    const nav = board([makeThread("a1"), makeThread("s1", settled)]);
+    const nav = board([working("a1"), makeThread("s1", settled)]);
     expect(nav("a1")?.previousKey).toBeNull();
     expect(nav("s1")?.nextKey).toBeNull();
   });
 
-  it("skips collapsed sections", () => {
-    const nav = board([makeThread("a1"), makeThread("s1", settled), makeThread("a2")]);
-    expect(nav("a1", ["settled"])?.nextKey).toBe(key("a2"));
-    expect(nav("a2", ["active"])?.previousKey).toBeNull();
+  it("skips collapsed rows", () => {
+    const nav = board([working("a1"), makeThread("s1", settled), working("a2")]);
+    expect(nav("a1", ["done"])?.nextKey).toBe(key("a2"));
+    expect(nav("a2", ["working"])?.previousKey).toBeNull();
   });
 
-  it("keeps neighbors for a card in a collapsed section", () => {
-    const nav = board([makeThread("a1"), makeThread("a2"), makeThread("s1", settled)]);
-    expect(nav("s1", ["settled"])).toMatchObject({
-      section: "settled",
+  it("keeps neighbors for a card in a collapsed row", () => {
+    const nav = board([working("a1"), working("a2"), makeThread("s1", settled)]);
+    expect(nav("s1", ["done"])).toMatchObject({
+      row: "done",
       index: 1,
       count: 1,
       previousKey: key("a2"),

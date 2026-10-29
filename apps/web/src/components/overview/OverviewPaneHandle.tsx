@@ -9,13 +9,13 @@ const stopDrag = (event: PointerEvent) => event.stopPropagation();
 
 export function OverviewPaneHandle(props: {
   nav: OverviewPaneNav | null;
-  sectionName: string | null;
+  rowName: string | null;
   onStep: (key: string) => void;
   onOpenFull: (() => void) | null;
   onClose: () => void;
   separator: ComponentProps<"div">;
 }) {
-  const { nav, sectionName, onStep, onOpenFull, onClose } = props;
+  const { nav, rowName, onStep, onOpenFull, onClose } = props;
   const { onPointerDown, onPointerMove, onPointerUp, onPointerCancel, ...separator } =
     props.separator;
   return (
@@ -27,10 +27,10 @@ export function OverviewPaneHandle(props: {
       className="relative flex h-6 shrink-0 cursor-row-resize touch-none items-center justify-between border-y border-border bg-muted px-2 text-2xs text-muted-foreground hover:bg-accent"
     >
       <div onPointerDown={stopDrag} className="relative z-10 flex items-center gap-0.5">
-        {nav === null || sectionName === null ? null : (
+        {nav === null || rowName === null ? null : (
           <>
             <span className="mr-1 whitespace-nowrap">
-              <b className="font-semibold text-foreground">{sectionName}</b> · {nav.index} of{" "}
+              <b className="font-semibold text-foreground">{rowName}</b> · {nav.index} of{" "}
               {nav.count}
             </span>
             <Button

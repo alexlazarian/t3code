@@ -1,25 +1,14 @@
 import { scopedThreadKey, scopeThreadRef } from "@t3tools/client-runtime/environment";
 import { resolveSettledThreadTimestamp } from "@t3tools/client-runtime/state/thread-sort";
 import type { OrchestrationV2ShellSubagent } from "@t3tools/contracts";
-import { BotIcon, EyeIcon, ListIcon, RowsIcon, SquareTerminalIcon } from "lucide-react";
+import { BotIcon, EyeIcon, ListIcon, PinIcon, RowsIcon, SquareTerminalIcon } from "lucide-react";
 import { memo, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
 
 import { deriveActiveWorkStartedAt } from "../../session-logic";
 import { cn } from "~/lib/utils";
 import type { SidebarThreadSummary } from "../../types";
 import { RelativeTimeLabel, threadTimeTimestamp } from "../sidebar/RelativeTimeLabel";
-import {
-  isSidebarThreadCompleted,
-  isSidebarThreadWoke,
-  resolveSidebarStatusLabel,
-} from "../sidebar/threadStatusLabel";
-import {
-  isThreadUnread,
-  resolveSidebarThreadStatus,
-  shouldRecedeSidebarThread,
-  threadShellKey,
-  type SidebarSection,
-} from "../Sidebar.logic";
+import { shouldRecedeSidebarThread, threadShellKey } from "../Sidebar.logic";
 import type { SidebarProviderEntry } from "../sidebar/SidebarThreadRow";
 import { UnsentDraftLabel } from "../sidebar/UnsentDraftLabel";
 import { useThreadHasUnsentDraft } from "../../composerDraftStore";
@@ -34,6 +23,7 @@ import {
   overviewStepLine,
   overviewWaitStrip,
   overviewStrobeDelay,
+  resolveOverviewThreadStatus,
   type OverviewLight,
   type OverviewWaitStrip,
 } from "./Overview.logic";
@@ -63,7 +53,7 @@ const WAIT_ICON: Record<
 
 export const OverviewCard = memo(function OverviewCard(props: {
   readonly thread: SidebarThreadSummary;
-  readonly section: SidebarSection;
+  readonly resting: "snoozed" | "settled" | null;
   readonly projectName: string;
   readonly machineLabel: string | null;
   readonly providerName: string;
@@ -80,21 +70,12 @@ export const OverviewCard = memo(function OverviewCard(props: {
   const { thread, lastVisitedAt } = props;
   const [expanded, setExpanded] = useState(false);
   const threadKey = threadShellKey(thread);
-  const isUnread = isThreadUnread({ ...thread, lastVisitedAt });
-  const sidebarStatus = resolveSidebarThreadStatus(thread);
-  const isWoke = isSidebarThreadWoke({
-    wokeAt: props.wokeAt,
-    lastVisitedAt,
-    settledOverride: thread.settledOverride,
-  });
-  const status = resolveSidebarStatusLabel({
+  const {
     status: sidebarStatus,
-    goalActive: thread.goal?.status === "active",
-    hasActionableProposedPlan: thread.hasActionableProposedPlan,
     isUnread,
-    isCompleted: isSidebarThreadCompleted(thread),
     isWoke,
-  });
+    label: status,
+  } = resolveOverviewThreadStatus(thread, { lastVisitedAt, wokeAt: props.wokeAt });
   const recedes = shouldRecedeSidebarThread({
     status: sidebarStatus,
     hasActionableProposedPlan: thread.hasActionableProposedPlan,
@@ -151,7 +132,13 @@ export const OverviewCard = memo(function OverviewCard(props: {
       tabIndex={props.tabbable ? 0 : -1}
       data-thread-key={threadKey}
       data-info-thread={threadKey}
-      aria-label={[thread.title, isUnread ? "unread" : null, props.projectName, status?.label]
+      aria-label={[
+        thread.title,
+        thread.pinnedAt != null ? "pinned" : null,
+        isUnread ? "unread" : null,
+        props.projectName,
+        status?.label,
+      ]
         .filter(Boolean)
         .join(", ")}
       aria-pressed={props.selected}
@@ -163,10 +150,10 @@ export const OverviewCard = memo(function OverviewCard(props: {
       className={cn(
         "min-w-0 cursor-pointer border border-border bg-muted text-foreground outline-0 -outline-offset-1 outline-ring select-none focus-visible:outline-2",
         props.selected && "outline-2 outline-primary",
-        // The section fade is stronger than the read fade, so they never stack.
+        // The resting fade is stronger than the read fade, so they never stack.
         props.offline
           ? "opacity-50"
-          : props.section === "snoozed" || props.section === "settled"
+          : props.resting !== null
             ? "opacity-55 saturate-50"
             : recedes &&
               "opacity-60 transition-opacity hover:opacity-100 focus-within:opacity-100 motion-reduce:transition-none",
@@ -191,6 +178,9 @@ export const OverviewCard = memo(function OverviewCard(props: {
         >
           {thread.title}
         </span>
+        {thread.pinnedAt != null ? (
+          <PinIcon aria-hidden className="size-3 shrink-0 text-muted-foreground" />
+        ) : null}
         {isUnread ? (
           <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-primary" />
         ) : null}
@@ -264,7 +254,7 @@ export const OverviewCard = memo(function OverviewCard(props: {
             ) : (
               <RelativeTimeLabel
                 timestamp={
-                  props.section === "settled"
+                  props.resting === "settled"
                     ? resolveSettledThreadTimestamp(thread)
                     : threadTimeTimestamp(thread)
                 }

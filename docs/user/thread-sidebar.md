@@ -241,8 +241,10 @@ all threads as read** in the command palette does the same for the sidebar.
 ## See every project at once
 
 On web and desktop, **Overview** lays out each project as a column of thread cards.
-A card's left edge shows its status: green while working, amber when it needs you,
-and red when it failed or hit a usage limit. Open it with **Overview** above the main area
+Cards sit in rows by status: **Failed**, **Needs you**, **Working**, **Waiting**,
+and **Done**. A card's left edge shows its status: green while working, amber when it needs you,
+and red when it failed or hit a usage limit. Pinned threads show a pin and come first in their
+row; snoozed and settled threads stay in their status row, dimmed. Open it with **Overview** above the main area
 or **Switch to Overview** in the command palette. To get back to a single thread, pick one
 in the sidebar, double-click a card, or use **Back to threads** in the command palette.
 **Settings → General → Thread view** chooses which view T3 Code opens in; it also opens in
