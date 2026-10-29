@@ -58,11 +58,6 @@ export function currentThreadKey(): string | null {
   return currentThread === null ? null : threadKeyOf(currentThread);
 }
 
-/** The thread the user last opened in either view this session. */
-export function currentThreadRef(): ThreadRouteRef | null {
-  return currentThread;
-}
-
 export function overviewSplitThreadKey(): string | null {
   return overviewSplitClosed ? null : currentThreadKey();
 }

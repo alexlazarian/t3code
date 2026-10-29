@@ -21,10 +21,12 @@ export type SettingsPath =
   | "/settings/diagnostics"
   | "/settings/appearance"
   | "/settings/chat"
+  | "/settings/prompt-stash"
   | "/settings/diffs"
   | "/settings/keybindings"
   | "/settings/snap-shot"
   | "/settings/providers"
+  | "/settings/context"
   | "/settings/usage"
   | "/settings/threads"
   | "/settings/browser"
@@ -90,10 +92,12 @@ export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
   "/settings/general": "General",
   "/settings/appearance": "Appearance",
   "/settings/chat": "Chat",
+  "/settings/prompt-stash": "Prompt stash",
   "/settings/diffs": "Diffs & pull requests",
   "/settings/keybindings": "Keybindings",
   "/settings/snap-shot": "SnapShots",
   "/settings/providers": "Providers",
+  "/settings/context": "Context",
   "/settings/usage": "Usage",
   "/settings/threads": "Threads",
   "/settings/browser": "Browser",
@@ -120,6 +124,7 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
       "/settings/general",
       "/settings/appearance",
       "/settings/chat",
+      "/settings/prompt-stash",
       "/settings/diffs",
       "/settings/keybindings",
       "/settings/snap-shot",
@@ -129,6 +134,7 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
     heading: "Agents",
     paths: [
       "/settings/providers",
+      "/settings/context",
       "/settings/usage",
       "/settings/threads",
       "/settings/browser",
@@ -1185,6 +1191,18 @@ export const SETTINGS_SEARCH_ITEMS = [
     to: "/settings/archived",
     searchTerms: ["restore reopen deleted history projects"],
   },
+  {
+    id: "context",
+    title: "Context",
+    to: "/settings/context",
+    searchTerms: ["memory memories claude.md instructions skills commands"],
+  },
+  {
+    id: "prompt-stash",
+    title: "Prompt stash",
+    to: "/settings/prompt-stash",
+    searchTerms: ["stashed saved prompts drafts"],
+  },
 ] as const satisfies ReadonlyArray<SettingsSearchItem>;
 
 export type SettingsSearchItemId = (typeof SETTINGS_SEARCH_ITEMS)[number]["id"];
@@ -1197,10 +1215,12 @@ const SETTINGS_CATEGORY_SCOPES: Readonly<Record<SettingsPath, SettingsSearchScop
   "/settings/general": null,
   "/settings/appearance": null,
   "/settings/chat": null,
+  "/settings/prompt-stash": null,
   "/settings/diffs": null,
   "/settings/snap-shot": null,
   "/settings/keybindings": null,
   "/settings/providers": null,
+  "/settings/context": null,
   "/settings/usage": null,
   "/settings/threads": null,
   "/settings/browser": null,

@@ -2,7 +2,6 @@ import { Debouncer } from "@tanstack/react-pacer";
 import type { PullRequestMergeMethod } from "@t3tools/contracts";
 import { create } from "zustand";
 import { normalizeProjectPathForComparison } from "@t3tools/client-runtime/state/projects";
-import { isLibraryCategory, type LibraryCategory } from "./components/library/Library.logic";
 import type { SidebarStatusFilter } from "./components/Sidebar.logic";
 
 export const PERSISTED_STATE_KEY = "t3code:ui-state:v1";
@@ -34,7 +33,6 @@ export interface PersistedUiState {
   sidebarProjectScopeKeys?: string[];
   sidebarStatusFilter?: string;
   sidebarPanel?: string;
-  libraryCategory?: string;
   threadChangedFilesExpansionVersion?: number;
   threadChangedFilesExpandedById?: Record<string, Record<string, boolean>>;
   pullRequestMergeMethod?: string;
@@ -46,7 +44,6 @@ export interface UiProjectState {
   sidebarProjectScopeKeys: string[];
   sidebarStatusFilter: SidebarStatusFilter;
   sidebarPanel: SidebarPanel;
-  libraryCategory: LibraryCategory;
 }
 
 export interface UiThreadState {
@@ -71,7 +68,6 @@ const initialState: UiState = {
   sidebarProjectScopeKeys: [],
   sidebarStatusFilter: "all",
   sidebarPanel: "threads",
-  libraryCategory: "context",
   threadLastVisitedAtById: {},
   threadChangedFilesExpandedById: {},
   defaultAdvertisedEndpointKey: null,
@@ -173,9 +169,6 @@ export function parsePersistedState(parsed: PersistedUiState): UiState {
     sidebarPanel: isSidebarPanel(parsed.sidebarPanel)
       ? parsed.sidebarPanel
       : initialState.sidebarPanel,
-    libraryCategory: isLibraryCategory(parsed.libraryCategory)
-      ? parsed.libraryCategory
-      : initialState.libraryCategory,
     pullRequestMergeMethod: isPullRequestMergeMethod(parsed.pullRequestMergeMethod)
       ? parsed.pullRequestMergeMethod
       : initialState.pullRequestMergeMethod,
@@ -257,7 +250,6 @@ export function persistState(state: UiState): void {
             : null,
         sidebarStatusFilter: state.sidebarStatusFilter,
         sidebarPanel: state.sidebarPanel,
-        libraryCategory: state.libraryCategory,
         threadChangedFilesExpansionVersion: THREAD_CHANGED_FILES_EXPANSION_VERSION,
         threadChangedFilesExpandedById: state.threadChangedFilesExpandedById,
         pullRequestMergeMethod: state.pullRequestMergeMethod,
@@ -382,10 +374,6 @@ function setSidebarPanel(state: UiState, panel: SidebarPanel): UiState {
   return state.sidebarPanel === panel ? state : { ...state, sidebarPanel: panel };
 }
 
-function setLibraryCategory(state: UiState, category: LibraryCategory): UiState {
-  return state.libraryCategory === category ? state : { ...state, libraryCategory: category };
-}
-
 function setSidebarStatusFilter(state: UiState, filter: SidebarStatusFilter): UiState {
   return state.sidebarStatusFilter === filter ? state : { ...state, sidebarStatusFilter: filter };
 }
@@ -481,7 +469,6 @@ interface UiStateStore extends UiState {
   setSidebarProjectScopeKeys: (projectKeys: readonly string[]) => void;
   setSidebarStatusFilter: (filter: SidebarStatusFilter) => void;
   setSidebarPanel: (panel: SidebarPanel) => void;
-  setLibraryCategory: (category: LibraryCategory) => void;
   setPullRequestMergeMethod: (method: PullRequestMergeMethod) => void;
   setProjectExpanded: (projectIds: string | readonly string[], expanded: boolean) => void;
   reorderProjects: (
@@ -505,7 +492,6 @@ export const useUiStateStore = create<UiStateStore>((set) => ({
     set((state) => setSidebarProjectScopeKeys(state, projectKeys)),
   setSidebarStatusFilter: (filter) => set((state) => setSidebarStatusFilter(state, filter)),
   setSidebarPanel: (panel) => set((state) => setSidebarPanel(state, panel)),
-  setLibraryCategory: (category) => set((state) => setLibraryCategory(state, category)),
   setPullRequestMergeMethod: (method) => set((state) => setPullRequestMergeMethod(state, method)),
   setProjectExpanded: (projectIds, expanded) =>
     set((state) => setProjectExpanded(state, projectIds, expanded)),

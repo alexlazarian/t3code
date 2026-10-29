@@ -58,7 +58,7 @@ const PANEL_TABS: ReadonlyArray<{ id: SidebarPanel; label: string; info: string 
   {
     id: "library",
     label: "Library",
-    info: "Library: skills, models, providers, access modes, stash, scheduled tasks, projects, and machines",
+    info: "Library: settings, context, and your prompt stash",
   },
 ];
 

@@ -6,7 +6,8 @@ import { Button } from "../components/ui/button";
 import { useSettingsRestore } from "../components/settings/SettingsPanels";
 
 import { useCloseAppModal } from "../components/sidebar/mainAppLocation";
-import { SidebarInset } from "../components/ui/sidebar";
+import { SidebarInset, useSidebar } from "../components/ui/sidebar";
+import { useUiStateStore, type SidebarPanel } from "../uiStateStore";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../components/ui/tooltip";
 import { SettingsBreadcrumb } from "../components/settings/SettingsBreadcrumb";
 import { SettingsSidebarNav } from "../components/settings/SettingsSidebarNav";
@@ -91,11 +92,12 @@ function SettingsScopeBoundary({ pathname, children }: { pathname: string; child
       </SettingsScopeNotice>
     );
   }
-  // Projects and Usage pick their own targets.
+  // Projects, Usage and Context pick their own targets.
   if (
     SETTINGS_DEVICE_ONLY_PATHS.has(pathname) ||
     pathname === "/settings/projects" ||
-    pathname === "/settings/usage"
+    pathname === "/settings/usage" ||
+    pathname === "/settings/context"
   ) {
     return children;
   }
@@ -126,12 +128,16 @@ function SettingsContentLayout() {
       ? environment?.environmentId
       : JSON.stringify(search);
   const [restoreSignal, setRestoreSignal] = useState(0);
+  const { open: sidebarOpen, isMobile } = useSidebar();
+  const libraryShown = useUiStateStore((store) => store.sidebarPanel === "library");
+  // The Library panel is this page's list; the page keeps its own only while Library is hidden.
+  const ownNav = !libraryShown || !sidebarOpen || isMobile;
 
   return (
     <SidebarInset className="h-(--app-height) min-h-0 overflow-hidden overscroll-y-none">
       <SettingsPageEscape />
       <div className="relative flex min-h-0 flex-1">
-        <SettingsSidebarNav pathname={location.pathname} />
+        {ownNav ? <SettingsSidebarNav pathname={location.pathname} /> : null}
         <div {...contentArea} className="flex min-h-0 min-w-0 flex-1 flex-col">
           <header className="flex h-12 shrink-0 items-center gap-3 border-b ps-5 pe-2">
             <SettingsBreadcrumb pathname={location.pathname} />
@@ -235,5 +241,20 @@ export const Route = createFileRoute("/_chat/settings")({
     if (moved) throw redirect({ to: moved, search: true, hash: true, replace: true });
     if (!preload) rememberSettingsPath(location.pathname);
   },
+  // Settings opens on the Library panel; leaving returns the sidebar to the panel it showed.
+  onEnter: () => {
+    const store = useUiStateStore.getState();
+    panelBeforeSettings = store.sidebarPanel;
+    store.setSidebarPanel("library");
+  },
+  onLeave: () => {
+    const store = useUiStateStore.getState();
+    if (panelBeforeSettings !== null && store.sidebarPanel === "library") {
+      store.setSidebarPanel(panelBeforeSettings);
+    }
+    panelBeforeSettings = null;
+  },
   component: SettingsRouteLayout,
 });
+
+let panelBeforeSettings: SidebarPanel | null = null;

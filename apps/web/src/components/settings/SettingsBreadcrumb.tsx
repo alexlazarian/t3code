@@ -23,7 +23,7 @@ export function SettingsBreadcrumb({ pathname }: { pathname: string }) {
     <WorkspaceBreadcrumb ariaLabel="Settings breadcrumb">
       {sectionLabel ? (
         <>
-          <WorkspaceBreadcrumbItem>Settings</WorkspaceBreadcrumbItem>
+          <WorkspaceBreadcrumbItem>Library</WorkspaceBreadcrumbItem>
           <WorkspaceBreadcrumbSeparator />
         </>
       ) : null}

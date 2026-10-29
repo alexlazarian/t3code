@@ -22,7 +22,6 @@ function makeUiState(overrides: Partial<UiState> = {}): UiState {
     sidebarProjectScopeKeys: [],
     sidebarStatusFilter: "all",
     sidebarPanel: "threads",
-    libraryCategory: "context",
     threadLastVisitedAtById: {},
     threadChangedFilesExpandedById: {},
     defaultAdvertisedEndpointKey: null,
@@ -131,7 +130,6 @@ describe("parsePersistedState", () => {
       sidebarProjectScopeKeys: [],
       sidebarStatusFilter: "all",
       sidebarPanel: "threads",
-      libraryCategory: "context",
       pullRequestMergeMethod: "merge",
       threadChangedFilesExpandedById: {
         "environment:thread-1": {
@@ -155,26 +153,13 @@ describe("parsePersistedState", () => {
     expect(parsed.threadChangedFilesExpandedById).toEqual({});
   });
 
-  it("keeps a valid sidebar panel and library category and drops invalid ones", () => {
-    expect(
-      parsePersistedState({ sidebarPanel: "library", libraryCategory: "machines" }),
-    ).toMatchObject({
+  it("keeps a valid sidebar panel and drops an invalid one", () => {
+    expect(parsePersistedState({ sidebarPanel: "library" })).toMatchObject({
       sidebarPanel: "library",
-      libraryCategory: "machines",
     });
-    expect(parsePersistedState({ sidebarPanel: "nope", libraryCategory: "sched" })).toMatchObject({
+    expect(parsePersistedState({ sidebarPanel: "nope" })).toMatchObject({
       sidebarPanel: "threads",
-      libraryCategory: "context",
     });
-  });
-
-  it("falls back to skills for the dropped actions and settings categories", () => {
-    expect(
-      parsePersistedState({ sidebarPanel: "library", libraryCategory: "actions" }),
-    ).toMatchObject({ libraryCategory: "context" });
-    expect(
-      parsePersistedState({ sidebarPanel: "library", libraryCategory: "settings" }),
-    ).toMatchObject({ sidebarPanel: "library", libraryCategory: "context" });
   });
 
   it("migrates legacy CWD project preferences into local alias keys", () => {
@@ -262,7 +247,6 @@ describe("uiStateStore persistence", () => {
       sidebarProjectScopeKey: null,
       sidebarStatusFilter: "all",
       sidebarPanel: "threads",
-      libraryCategory: "context",
       threadChangedFilesExpansionVersion: 2,
       threadChangedFilesExpandedById: {
         "environment:thread-1": {

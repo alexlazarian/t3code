@@ -1,11 +1,9 @@
 import { RegistryContext, useAtomValue } from "@effect/atom-react";
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
 import {
   resolveProviderSkillsForCwd,
   resolveProviderSlashCommandsForCwd,
 } from "@t3tools/client-runtime/providerSkills";
 import type { ClaudeInstructionFile, EnvironmentId, ProviderInstanceId } from "@t3tools/contracts";
-import { useLocation } from "@tanstack/react-router";
 import * as Cause from "effect/Cause";
 import { AsyncResult } from "effect/reactivity";
 import { PlusIcon } from "lucide-react";
@@ -41,15 +39,7 @@ import {
   type ContextSkill,
   type ContextSource,
 } from "./contextPage.logic";
-import { useContextPageStore } from "./contextPageStore";
-
-/** Covers the main area for the route it was opened on; Close or Esc goes back to it. */
-export function ContextPageOverlay() {
-  const pathname = useLocation({ select: (location) => location.pathname });
-  const openOn = useContextPageStore((store) => store.openOn);
-  if (openOn !== pathname) return null;
-  return <ContextPage />;
-}
+import { useCloseAppModal } from "../sidebar/mainAppLocation";
 
 export type ContextMachine = {
   readonly environmentId: EnvironmentId;
@@ -57,13 +47,11 @@ export type ContextMachine = {
   readonly claude: ProviderInstanceEntry;
 };
 
-function ContextPage() {
-  const close = useContextPageStore((store) => store.close);
-  const openedThread = useContextPageStore((store) => store.thread);
+/** Library > Context. Inserting goes back to the thread it was opened from. */
+export function ContextPage() {
+  const close = useCloseAppModal();
   const routeCtx = useLibraryContext();
-  const threadRef =
-    routeCtx.threadRef ??
-    (openedThread ? scopeThreadRef(openedThread.environmentId, openedThread.threadId) : null);
+  const threadRef = routeCtx.threadRef;
   const threadShell = useQuietThreadShell(threadRef);
   const projects = useProjects();
   const threads = useThreadShells();
@@ -71,7 +59,7 @@ function ContextPage() {
   const { environments } = useEnvironments();
   const [tab, setTab] = useState<string>(CLAUDE_DRIVER_KIND);
   const [editor, setEditor] = useState<ContextEditor | null>(null);
-  const insert = useInsertInComposer(libraryInsertTarget({ ...routeCtx, threadRef }));
+  const insert = useInsertInComposer(libraryInsertTarget(routeCtx));
 
   const machineIds = [
     ...new Set([
@@ -192,11 +180,11 @@ function ContextPage() {
     return [...base, ...perProject];
   });
 
+  // Esc closes an open editor first; with none open, the page's own Esc leaves it.
   const onKeyDown = (event: KeyboardEvent) => {
-    if (event.key !== "Escape" || event.defaultPrevented) return;
+    if (event.key !== "Escape" || event.defaultPrevented || editor === null) return;
     event.preventDefault();
-    if (editor) setEditor(null);
-    else close();
+    setEditor(null);
   };
   const memoryCount = sources.reduce((total, source) => total + source.snapshot.memories.length, 0);
 
@@ -205,17 +193,8 @@ function ContextPage() {
       role="region"
       aria-label="Context"
       onKeyDown={onKeyDown}
-      className="absolute inset-x-0 top-(--main-header-height) bottom-0 z-40 flex min-h-0 flex-col bg-background text-foreground"
+      className="flex min-h-0 flex-1 flex-col text-foreground"
     >
-      <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border px-3 text-xs">
-        <span className="text-muted-foreground">Library</span>
-        <span className="text-muted-foreground/60">/</span>
-        <span className="font-semibold">Context</span>
-        <span className="flex-1" />
-        <Button size="xs" variant="ghost" onClick={close}>
-          Close
-        </Button>
-      </div>
       <div
         role="tablist"
         aria-label="Providers"
@@ -263,7 +242,7 @@ function ContextPage() {
             insert
               ? (text) => {
                   insert(text);
-                  close();
+                  void close();
                 }
               : null
           }

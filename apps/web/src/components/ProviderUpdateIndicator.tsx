@@ -25,7 +25,7 @@ const providerUpdateAvailableAtom = Atom.make((get) => {
   return false;
 }).pipe(Atom.withLabel("provider-update-available"));
 
-export function ProviderUpdateDot({ className }: { readonly className?: string }) {
+function ProviderUpdateDot({ className }: { readonly className?: string }) {
   return (
     <span
       role="img"

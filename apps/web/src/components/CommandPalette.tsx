@@ -1,4 +1,3 @@
-import { useContextPageStore } from "./context/contextPageStore";
 import { useUiStateStore } from "../uiStateStore";
 import { requestOpenSidebar } from "../sidebarOpenRequest";
 import { threadPullRequestLinkMode } from "@t3tools/client-runtime/thread-pull-request-compatibility";
@@ -1568,7 +1567,7 @@ function OpenCommandPaletteDialog(props: {
     title: "Open Context: memories, instruction files and skills",
     icon: <BrainIcon className={ITEM_ICON_CLASS} />,
     run: async () => {
-      useContextPageStore.getState().open(pathname);
+      await navigate({ to: "/settings/context" });
     },
   });
 

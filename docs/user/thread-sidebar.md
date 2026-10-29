@@ -245,18 +245,14 @@ and get the full grid back, click an empty spot in the grid, press `Esc`, or dra
 divider all the way down. A double-click or `Enter` opens the thread in List view at
 full size.
 
-**Settings** in the **Overview | Pull requests | Settings** switch above the
-main area, the gear button in the top bar, **Settings** at the bottom of the Library,
-the command palette, and the app menu open Settings as a page; `Esc` or **Back**
-returns to where you were.
-
 ## Use the Library
 
-On web and desktop, the **Library** tab beside **Threads** gathers context,
-models, providers, access modes, your prompt stash, scheduled tasks, projects,
-and machines in one place. Skills, commands, and stashed prompts go into the open
-thread's composer. Models and access modes apply to the open thread, and projects
-start a new thread. Each category explains what its items do.
+On web and desktop, the **Library** tab beside **Threads** lists every settings
+page, plus **Context** and **Prompt stash**. Click one to open it in the main
+area; `Esc` or **Back** returns to where you were. The gear button in the top
+bar, the command palette, and the app menu open the same pages and switch the
+sidebar to the Library. **Prompt stash** lists the prompts saved with
+`Cmd/Ctrl+S` on this device, and can insert one into the thread you came from.
 
 ### See and edit what Claude loads
 
@@ -264,7 +260,8 @@ start a new thread. Each category explains what its items do.
 project: memories, instruction files, and skills and commands. The open thread's
 project comes first, and folders that belong to no project are listed under
 **Other folders**. Pick one project at the top to narrow the page. You can also
-open it from the command palette.
+open it from the command palette. **Insert in composer** on a skill adds it to
+the thread you opened the page from.
 
 Claude saves memories per folder, so each project combines the memories from its
 main checkout and all its worktrees, and tags each one with its folder.

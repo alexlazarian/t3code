@@ -9,6 +9,8 @@ import {
 } from "react";
 import {
   ArchiveIcon,
+  BookmarkIcon,
+  BrainIcon,
   FlaskConicalIcon,
   BotIcon,
   createLucideIcon,
@@ -60,6 +62,7 @@ import { validateSettingsScopeSearch } from "./settingsScope";
 import { useSettingsSectionNavigation } from "./useSettingsSectionNavigation";
 import { workspaceAreaProps } from "../../lib/workspaceFocus";
 import { ProviderUpdateIndicator } from "../ProviderUpdateIndicator";
+import { isSettingsPath } from "../sidebar/mainAppLocation";
 
 const SnapShotIcon = createLucideIcon("snap-shot", [
   [
@@ -91,11 +94,13 @@ const SETTINGS_SECTION_ICONS: Readonly<
   "/settings/diagnostics": WrenchIcon,
   "/settings/appearance": PaletteIcon,
   "/settings/chat": MessageSquareTextIcon,
+  "/settings/prompt-stash": BookmarkIcon,
   "/settings/diffs": FileDiffIcon,
   "/settings/projects": PanelsTopLeftIcon,
   "/settings/keybindings": KeyboardIcon,
   "/settings/snap-shot": SnapShotIcon,
   "/settings/providers": BotIcon,
+  "/settings/context": BrainIcon,
   "/settings/usage": ChartNoAxesColumnIcon,
   "/settings/threads": MessagesSquareIcon,
   "/settings/browser": GlobeIcon,
@@ -127,8 +132,19 @@ function SettingsSectionIcon({ to }: { to: SettingsPath }) {
   return <Icon className="size-4 shrink-0 text-(--sidebar-icon-color)" />;
 }
 
-export function SettingsSidebarNav({ pathname }: { pathname: string }) {
-  const navArea = workspaceAreaProps("settings-nav", 0, "Settings sections");
+/** `library` is the Library panel's list; `page` is the Settings page's own rail when Library is hidden. */
+export function SettingsSidebarNav({
+  pathname,
+  placement = "page",
+}: {
+  pathname: string;
+  placement?: "page" | "library";
+}) {
+  const inLibrary = placement === "library";
+  const onSettingsPage = isSettingsPath(pathname);
+  const navArea = inLibrary
+    ? { "aria-label": "Library" }
+    : workspaceAreaProps("settings-nav", 0, "Settings sections");
   const navigate = useNavigate();
   const currentHash = useLocation({ select: (location) => location.hash });
   const currentSearch = useLocation({ select: (location) => location.search });
@@ -143,7 +159,9 @@ export function SettingsSidebarNav({ pathname }: { pathname: string }) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   // Below md the nav is an icon rail; searching expands it over the page.
-  const [compactSearchOpen, setCompactSearchOpen] = useState(false);
+  const [compactSearchOpenState, setCompactSearchOpen] = useState(false);
+  // The Library panel is never an icon rail.
+  const compactSearchOpen = inLibrary || compactSearchOpenState;
   const [activeResultIndex, setActiveResultIndex] = useState(0);
   const searchableItems = useAvailableSettingsSearchItems(scopeSearch);
   const results = searchSettings(query, searchableItems);
@@ -157,6 +175,8 @@ export function SettingsSidebarNav({ pathname }: { pathname: string }) {
 
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- window keydown listener for the find and slash search shortcuts
   useEffect(() => {
+    // Off the Settings page, Cmd+F and / belong to the thread.
+    if (!onSettingsPage) return;
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.defaultPrevented || event.isComposing) return;
       const isFindShortcut =
@@ -189,18 +209,19 @@ export function SettingsSidebarNav({ pathname }: { pathname: string }) {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [onSettingsPage]);
 
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- focuses the search input DOM node after the compact search opens
   useEffect(() => {
-    if (compactSearchOpen) searchInputRef.current?.focus();
-  }, [compactSearchOpen]);
+    if (compactSearchOpenState) searchInputRef.current?.focus();
+  }, [compactSearchOpenState]);
 
+  // From a thread, opening a page is a step Back can undo; between pages it is not.
   const handleSectionClick = (to: SettingsPath) => {
     void navigate({
       to,
       hash: "",
-      replace: true,
+      replace: onSettingsPage,
       hashScrollIntoView: false,
     });
   };
@@ -221,7 +242,7 @@ export function SettingsSidebarNav({ pathname }: { pathname: string }) {
     void navigate({
       to: item.to,
       hash: targetId,
-      replace: true,
+      replace: onSettingsPage,
       hashScrollIntoView: false,
       state: { settingsTargetHighlight: true },
     });
@@ -257,8 +278,10 @@ export function SettingsSidebarNav({ pathname }: { pathname: string }) {
       {...navArea}
       role="navigation"
       className={cn(
-        "flex w-60 shrink-0 flex-col border-e bg-sidebar text-sidebar-foreground max-md:w-14",
-        compactSearchOpen &&
+        inLibrary
+          ? "flex min-h-0 flex-1 flex-col text-sidebar-foreground"
+          : "flex w-60 shrink-0 flex-col border-e bg-sidebar text-sidebar-foreground max-md:w-14",
+        compactSearchOpenState &&
           "max-md:absolute max-md:inset-y-0 max-md:start-0 max-md:z-10 max-md:w-full",
       )}
     >

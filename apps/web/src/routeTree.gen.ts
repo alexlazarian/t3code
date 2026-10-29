@@ -30,6 +30,7 @@ import { Route as ChatSettingsSourceControlRouteImport } from './routes/_chat.se
 import { Route as ChatSettingsSnapShotRouteImport } from './routes/_chat.settings.snap-shot'
 import { Route as ChatSettingsScheduledTasksRouteImport } from './routes/_chat.settings.scheduled-tasks'
 import { Route as ChatSettingsProvidersRouteImport } from './routes/_chat.settings.providers'
+import { Route as ChatSettingsPromptStashRouteImport } from './routes/_chat.settings.prompt-stash'
 import { Route as ChatSettingsProjectsRouteImport } from './routes/_chat.settings.projects'
 import { Route as ChatSettingsOpenSourceLicensesRouteImport } from './routes/_chat.settings.open-source-licenses'
 import { Route as ChatSettingsMaintenanceRouteImport } from './routes/_chat.settings.maintenance'
@@ -40,6 +41,7 @@ import { Route as ChatSettingsGeneralRouteImport } from './routes/_chat.settings
 import { Route as ChatSettingsDiffsRouteImport } from './routes/_chat.settings.diffs'
 import { Route as ChatSettingsDiagnosticsRouteImport } from './routes/_chat.settings.diagnostics'
 import { Route as ChatSettingsDevicesRouteImport } from './routes/_chat.settings.devices'
+import { Route as ChatSettingsContextRouteImport } from './routes/_chat.settings.context'
 import { Route as ChatSettingsConnectionsRouteImport } from './routes/_chat.settings.connections'
 import { Route as ChatSettingsChatRouteImport } from './routes/_chat.settings.chat'
 import { Route as ChatSettingsBrowserRouteImport } from './routes/_chat.settings.browser'
@@ -157,6 +159,11 @@ const ChatSettingsProvidersRoute = ChatSettingsProvidersRouteImport.update({
   path: '/providers',
   getParentRoute: () => ChatSettingsRoute,
 } as any)
+const ChatSettingsPromptStashRoute = ChatSettingsPromptStashRouteImport.update({
+  id: '/prompt-stash',
+  path: '/prompt-stash',
+  getParentRoute: () => ChatSettingsRoute,
+} as any)
 const ChatSettingsProjectsRoute = ChatSettingsProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
@@ -207,6 +214,11 @@ const ChatSettingsDiagnosticsRoute = ChatSettingsDiagnosticsRouteImport.update({
 const ChatSettingsDevicesRoute = ChatSettingsDevicesRouteImport.update({
   id: '/devices',
   path: '/devices',
+  getParentRoute: () => ChatSettingsRoute,
+} as any)
+const ChatSettingsContextRoute = ChatSettingsContextRouteImport.update({
+  id: '/context',
+  path: '/context',
   getParentRoute: () => ChatSettingsRoute,
 } as any)
 const ChatSettingsConnectionsRoute = ChatSettingsConnectionsRouteImport.update({
@@ -284,6 +296,7 @@ export interface FileRoutesByFullPath {
   '/settings/browser': typeof ChatSettingsBrowserRoute
   '/settings/chat': typeof ChatSettingsChatRoute
   '/settings/connections': typeof ChatSettingsConnectionsRoute
+  '/settings/context': typeof ChatSettingsContextRoute
   '/settings/devices': typeof ChatSettingsDevicesRoute
   '/settings/diagnostics': typeof ChatSettingsDiagnosticsRoute
   '/settings/diffs': typeof ChatSettingsDiffsRoute
@@ -294,6 +307,7 @@ export interface FileRoutesByFullPath {
   '/settings/maintenance': typeof ChatSettingsMaintenanceRoute
   '/settings/open-source-licenses': typeof ChatSettingsOpenSourceLicensesRoute
   '/settings/projects': typeof ChatSettingsProjectsRoute
+  '/settings/prompt-stash': typeof ChatSettingsPromptStashRoute
   '/settings/providers': typeof ChatSettingsProvidersRoute
   '/settings/scheduled-tasks': typeof ChatSettingsScheduledTasksRoute
   '/settings/snap-shot': typeof ChatSettingsSnapShotRoute
@@ -326,6 +340,7 @@ export interface FileRoutesByTo {
   '/settings/browser': typeof ChatSettingsBrowserRoute
   '/settings/chat': typeof ChatSettingsChatRoute
   '/settings/connections': typeof ChatSettingsConnectionsRoute
+  '/settings/context': typeof ChatSettingsContextRoute
   '/settings/devices': typeof ChatSettingsDevicesRoute
   '/settings/diagnostics': typeof ChatSettingsDiagnosticsRoute
   '/settings/diffs': typeof ChatSettingsDiffsRoute
@@ -336,6 +351,7 @@ export interface FileRoutesByTo {
   '/settings/maintenance': typeof ChatSettingsMaintenanceRoute
   '/settings/open-source-licenses': typeof ChatSettingsOpenSourceLicensesRoute
   '/settings/projects': typeof ChatSettingsProjectsRoute
+  '/settings/prompt-stash': typeof ChatSettingsPromptStashRoute
   '/settings/providers': typeof ChatSettingsProvidersRoute
   '/settings/scheduled-tasks': typeof ChatSettingsScheduledTasksRoute
   '/settings/snap-shot': typeof ChatSettingsSnapShotRoute
@@ -370,6 +386,7 @@ export interface FileRoutesById {
   '/_chat/settings/browser': typeof ChatSettingsBrowserRoute
   '/_chat/settings/chat': typeof ChatSettingsChatRoute
   '/_chat/settings/connections': typeof ChatSettingsConnectionsRoute
+  '/_chat/settings/context': typeof ChatSettingsContextRoute
   '/_chat/settings/devices': typeof ChatSettingsDevicesRoute
   '/_chat/settings/diagnostics': typeof ChatSettingsDiagnosticsRoute
   '/_chat/settings/diffs': typeof ChatSettingsDiffsRoute
@@ -380,6 +397,7 @@ export interface FileRoutesById {
   '/_chat/settings/maintenance': typeof ChatSettingsMaintenanceRoute
   '/_chat/settings/open-source-licenses': typeof ChatSettingsOpenSourceLicensesRoute
   '/_chat/settings/projects': typeof ChatSettingsProjectsRoute
+  '/_chat/settings/prompt-stash': typeof ChatSettingsPromptStashRoute
   '/_chat/settings/providers': typeof ChatSettingsProvidersRoute
   '/_chat/settings/scheduled-tasks': typeof ChatSettingsScheduledTasksRoute
   '/_chat/settings/snap-shot': typeof ChatSettingsSnapShotRoute
@@ -414,6 +432,7 @@ export interface FileRouteTypes {
     | '/settings/browser'
     | '/settings/chat'
     | '/settings/connections'
+    | '/settings/context'
     | '/settings/devices'
     | '/settings/diagnostics'
     | '/settings/diffs'
@@ -424,6 +443,7 @@ export interface FileRouteTypes {
     | '/settings/maintenance'
     | '/settings/open-source-licenses'
     | '/settings/projects'
+    | '/settings/prompt-stash'
     | '/settings/providers'
     | '/settings/scheduled-tasks'
     | '/settings/snap-shot'
@@ -456,6 +476,7 @@ export interface FileRouteTypes {
     | '/settings/browser'
     | '/settings/chat'
     | '/settings/connections'
+    | '/settings/context'
     | '/settings/devices'
     | '/settings/diagnostics'
     | '/settings/diffs'
@@ -466,6 +487,7 @@ export interface FileRouteTypes {
     | '/settings/maintenance'
     | '/settings/open-source-licenses'
     | '/settings/projects'
+    | '/settings/prompt-stash'
     | '/settings/providers'
     | '/settings/scheduled-tasks'
     | '/settings/snap-shot'
@@ -499,6 +521,7 @@ export interface FileRouteTypes {
     | '/_chat/settings/browser'
     | '/_chat/settings/chat'
     | '/_chat/settings/connections'
+    | '/_chat/settings/context'
     | '/_chat/settings/devices'
     | '/_chat/settings/diagnostics'
     | '/_chat/settings/diffs'
@@ -509,6 +532,7 @@ export interface FileRouteTypes {
     | '/_chat/settings/maintenance'
     | '/_chat/settings/open-source-licenses'
     | '/_chat/settings/projects'
+    | '/_chat/settings/prompt-stash'
     | '/_chat/settings/providers'
     | '/_chat/settings/scheduled-tasks'
     | '/_chat/settings/snap-shot'
@@ -678,6 +702,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatSettingsProvidersRouteImport
       parentRoute: typeof ChatSettingsRoute
     }
+    '/_chat/settings/prompt-stash': {
+      id: '/_chat/settings/prompt-stash'
+      path: '/prompt-stash'
+      fullPath: '/settings/prompt-stash'
+      preLoaderRoute: typeof ChatSettingsPromptStashRouteImport
+      parentRoute: typeof ChatSettingsRoute
+    }
     '/_chat/settings/projects': {
       id: '/_chat/settings/projects'
       path: '/projects'
@@ -746,6 +777,13 @@ declare module '@tanstack/react-router' {
       path: '/devices'
       fullPath: '/settings/devices'
       preLoaderRoute: typeof ChatSettingsDevicesRouteImport
+      parentRoute: typeof ChatSettingsRoute
+    }
+    '/_chat/settings/context': {
+      id: '/_chat/settings/context'
+      path: '/context'
+      fullPath: '/settings/context'
+      preLoaderRoute: typeof ChatSettingsContextRouteImport
       parentRoute: typeof ChatSettingsRoute
     }
     '/_chat/settings/connections': {
@@ -830,6 +868,7 @@ interface ChatSettingsRouteChildren {
   ChatSettingsBrowserRoute: typeof ChatSettingsBrowserRoute
   ChatSettingsChatRoute: typeof ChatSettingsChatRoute
   ChatSettingsConnectionsRoute: typeof ChatSettingsConnectionsRoute
+  ChatSettingsContextRoute: typeof ChatSettingsContextRoute
   ChatSettingsDevicesRoute: typeof ChatSettingsDevicesRoute
   ChatSettingsDiagnosticsRoute: typeof ChatSettingsDiagnosticsRoute
   ChatSettingsDiffsRoute: typeof ChatSettingsDiffsRoute
@@ -840,6 +879,7 @@ interface ChatSettingsRouteChildren {
   ChatSettingsMaintenanceRoute: typeof ChatSettingsMaintenanceRoute
   ChatSettingsOpenSourceLicensesRoute: typeof ChatSettingsOpenSourceLicensesRoute
   ChatSettingsProjectsRoute: typeof ChatSettingsProjectsRoute
+  ChatSettingsPromptStashRoute: typeof ChatSettingsPromptStashRoute
   ChatSettingsProvidersRoute: typeof ChatSettingsProvidersRoute
   ChatSettingsScheduledTasksRoute: typeof ChatSettingsScheduledTasksRoute
   ChatSettingsSnapShotRoute: typeof ChatSettingsSnapShotRoute
@@ -859,6 +899,7 @@ const ChatSettingsRouteChildren: ChatSettingsRouteChildren = {
   ChatSettingsBrowserRoute: ChatSettingsBrowserRoute,
   ChatSettingsChatRoute: ChatSettingsChatRoute,
   ChatSettingsConnectionsRoute: ChatSettingsConnectionsRoute,
+  ChatSettingsContextRoute: ChatSettingsContextRoute,
   ChatSettingsDevicesRoute: ChatSettingsDevicesRoute,
   ChatSettingsDiagnosticsRoute: ChatSettingsDiagnosticsRoute,
   ChatSettingsDiffsRoute: ChatSettingsDiffsRoute,
@@ -869,6 +910,7 @@ const ChatSettingsRouteChildren: ChatSettingsRouteChildren = {
   ChatSettingsMaintenanceRoute: ChatSettingsMaintenanceRoute,
   ChatSettingsOpenSourceLicensesRoute: ChatSettingsOpenSourceLicensesRoute,
   ChatSettingsProjectsRoute: ChatSettingsProjectsRoute,
+  ChatSettingsPromptStashRoute: ChatSettingsPromptStashRoute,
   ChatSettingsProvidersRoute: ChatSettingsProvidersRoute,
   ChatSettingsScheduledTasksRoute: ChatSettingsScheduledTasksRoute,
   ChatSettingsSnapShotRoute: ChatSettingsSnapShotRoute,

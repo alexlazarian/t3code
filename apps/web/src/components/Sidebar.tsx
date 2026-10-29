@@ -2659,14 +2659,14 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
       <ThreadContextDragGhost />
       <SidebarChromeHeader isElectron={isElectron} showPanelTabs />
       {sidebarPanel === "library" ? (
-        <SidebarContent
-          className="min-h-full"
+        <div
+          className="flex min-h-0 flex-1 flex-col"
           role="tabpanel"
           id={sidebarPanelId("library")}
           aria-labelledby={sidebarPanelTabId("library")}
         >
           <LibraryPanel />
-        </SidebarContent>
+        </div>
       ) : (
         <SidebarContent
           className="min-h-full"
