@@ -29,6 +29,7 @@ import type { StatusLightTone } from "../StatusLight";
 import {
   matchesSidebarStatusFilter,
   resolveSidebarThreadStatus,
+  threadShellKey,
   type partitionSidebarThreads,
   type SidebarSection,
 } from "../Sidebar.logic";
@@ -215,6 +216,42 @@ export function overviewDraftCards(input: {
     list.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
   }
   return byProject;
+}
+
+export interface OverviewPaneNav {
+  readonly section: SidebarSection;
+  readonly index: number;
+  readonly count: number;
+  readonly previousKey: string | null;
+  readonly nextKey: string | null;
+}
+
+/** Steps through the board's cards in reading order, so the pane handle can walk to a neighbor. */
+export function resolveOverviewPaneNav(input: {
+  readonly rows: ReadonlyArray<OverviewRow>;
+  readonly columns: ReadonlyArray<OverviewColumn>;
+  readonly isExpanded: (section: SidebarSection) => boolean;
+  readonly key: string;
+}): OverviewPaneNav | null {
+  const cards = input.rows.flatMap((row) =>
+    input.columns.flatMap((column) =>
+      (row.cells.get(column.projectKey) ?? []).map((thread) => ({
+        key: threadShellKey(thread),
+        section: row.section,
+      })),
+    ),
+  );
+  const at = cards.findIndex((card) => card.key === input.key);
+  const current = cards[at];
+  if (current === undefined) return null;
+  const visible = (card: (typeof cards)[number]) => input.isExpanded(card.section);
+  return {
+    section: current.section,
+    index: cards.slice(0, at + 1).filter((card) => card.section === current.section).length,
+    count: cards.filter((card) => card.section === current.section).length,
+    previousKey: cards.slice(0, at).findLast(visible)?.key ?? null,
+    nextKey: cards.slice(at + 1).find(visible)?.key ?? null,
+  };
 }
 
 export type OverviewPaneTarget =

@@ -84,6 +84,7 @@ import {
   overviewMachineSpans,
   overviewProjectKeyOf,
   overviewSplitDragFraction,
+  resolveOverviewPaneNav,
   resolveOverviewPaneTarget,
   resolveOverviewSplitRelease,
   type OverviewColumn,
@@ -94,6 +95,7 @@ import { OverviewCard } from "./OverviewCard";
 import { OverviewColumnHeader } from "./OverviewColumnHeader";
 import { OverviewDraftsShelf } from "./OverviewDraftCard";
 import { OverviewMachineRow } from "./OverviewMachineRow";
+import { OverviewPaneHandle } from "./OverviewPaneHandle";
 import { OverviewShelf } from "./OverviewShelf";
 
 const SECTION_NAMES: Record<SidebarSection, string> = {
@@ -311,6 +313,15 @@ export function OverviewView() {
     seenServerThreadKeys,
   });
   const openRef = paneTarget === null ? null : parseScopedThreadKey(paneTarget.threadKey);
+  const paneNav =
+    openKey === null
+      ? null
+      : resolveOverviewPaneNav({
+          rows,
+          columns,
+          isExpanded: (section) => expansion.sections[section][0],
+          key: openKey,
+        });
   const paneMissing = openKey !== null && paneTarget === null;
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- closes the shared split store once its thread or draft is gone
   useEffect(() => {
@@ -668,21 +679,28 @@ export function OverviewView() {
             </div>
             {paneTarget === null || openRef === null ? null : (
               <>
-                <div
-                  role="separator"
-                  aria-orientation="horizontal"
-                  aria-label="Resize thread pane"
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={Math.round(splitFraction * 100)}
-                  tabIndex={0}
-                  onPointerDown={handleDividerPointerDown}
-                  onPointerMove={handleDividerPointerMove}
-                  onPointerUp={handleDividerPointerUp}
-                  onPointerCancel={handleDividerPointerCancel}
-                  onKeyDown={handleDividerKeyDown}
-                  data-info="Drag to resize. Drag all the way down to close."
-                  className="h-1.5 shrink-0 cursor-row-resize touch-none border-y border-border bg-muted outline-0 outline-ring hover:bg-accent focus-visible:outline-2"
+                <OverviewPaneHandle
+                  nav={paneNav}
+                  sectionName={paneNav === null ? null : SECTION_NAMES[paneNav.section]}
+                  onStep={showThread}
+                  onOpenFull={
+                    paneTarget.kind === "draft" ? null : () => openThread(paneTarget.threadKey)
+                  }
+                  onClose={closeSplit}
+                  separator={{
+                    role: "separator",
+                    "aria-orientation": "horizontal",
+                    "aria-label": "Resize thread pane",
+                    "aria-valuemin": 0,
+                    "aria-valuemax": 100,
+                    "aria-valuenow": Math.round(splitFraction * 100),
+                    tabIndex: 0,
+                    onPointerDown: handleDividerPointerDown,
+                    onPointerMove: handleDividerPointerMove,
+                    onPointerUp: handleDividerPointerUp,
+                    onPointerCancel: handleDividerPointerCancel,
+                    onKeyDown: handleDividerKeyDown,
+                  }}
                 />
                 <div
                   ref={paneRef}

@@ -38,6 +38,7 @@ import {
   sidebarStepLine,
   overviewWaitStrip,
   overviewSplitDragFraction,
+  resolveOverviewPaneNav,
   resolveOverviewPaneTarget,
   resolveOverviewSplitRelease,
 } from "./Overview.logic";
@@ -742,6 +743,75 @@ describe("overview split", () => {
     expect(resolveOverviewSplitRelease(100 / 600, 600)).toBeNull();
     expect(resolveOverviewSplitRelease(130 / 600, 600)).toBe(160 / 600);
     expect(resolveOverviewSplitRelease(0.5, 600)).toBe(0.5);
+  });
+});
+
+describe("overview pane nav", () => {
+  const projects = snapshots([
+    makeProject(),
+    makeProject({ id: ProjectId.make("project-2"), title: "other", workspaceRoot: "/tmp/other" }),
+  ]);
+  const inProject2 = { projectId: ProjectId.make("project-2") };
+  const key = (id: string) => `${envA}:${id}`;
+  const board = (threads: ReadonlyArray<ReturnType<typeof makeThread>>) => {
+    const { rows, columns } = buildOverviewGrid({
+      partition: partition(threads),
+      projects,
+      projectKeyOf: overviewProjectKeyOf(projects),
+      workingShelfEnabled: false,
+    });
+    return (id: string, collapsed: ReadonlyArray<string> = []) =>
+      resolveOverviewPaneNav({
+        rows,
+        columns,
+        isExpanded: (section) => !collapsed.includes(section),
+        key: key(id),
+      });
+  };
+  const settled = { settledOverride: "settled" as const };
+
+  it("walks a section column by column, then into the next section", () => {
+    const nav = board([
+      makeThread("a1"),
+      makeThread("a2"),
+      makeThread("b1", inProject2),
+      makeThread("s1", settled),
+    ]);
+    expect(nav("a2")).toMatchObject({
+      section: "active",
+      index: 2,
+      count: 3,
+      previousKey: key("a1"),
+      nextKey: key("b1"),
+    });
+    expect(nav("b1")?.nextKey).toBe(key("s1"));
+  });
+
+  it("stops at the first and last card", () => {
+    const nav = board([makeThread("a1"), makeThread("s1", settled)]);
+    expect(nav("a1")?.previousKey).toBeNull();
+    expect(nav("s1")?.nextKey).toBeNull();
+  });
+
+  it("skips collapsed sections", () => {
+    const nav = board([makeThread("a1"), makeThread("s1", settled), makeThread("a2")]);
+    expect(nav("a1", ["settled"])?.nextKey).toBe(key("a2"));
+    expect(nav("a2", ["active"])?.previousKey).toBeNull();
+  });
+
+  it("keeps neighbors for a card in a collapsed section", () => {
+    const nav = board([makeThread("a1"), makeThread("a2"), makeThread("s1", settled)]);
+    expect(nav("s1", ["settled"])).toMatchObject({
+      section: "settled",
+      index: 1,
+      count: 1,
+      previousKey: key("a2"),
+      nextKey: null,
+    });
+  });
+
+  it("returns null for a key that is not on the board", () => {
+    expect(board([makeThread("a1")])("missing")).toBeNull();
   });
 });
 
