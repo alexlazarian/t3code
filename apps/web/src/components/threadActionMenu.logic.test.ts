@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { buildThreadActionMenuItems, type ThreadActionMenuState } from "./threadActionMenu.logic";
+import {
+  buildThreadActionMenuItems,
+  buildThreadActionStrip,
+  type ThreadActionMenuState,
+} from "./threadActionMenu.logic";
 
 const baseState: ThreadActionMenuState = {
   canOperate: true,
@@ -70,5 +74,47 @@ describe("buildThreadActionMenuItems", () => {
       (item) => item.id === "archive",
     );
     expect(archiveItem?.disabled).toBe(true);
+  });
+});
+
+describe("buildThreadActionStrip", () => {
+  it.each([
+    [{ isSettled: true }, "Un-settle"],
+    [{ isSnoozed: true }, "Wake"],
+    [{ isPinned: true }, "Unpin"],
+  ] as const)("shows %o pressed as the way back", (flags, label) => {
+    const action = buildThreadActionStrip({ ...baseState, ...flags }).find(
+      (item) => item.label === label,
+    );
+    expect(action).toMatchObject({ label, pressed: true, disabled: false });
+  });
+
+  it("disables lifecycle and rename without permission but keeps Share", () => {
+    const strip = buildThreadActionStrip({
+      ...baseState,
+      canOperate: false,
+      canShareWithGuest: true,
+    });
+    expect(strip.map((item) => [item.id, item.disabled])).toEqual([
+      ["settle", true],
+      ["snooze", true],
+      ["pin", true],
+      ["rename", true],
+      ["share-guest", false],
+    ]);
+  });
+
+  it("drops actions the environment does not support and disables Snooze when it cannot snooze now", () => {
+    expect(
+      buildThreadActionStrip({
+        ...baseState,
+        supports: { ...baseState.supports, settlement: false, pinning: false },
+      }).map((item) => item.id),
+    ).toEqual(["snooze", "rename"]);
+    expect(
+      buildThreadActionStrip({ ...baseState, canSnoozeNow: false }).find(
+        (item) => item.id === "snooze",
+      )?.disabled,
+    ).toBe(true);
   });
 });

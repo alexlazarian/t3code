@@ -177,4 +177,13 @@ describe("thread menu permissions", () => {
       expect(state.effects).toEqual([]);
     },
   );
+
+  it.each(["rename", "pin", "settle", "unsnooze"] as const)(
+    "%s through runAction rechecks permission",
+    async (action) => {
+      await createMenu().runAction(action);
+      await state.completed.promise;
+      expect(state.effects).toEqual([]);
+    },
+  );
 });

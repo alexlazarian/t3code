@@ -269,6 +269,8 @@ import { ProviderSubagentBar } from "./chat/ProviderSubagentBar";
 import { getTriggerDisplayModelName } from "./chat/providerIconUtils";
 import { resolveScrollToEndClearance } from "./composerFooterLayout";
 import { ChatHeader } from "./chat/ChatHeader";
+import { ThreadActionStrip } from "./chat/ThreadActionStrip";
+import { useThreadTitleRename } from "./chat/useThreadTitleRename";
 import { useRemoteOpenState } from "~/remoteOpen";
 import { shouldShowOpenInPicker } from "./chat/OpenInPicker.logic";
 import { useOpenFavoriteEditorShortcut } from "./chat/OpenInPickerShortcut";
@@ -953,6 +955,11 @@ export default function ChatView(props: ChatViewProps) {
   );
   const browserAvailable = isPreviewSupportedInRuntime() || activeEnvironmentServerBrowser;
   const activeThreadShell = serverThread;
+  const titleRename = useThreadTitleRename({
+    threadRef: activeThreadRef,
+    title: activeThread?.title ?? "",
+    isServerThread,
+  });
   const timelineThreadError =
     serverRuntime?.status === "failed" &&
     serverRuntime.lastErrorClass === "usage_limit" &&
@@ -3147,55 +3154,54 @@ export default function ChatView(props: ChatViewProps) {
         data-chat-column
         inert={rightPanelMaximized}
       >
-        <header
-          data-chat-header
-          className={cn(
-            "relative bg-background",
-            isElectron
-              ? "drag-region flex h-[var(--workspace-topbar-height)] min-h-[var(--workspace-topbar-height)] shrink-0 items-center px-3 sm:px-5"
-              : "flex h-[var(--workspace-topbar-height)] min-h-[var(--workspace-topbar-height)] shrink-0 items-center pl-(--workspace-gutter-start) pr-(--workspace-gutter-end)",
-          )}
-        >
-          <ChatHeader
-            activeThreadEnvironmentId={activeThread.environmentId}
-            activeThreadId={activeThread.id}
-            isServerThread={isServerThread}
+        <ChatHeader
+          activeThreadEnvironmentId={activeThread.environmentId}
+          activeThreadId={activeThread.id}
+          isServerThread={isServerThread}
+          threadShell={activeThreadShell}
+          rename={titleRename}
+          activeThreadTitle={activeThread.title}
+          activeThreadLinkOrigin={activeThreadShell?.linkOrigin?.label ?? null}
+          activeProject={activeProject ?? null}
+          parentThreadLink={headerParentThreadLink}
+          onOpenThread={onOpenRelatedThreadStable}
+          onNewThreadInProject={handleNewThreadInActiveProjectStable}
+          {...(activeDraftLogicalProjectKey
+            ? { onOpenProjectSettings: handleOpenDraftProjectSettingsStable }
+            : {})}
+          threadPanelOpen={threadPanelOpen}
+          threadPanelPopoverHandle={threadPanelPopoverHandle}
+          threadPanelAnchorRef={threadPanelAnchorRef}
+          threadPanelShortcutLabel={threadPanelShortcutLabel}
+          activeSurfaceKind={activeRightPanelKind}
+          isGitRepo={isGitRepo}
+          hasProject={activeProject !== null}
+          browserAvailable={browserAvailable}
+          canOperatePreview={canOperatePreview}
+          pullRequestsAvailable={pullRequestsSurfaceAvailable}
+          diffShortcutLabel={shortcutLabelForCommand(keybindings, "diff.toggle")}
+          onToggleDiff={onToggleDiffStable}
+          previewShortcutLabel={shortcutLabelForCommand(keybindings, "preview.toggle")}
+          onTogglePreview={togglePreviewPanelStable}
+          onToggleFiles={toggleFilesSurfaceStable}
+          onTogglePullRequests={togglePullRequestsSurfaceStable}
+          terminalAvailable={activeProject !== null}
+          terminalOpen={rightPanelTerminalOpen}
+          terminalShortcutLabel={terminalShortcutLabel}
+          onToggleTerminal={toggleTerminalStable}
+          rightPanelAvailable={activeProject !== null}
+          rightPanelOpen={rightPanelOpen}
+          rightPanelShortcutLabel={rightPanelShortcutLabel}
+          onToggleRightPanel={toggleRightPanelStable}
+        />
+        {activeThreadRef && activeThreadShell ? (
+          <ThreadActionStrip
+            threadRef={activeThreadRef}
             threadShell={activeThreadShell}
-            activeThreadTitle={activeThread.title}
-            activeThreadLinkOrigin={activeThreadShell?.linkOrigin?.label ?? null}
-            activeProject={activeProject ?? null}
-            parentThreadLink={headerParentThreadLink}
-            onOpenThread={onOpenRelatedThreadStable}
-            onNewThreadInProject={handleNewThreadInActiveProjectStable}
-            {...(activeDraftLogicalProjectKey
-              ? { onOpenProjectSettings: handleOpenDraftProjectSettingsStable }
-              : {})}
-            threadPanelOpen={threadPanelOpen}
-            threadPanelPopoverHandle={threadPanelPopoverHandle}
-            threadPanelAnchorRef={threadPanelAnchorRef}
-            threadPanelShortcutLabel={threadPanelShortcutLabel}
-            activeSurfaceKind={activeRightPanelKind}
-            isGitRepo={isGitRepo}
-            hasProject={activeProject !== null}
-            browserAvailable={browserAvailable}
-            canOperatePreview={canOperatePreview}
-            pullRequestsAvailable={pullRequestsSurfaceAvailable}
-            diffShortcutLabel={shortcutLabelForCommand(keybindings, "diff.toggle")}
-            onToggleDiff={onToggleDiffStable}
-            previewShortcutLabel={shortcutLabelForCommand(keybindings, "preview.toggle")}
-            onTogglePreview={togglePreviewPanelStable}
-            onToggleFiles={toggleFilesSurfaceStable}
-            onTogglePullRequests={togglePullRequestsSurfaceStable}
-            terminalAvailable={activeProject !== null}
-            terminalOpen={rightPanelTerminalOpen}
-            terminalShortcutLabel={terminalShortcutLabel}
-            onToggleTerminal={toggleTerminalStable}
-            rightPanelAvailable={activeProject !== null}
-            rightPanelOpen={rightPanelOpen}
-            rightPanelShortcutLabel={rightPanelShortcutLabel}
-            onToggleRightPanel={toggleRightPanelStable}
+            projectCwd={activeProject?.workspaceRoot ?? null}
+            onStartRename={titleRename.startRename}
           />
-        </header>
+        ) : null}
 
         <div className="relative flex min-h-0 min-w-0 flex-1">
           <ThreadFindCanvas

@@ -247,3 +247,59 @@ export function buildThreadActionMenuItems(
           : item,
       );
 }
+
+export type ThreadStripActionId = Extract<
+  ThreadActionMenuId,
+  "settle" | "unsettle" | "snooze" | "unsnooze" | "pin" | "unpin" | "rename" | "share-guest"
+>;
+
+export interface ThreadStripAction {
+  readonly id: ThreadStripActionId;
+  readonly label: string;
+  readonly pressed: boolean;
+  readonly disabled: boolean;
+  readonly group: "lifecycle" | "edit";
+}
+
+export function buildThreadActionStrip(
+  state: ThreadActionMenuState,
+): ReadonlyArray<ThreadStripAction> {
+  const entries: ReadonlyArray<{
+    readonly id: ThreadStripActionId;
+    readonly label: string;
+    readonly group: ThreadStripAction["group"];
+  }> = [
+    ...(state.supports.settlement
+      ? [
+          state.isSettled
+            ? { id: "unsettle" as const, label: "Un-settle", group: "lifecycle" as const }
+            : { id: "settle" as const, label: "Settle", group: "lifecycle" as const },
+        ]
+      : []),
+    ...(state.supports.snooze
+      ? [
+          state.isSnoozed
+            ? { id: "unsnooze" as const, label: "Wake", group: "lifecycle" as const }
+            : { id: "snooze" as const, label: "Snooze", group: "lifecycle" as const },
+        ]
+      : []),
+    ...(state.supports.pinning
+      ? [
+          state.isPinned
+            ? { id: "unpin" as const, label: "Unpin", group: "lifecycle" as const }
+            : { id: "pin" as const, label: "Pin", group: "lifecycle" as const },
+        ]
+      : []),
+    { id: "rename", label: "Rename", group: "edit" },
+    ...(state.canShareWithGuest
+      ? [{ id: "share-guest" as const, label: "Share", group: "edit" as const }]
+      : []),
+  ];
+  return entries.map((entry) => ({
+    ...entry,
+    pressed: entry.id === "unsettle" || entry.id === "unsnooze" || entry.id === "unpin",
+    disabled:
+      (threadActionRequiresOperate(entry.id) && !state.canOperate) ||
+      (entry.id === "snooze" && !state.canSnoozeNow),
+  }));
+}
