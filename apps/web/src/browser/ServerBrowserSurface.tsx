@@ -803,10 +803,10 @@ export function ServerBrowserSurface(props: {
               }}
             />
             <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => answerFileChooser([])}>
+              <Button variant="outline" onClick={() => answerFileChooser([])}>
                 Cancel
               </Button>
-              <Button size="sm" onClick={() => fileInputRef.current?.click()}>
+              <Button onClick={() => fileInputRef.current?.click()}>
                 Choose {fileChooser.multiple ? "files" : "file"}
               </Button>
             </div>
@@ -829,15 +829,10 @@ export function ServerBrowserSurface(props: {
                   />
                 ) : null}
                 <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => send({ type: "dialog", accept: false })}
-                  >
+                  <Button variant="outline" onClick={() => send({ type: "dialog", accept: false })}>
                     Dismiss
                   </Button>
                   <Button
-                    size="sm"
                     onClick={() =>
                       send({
                         type: "dialog",
@@ -851,7 +846,7 @@ export function ServerBrowserSurface(props: {
                 </div>
               </>
             ) : (
-              <p className="text-xs text-muted-foreground">Take control to respond.</p>
+              <p className="text-sm text-muted-foreground">Take control to respond.</p>
             )}
           </div>
         ) : null}

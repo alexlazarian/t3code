@@ -36,6 +36,7 @@ import { ProviderAccentColorPicker } from "./ProviderAccentColorPicker";
 import { SettingsGroup } from "./SettingsGroup";
 import { SettingsRow } from "./settingsLayout";
 import { ProviderSettingsForm, deriveProviderSettingsFields } from "./ProviderSettingsForm";
+import { Spinner } from "../ui/spinner";
 import { WizardPanel, WizardPopup, WizardHeader, WizardFooter } from "../ui/wizard";
 import {
   ADD_PROVIDER_WIZARD_STEPS,
@@ -423,7 +424,7 @@ export function AddProviderInstanceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <WizardPopup size="wide">
+      <WizardPopup>
         <WizardHeader
           title="Add provider"
           description={<>Add an account or configure a provider on {environmentLabel}.</>}
@@ -693,8 +694,7 @@ export function AddProviderInstanceDialog({
 
             <WizardFooter>
               <Button
-                variant={wizardStep === 0 ? "ghost-muted" : "outline"}
-                size="sm"
+                variant="outline"
                 disabled={isSaving || isPreparingRegistryAgent}
                 onClick={() => {
                   if (wizardStep === 0) {
@@ -708,17 +708,13 @@ export function AddProviderInstanceDialog({
               </Button>
               {wizardStep === 0 && driver === "codex" ? (
                 <>
-                  <Button variant="outline" size="sm" onClick={() => navigateToStep(1)}>
+                  <Button variant="outline" onClick={() => navigateToStep(1)}>
                     Configure manually
                   </Button>
-                  <ChatGptConnectionButton
-                    size="sm"
-                    onClick={() => setAddingChatGptAccount(true)}
-                  />
+                  <ChatGptConnectionButton onClick={() => setAddingChatGptAccount(true)} />
                 </>
               ) : wizardStep < (isAcpRegistry ? 1 : 2) ? (
                 <Button
-                  size="sm"
                   disabled={isPreparingRegistryAgent}
                   onClick={() => navigateToStep(wizardStep + 1)}
                 >
@@ -726,15 +722,19 @@ export function AddProviderInstanceDialog({
                 </Button>
               ) : (
                 <Button
-                  size="sm"
                   disabled={isSaving || !canManageProviders}
                   onClick={() => void handleSave()}
                 >
-                  {isSaving
-                    ? "Adding..."
-                    : isAcpRegistry && !isLocalAcp
-                      ? "Continue to sign-in"
-                      : "Add instance"}
+                  {isSaving ? (
+                    <>
+                      <Spinner size="sm" />
+                      Adding…
+                    </>
+                  ) : isAcpRegistry && !isLocalAcp ? (
+                    "Continue to sign-in"
+                  ) : (
+                    "Add instance"
+                  )}
                 </Button>
               )}
             </WizardFooter>

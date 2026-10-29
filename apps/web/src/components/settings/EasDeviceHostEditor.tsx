@@ -22,6 +22,7 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Input } from "../ui/input";
+import { Label } from "../ui/label";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { Spinner } from "../ui/spinner";
 import { parseEasDeviceHostDraft } from "./easDeviceHostsSettings.logic";
@@ -57,6 +58,7 @@ export function EasDeviceHostEditor(props: {
   const check = useAtomCommand(deviceEnvironment.easAccount, { reportFailure: false });
   const [draft, setDraft] = useState(props.host);
   const tokenId = useId();
+  const fieldId = useId();
   // A saved token arrives redacted; only a replacement or a clear changes it.
   const [token, setToken] = useState<
     { kind: "saved" } | { kind: "new"; value: string } | { kind: "cleared" }
@@ -135,9 +137,10 @@ export function EasDeviceHostEditor(props: {
     label: string,
     max: number,
   ) => (
-    <label className="block space-y-1.5">
-      <span>{label}</span>
+    <div className="grid gap-1.5">
+      <Label htmlFor={`${fieldId}-${field}`}>{label}</Label>
       <Input
+        id={`${fieldId}-${field}`}
         type="number"
         min={1}
         max={max}
@@ -148,7 +151,7 @@ export function EasDeviceHostEditor(props: {
           setDraft((current) => ({ ...current, [field]: value }));
         }}
       />
-    </label>
+    </div>
   );
 
   return (
@@ -174,9 +177,10 @@ export function EasDeviceHostEditor(props: {
             </DialogDescription>
           </DialogHeader>
           <DialogPanel>
-            <label className="block space-y-1.5 text-sm">
-              <span>Name</span>
+            <div className="grid gap-1.5">
+              <Label htmlFor={`${fieldId}-name`}>Name</Label>
               <Input
+                id={`${fieldId}-name`}
                 autoFocus
                 required
                 value={draft.label}
@@ -186,11 +190,9 @@ export function EasDeviceHostEditor(props: {
                   setDraft((current) => ({ ...current, label }));
                 }}
               />
-            </label>
-            <div className="space-y-1.5 text-sm">
-              <label htmlFor={tokenId} className="block">
-                Expo access token
-              </label>
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor={tokenId}>Expo access token</Label>
               <div className="flex items-center gap-2">
                 <SecretInput
                   id={tokenId}
@@ -229,7 +231,7 @@ export function EasDeviceHostEditor(props: {
                 ) : null}
               </div>
             </div>
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 px-3 py-2.5">
+            <div className="flex items-center justify-between gap-3 rounded-xl border bg-muted/40 p-3">
               <p role="status" className="min-w-0 text-xs text-muted-foreground">
                 {account.status === "signed-in"
                   ? `Signed in as ${account.account.signedInAs} with ${CREDENTIAL_SOURCES[account.account.credentialSource]}.`
@@ -249,8 +251,8 @@ export function EasDeviceHostEditor(props: {
                 {account.status === "checking" ? <Spinner size="xs" /> : null} Check account
               </Button>
             </div>
-            <div className="space-y-1.5 text-sm">
-              <span>EAS project</span>
+            <div className="grid gap-1.5">
+              <Label htmlFor={`${fieldId}-project`}>EAS project</Label>
               <Select
                 value={draft.appId ?? FROM_THREAD_PROJECT}
                 disabled={props.busy}
@@ -262,7 +264,7 @@ export function EasDeviceHostEditor(props: {
                   });
                 }}
               >
-                <SelectTrigger size="sm" aria-label="EAS project">
+                <SelectTrigger id={`${fieldId}-project`} size="sm">
                   <SelectValue>
                     {(value: string) =>
                       value === FROM_THREAD_PROJECT
@@ -300,17 +302,18 @@ export function EasDeviceHostEditor(props: {
               {props.isNew ? null : " Saving restarts this host, which stops its running sessions."}
             </p>
             {problem === null ? null : (
-              <p className="text-xs text-destructive" role="alert">
+              <p className="text-sm text-destructive" role="alert">
                 {problem}
               </p>
             )}
           </DialogPanel>
           <DialogFooter>
-            <Button type="button" variant="ghost" disabled={props.busy} onClick={props.onClose}>
+            <Button type="button" variant="outline" disabled={props.busy} onClick={props.onClose}>
               Cancel
             </Button>
             <Button type="submit" disabled={props.busy || !valid}>
-              {props.busy ? <Spinner size="xs" /> : null} Save host
+              {props.busy ? <Spinner /> : null}
+              {props.busy ? "Saving…" : "Save host"}
             </Button>
           </DialogFooter>
         </form>

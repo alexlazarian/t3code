@@ -19,6 +19,8 @@ import * as Option from "effect/Option";
 import { cn } from "../../lib/utils";
 import { formatDesktopSshTarget } from "./EnvironmentRow";
 import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Spinner } from "../ui/spinner";
 import { CommandShortcut } from "../ui/command";
 import {
   Autocomplete,
@@ -31,6 +33,7 @@ import {
 import {
   Dialog,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogPanel,
   DialogPopup,
@@ -39,7 +42,6 @@ import {
 } from "../ui/dialog";
 import { stackedThreadToast, toastManager } from "../ui/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
-import { Alert, AlertDescription } from "../ui/alert";
 import { Button } from "../ui/button";
 import { AnimatedHeight } from "../AnimatedHeight";
 import { environmentCatalog } from "~/connection/catalog";
@@ -381,32 +383,32 @@ export function AddEnvironmentDialog({
   const renderRemoteFields = () => (
     <div className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem]">
-        <label className="block">
-          <span className="mb-1.5 block text-xs font-medium text-foreground">Host</span>
+        <div className="grid gap-1.5">
+          <Label htmlFor="saved-backend-host">Host</Label>
           <Input
+            id="saved-backend-host"
             value={savedBackendHost}
             onChange={(event) => handleSavedBackendHostChange(event.target.value)}
             placeholder="backend.example.com"
             disabled={isAddingSavedBackend}
             spellCheck={false}
           />
-        </label>
-        <label className="block">
-          <span className="mb-1.5 block text-xs font-medium text-foreground">Pairing code</span>
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="saved-backend-pairing-code">Pairing code</Label>
           <Input
+            id="saved-backend-pairing-code"
             value={savedBackendPairingCode}
             onChange={(event) => setSavedBackendPairingCode(event.target.value)}
             placeholder="PAIRCODE"
             disabled={isAddingSavedBackend}
             spellCheck={false}
           />
-        </label>
+        </div>
       </div>
-      <div>
-        <span className="mt-1 block text-2xs text-muted-foreground">
-          Paste a full pairing URL here to fill both fields automatically.
-        </span>
-      </div>
+      <p className="text-xs text-muted-foreground">
+        Paste a full pairing URL here to fill both fields automatically.
+      </p>
     </div>
   );
   const relayRouteOffer =
@@ -444,7 +446,7 @@ export function AddEnvironmentDialog({
   const renderRemoteModeBody = () => (
     <div className="space-y-4">
       {relayRouteOffer !== null ? (
-        <div className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
+        <div className="flex items-center justify-between gap-3 rounded-xl border bg-muted/40 p-3">
           <p className="text-xs text-muted-foreground">
             This machine is on your T3 Connect account. Use it as a fallback route.
           </p>
@@ -459,28 +461,15 @@ export function AddEnvironmentDialog({
         </div>
       ) : null}
       {renderRemoteFields()}
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
-      <Button
-        variant="outline"
-        className="w-full"
-        disabled={isAddingSavedBackend}
-        onClick={() => void handleAddSavedBackend()}
-      >
-        <PlusIcon className="size-3.5" />
-        {isAddingSavedBackend ? "Adding…" : routeTarget ? "Add route" : "Add environment"}
-      </Button>
     </div>
   );
   const renderSshFields = () => (
     <div className="space-y-4">
       <div className="space-y-3">
         <div className="block">
-          <label
-            htmlFor="saved-backend-ssh-host"
-            className="mb-1.5 block text-xs font-medium text-foreground"
-          >
+          <Label className="mb-1.5" htmlFor="saved-backend-ssh-host">
             SSH host or alias
-          </label>
+          </Label>
           <Autocomplete
             items={filteredDiscoveredSshHosts}
             itemToStringValue={(target) => target.alias}
@@ -552,9 +541,10 @@ export function AddEnvironmentDialog({
           </Autocomplete>
         </div>
         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_7rem]">
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-medium text-foreground">Username</span>
+          <div className="grid gap-1.5">
+            <Label htmlFor="saved-backend-ssh-username">Username</Label>
             <Input
+              id="saved-backend-ssh-username"
               value={savedBackendSshUsername}
               onChange={(event) => setSavedBackendSshUsername(event.target.value)}
               onKeyDown={handleSavedBackendSshFieldKeyDown}
@@ -562,10 +552,11 @@ export function AddEnvironmentDialog({
               disabled={isAddingSavedBackend}
               spellCheck={false}
             />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-medium text-foreground">Port</span>
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="saved-backend-ssh-port">Port</Label>
             <Input
+              id="saved-backend-ssh-port"
               value={savedBackendSshPort}
               onChange={(event) => setSavedBackendSshPort(event.target.value)}
               onKeyDown={handleSavedBackendSshFieldKeyDown}
@@ -574,25 +565,13 @@ export function AddEnvironmentDialog({
               disabled={isAddingSavedBackend}
               spellCheck={false}
             />
-          </label>
+          </div>
         </div>
-        {error || discoveredSshHostsError ? (
-          <Alert variant="error">
-            <AlertDescription>{error ?? discoveredSshHostsError}</AlertDescription>
-          </Alert>
-        ) : null}
-        <Button
-          variant="outline"
-          className="w-full"
-          disabled={isAddingSavedBackend}
-          onClick={() => void handleAddSavedBackend()}
-        >
-          <PlusIcon className="size-3.5" />
-          {isAddingSavedBackend ? "Adding…" : routeTarget ? "Add route" : "Add environment"}
-        </Button>
       </div>
     </div>
   );
+
+  const formError = savedBackendMode === "ssh" ? (error ?? discoveredSshHostsError) : error;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -611,7 +590,7 @@ export function AddEnvironmentDialog({
         />
         <TooltipPopup side="top">Add environment</TooltipPopup>
       </Tooltip>
-      <DialogPopup className="max-h-[80dvh] sm:max-w-3xl">
+      <DialogPopup>
         <DialogHeader>
           <DialogTitle>
             {routeTarget ? `Add a route to ${routeTarget.label}` : "Add Environment"}
@@ -643,8 +622,18 @@ export function AddEnvironmentDialog({
             <AnimatedHeight>
               {savedBackendMode === "ssh" ? renderSshFields() : renderRemoteModeBody()}
             </AnimatedHeight>
+            {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
           </div>
         </DialogPanel>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button disabled={isAddingSavedBackend} onClick={() => void handleAddSavedBackend()}>
+            {isAddingSavedBackend ? <Spinner /> : null}
+            {isAddingSavedBackend ? "Adding…" : routeTarget ? "Add route" : "Add environment"}
+          </Button>
+        </DialogFooter>
       </DialogPopup>
     </Dialog>
   );

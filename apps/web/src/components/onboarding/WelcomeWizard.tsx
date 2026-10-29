@@ -93,6 +93,7 @@ import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collaps
 import { Input } from "../ui/input";
 import { Tooltip, TooltipTrigger, TooltipPopup } from "../ui/tooltip";
 import { ScrollArea } from "../ui/scroll-area";
+import { Label } from "../ui/label";
 import { Spinner } from "../ui/spinner";
 import { WizardPanel, WizardSteps, WizardPopup, WizardHeader } from "../ui/wizard";
 import { Dialog } from "../ui/dialog";
@@ -226,21 +227,10 @@ export function WelcomeWizard({
       }}
     >
       <WizardPopup
-        size="wide"
         bottomStickOnMobile={false}
         initialFocus={() => document.getElementById("onboarding-pairing-url") ?? true}
       >
-        <WizardHeader
-          title="Set up T3 Code"
-          identity={
-            <div className="flex items-baseline gap-1.5" role="img" aria-label="T3 Code">
-              <T3Wordmark className="h-4 w-auto shrink-0" aria-hidden />
-              <span className="text-2xl font-medium tracking-tight text-muted-foreground">
-                Code
-              </span>
-            </div>
-          }
-        >
+        <WizardHeader title="Set up T3 Code">
           <WizardSteps
             steps={ONBOARDING_STAGES}
             currentStep={stageIndex}
@@ -332,6 +322,10 @@ function ConnectionStep({
   }, [ready]);
   return (
     <>
+      <div className="mb-4 flex items-baseline gap-1.5" role="img" aria-label="T3 Code">
+        <T3Wordmark className="h-4 w-auto shrink-0" aria-hidden />
+        <span className="text-2xl font-medium tracking-tight text-muted-foreground">Code</span>
+      </div>
       <h1 className="text-2xl font-semibold tracking-tight text-foreground">
         Connect your computers
       </h1>
@@ -588,9 +582,7 @@ function PairingForm({
         }}
       >
         <div>
-          <label className="block text-sm text-muted-foreground" htmlFor="onboarding-pairing-url">
-            Pairing link
-          </label>
+          <Label htmlFor="onboarding-pairing-url">Pairing link</Label>
           <Input
             id="onboarding-pairing-url"
             autoFocus
@@ -632,7 +624,8 @@ function PairingForm({
               Need a pairing link?
             </CollapsibleTrigger>
             <Button type="submit" disabled={isPairing || pairingUrl.trim().length === 0}>
-              {isPairing ? "Pairing..." : "Pair"}
+              {isPairing ? <Spinner /> : null}
+              {isPairing ? "Pairing…" : "Pair"}
             </Button>
           </div>
           <CollapsiblePanel>
@@ -1407,7 +1400,7 @@ function ImportStep({
           </p>
         </div>
         <div className="flex justify-end">
-          <Button variant="ghost-muted" onClick={() => void onDone()}>
+          <Button variant="outline" onClick={() => void onDone()}>
             Do not import projects
           </Button>
         </div>
@@ -1499,10 +1492,10 @@ function ImportStep({
         </div>
       </ScrollArea>
       {visibleImportError ? (
-        <p className="mt-3 text-sm text-destructive">{visibleImportError}</p>
+        <p className="mt-4 text-sm text-destructive">{visibleImportError}</p>
       ) : null}
       <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
-        <Button variant="ghost-muted" disabled={isImporting} onClick={finishAfterImport}>
+        <Button variant="outline" disabled={isImporting} onClick={finishAfterImport}>
           Do not import projects
         </Button>
         <Button
@@ -1510,6 +1503,7 @@ function ImportStep({
           disabled={!canImport || isImporting || selected.length === 0}
           onClick={() => void runImport(selected)}
         >
+          {isImporting ? <Spinner /> : null}
           {isImporting
             ? "Importing…"
             : `Import ${selected.length} ${selected.length === 1 ? "project" : "projects"}`}

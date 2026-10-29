@@ -9,7 +9,8 @@ import { useState, type ReactNode } from "react";
 import { MacAccessibilityIcon, MacScreenRecordingIcon } from "../Icons";
 import { CaptureShortcutConfig } from "./CaptureShortcutConfig";
 import { Button } from "../ui/button";
-import { Dialog, DialogDescription } from "../ui/dialog";
+import { Dialog } from "../ui/dialog";
+import { Spinner } from "../ui/spinner";
 import { WizardSteps, WizardPopup, WizardHeader, WizardPanel, WizardFooter } from "../ui/wizard";
 import {
   captureSetupAccessReady,
@@ -231,7 +232,10 @@ export function SnapShotSetupDialog({
       }}
     >
       <WizardPopup showCloseButton={!busy}>
-        <WizardHeader title={desktop ? `Set up snapshots for ${desktop}` : "Set up snapshots"}>
+        <WizardHeader
+          title={desktop ? `Set up snapshots for ${desktop}` : "Set up snapshots"}
+          description={description}
+        >
           <WizardSteps
             steps={SETUP_STEPS.map((item) => item.label)}
             currentStep={stepIndex}
@@ -246,7 +250,6 @@ export function SnapShotSetupDialog({
           <div className="space-y-4 text-sm">
             <div className="space-y-2" aria-live="polite">
               <h3 className="flex items-center gap-2 font-medium">{title}</h3>
-              <DialogDescription>{description}</DialogDescription>
             </div>
             {step === "access" ? (
               <>
@@ -332,16 +335,6 @@ export function SnapShotSetupDialog({
                 ) : null}
               </div>
             )}
-            {step === "shortcut" && !accessReady ? (
-              <p role="alert" className="text-destructive">
-                Capture needs attention. Go back to check access.
-              </p>
-            ) : null}
-            {error ? (
-              <p role="alert" className="text-destructive">
-                Couldn't finish this step. Try again or check Advanced for help.
-              </p>
-            ) : null}
             {details.length > 0 || (step === "access" && (backend === "gnome" || helperBackend)) ? (
               <details className="text-xs text-muted-foreground">
                 <summary className="cursor-pointer">Advanced</summary>
@@ -377,17 +370,27 @@ export function SnapShotSetupDialog({
                 </div>
               </details>
             ) : null}
+            {step === "shortcut" && !accessReady ? (
+              <p role="alert" className="text-sm text-destructive">
+                Capture needs attention. Go back to check access.
+              </p>
+            ) : null}
+            {error ? (
+              <p role="alert" className="text-sm text-destructive">
+                Couldn't finish this step. Try again or check Advanced for help.
+              </p>
+            ) : null}
           </div>
         </WizardPanel>
         <WizardFooter>
+          <Button variant="outline" disabled={busy} onClick={() => void onClose(false)}>
+            {wasEnabled ? "Close" : "Finish later"}
+          </Button>
           {step !== "access" ? (
-            <Button variant="ghost" disabled={busy} onClick={() => changeStep("access")}>
+            <Button variant="outline" disabled={busy} onClick={() => changeStep("access")}>
               Back
             </Button>
           ) : null}
-          <Button variant="ghost" disabled={busy} onClick={() => void onClose(false)}>
-            {wasEnabled ? "Close" : "Finish later"}
-          </Button>
           {step === "access" ? (
             helperBackend && !accessReady && helper?.status !== "ready" ? (
               <Button
@@ -397,6 +400,7 @@ export function SnapShotSetupDialog({
                   void (helper?.status === "error" ? checkAgain() : onAction(installHelper))
                 }
               >
+                {busy ? <Spinner size="sm" /> : null}
                 {checking
                   ? "Checking…"
                   : busy
@@ -419,6 +423,7 @@ export function SnapShotSetupDialog({
                       : checkAgain())
                 }
               >
+                {busy ? <Spinner size="sm" /> : null}
                 {checking
                   ? "Checking…"
                   : busy
@@ -463,6 +468,7 @@ export function SnapShotSetupDialog({
                 if (!shortcutChanged || (await onSaveShortcut())) await onClose(true);
               }}
             >
+              {busy ? <Spinner size="sm" /> : null}
               {busy ? "Saving…" : shortcutChanged ? "Save and finish" : "Done"}
             </Button>
           ) : null}

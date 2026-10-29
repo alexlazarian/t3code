@@ -16,6 +16,7 @@ import { serverEnvironment } from "../../state/server";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { Button } from "../ui/button";
 import { Dialog } from "../ui/dialog";
+import { Spinner } from "../ui/spinner";
 import { Input } from "../ui/input";
 import { WizardFooter, WizardHeader, WizardPanel, WizardPopup } from "../ui/wizard";
 import { MultipleAccountsNote } from "./MultipleAccountsNote";
@@ -91,7 +92,7 @@ export function AddCodexAccountDialog({
         if (!open && connected) onClose();
       }}
     >
-      <WizardPopup size="wide">
+      <WizardPopup>
         <WizardHeader
           title={instanceId ? displayName : "Add ChatGPT account"}
           description="Each account has its own Codex instance and sign-in. Choose the other account on the sign-in page."
@@ -132,7 +133,7 @@ export function AddCodexAccountDialog({
         <WizardFooter>
           {instanceId ? (
             <Button variant="outline" onClick={onClose}>
-              Finish later
+              Close
             </Button>
           ) : (
             <>
@@ -144,6 +145,7 @@ export function AddCodexAccountDialog({
                 form="add-codex-account"
                 disabled={pending || !name.trim() || !canManageProviders}
               >
+                {pending && <Spinner />}
                 {pending ? "Adding account…" : "Continue"}
               </Button>
             </>

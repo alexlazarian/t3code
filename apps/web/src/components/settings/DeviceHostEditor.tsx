@@ -5,6 +5,7 @@ import { CheckIcon, ChevronDownIcon, MonitorIcon, XIcon } from "lucide-react";
 import { Button, InlineButton } from "../ui/button";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
 import { Input } from "../ui/input";
+import { Label } from "../ui/label";
 import { Spinner } from "../ui/spinner";
 import {
   Dialog,
@@ -112,9 +113,10 @@ function DeviceHostEditorForm({
         </DialogDescription>
       </DialogHeader>
       <DialogPanel>
-        <label className="block space-y-1.5 text-sm">
-          <span>Name</span>
+        <div className="grid gap-1.5">
+          <Label htmlFor="device-host-name">Name</Label>
           <Input
+            id="device-host-name"
             autoFocus
             required
             value={draft.label}
@@ -125,10 +127,11 @@ function DeviceHostEditorForm({
             }}
             placeholder="Mac mini"
           />
-        </label>
-        <label className="block space-y-1.5 text-sm">
-          <span>SSH target</span>
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="device-host-target">SSH target</Label>
           <Input
+            id="device-host-target"
             required
             value={draft.target}
             disabled={busy}
@@ -138,16 +141,17 @@ function DeviceHostEditorForm({
             }}
             placeholder="user@host or SSH alias"
           />
-        </label>
+        </div>
         <details
           open={host.port !== undefined || host.identityFile !== undefined || undefined}
           className="text-sm"
         >
           <summary className="cursor-pointer text-muted-foreground">SSH options</summary>
           <div className="mt-3 grid grid-cols-[minmax(0,1fr)_7rem] gap-3">
-            <label className="block space-y-1.5">
-              <span>Identity file</span>
+            <div className="grid gap-1.5">
+              <Label htmlFor="device-host-identity-file">Identity file</Label>
               <Input
+                id="device-host-identity-file"
                 value={draft.identityFile ?? ""}
                 disabled={busy}
                 onChange={(event) => {
@@ -159,10 +163,11 @@ function DeviceHostEditorForm({
                 }}
                 placeholder="SSH config default"
               />
-            </label>
-            <label className="block space-y-1.5">
-              <span>Port</span>
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="device-host-port">Port</Label>
               <Input
+                id="device-host-port"
                 type="number"
                 min={1}
                 max={65535}
@@ -177,7 +182,7 @@ function DeviceHostEditorForm({
                 }}
                 placeholder="Default"
               />
-            </label>
+            </div>
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
             Optional. Resolved separately on each environment.
@@ -186,7 +191,7 @@ function DeviceHostEditorForm({
         <Collapsible
           open={checksOpen}
           onOpenChange={(open) => setExpandedChecks({ key: connectionKey, open })}
-          render={<div className="rounded-lg border border-border/60" />}
+          render={<div className="rounded-xl border bg-muted/40" />}
         >
           <div className="flex items-center justify-between gap-3 px-3 py-2.5">
             {targets.length === 1 ? (
@@ -277,11 +282,12 @@ function DeviceHostEditorForm({
         </Collapsible>
       </DialogPanel>
       <DialogFooter>
-        <Button type="button" variant="ghost" disabled={busy} onClick={onClose}>
+        <Button type="button" variant="outline" disabled={busy} onClick={onClose}>
           Cancel
         </Button>
         <Button type="submit" disabled={busy || checking || !valid || !draft.label.trim()}>
-          {busy ? <Spinner size="xs" /> : null} Save host
+          {busy ? <Spinner /> : null}
+          {busy ? "Saving…" : "Save host"}
         </Button>
       </DialogFooter>
     </form>

@@ -13,7 +13,14 @@ import { threadEnvironment } from "../state/threads";
 import { useOrchestrationCommand } from "../state/use-orchestration-command";
 import { buildThreadRouteParams, resolveThreadRouteTarget } from "../threadRoutes";
 import { Button } from "./ui/button";
-import { Dialog, DialogHeader, DialogPanel, DialogPopup, DialogTitle } from "./ui/dialog";
+import {
+  Dialog,
+  DialogDescription,
+  DialogHeader,
+  DialogPanel,
+  DialogPopup,
+  DialogTitle,
+} from "./ui/dialog";
 import { toastManager } from "./ui/toast";
 
 // Dev servers register this free ACP agent; see ProviderInstanceRegistryHydration.ts.
@@ -121,11 +128,12 @@ export function DevReplayHost() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogPopup className="sm:max-w-sm">
+      <DialogPopup size="sm">
         <DialogHeader>
           <DialogTitle>
             {project === undefined ? "Replay a recorded turn" : `Replay in ${project.title}`}
           </DialogTitle>
+          <DialogDescription>Start a free thread that replays a recorded turn.</DialogDescription>
         </DialogHeader>
         <DialogPanel>
           {scenarios.length === 0 || project === undefined ? (

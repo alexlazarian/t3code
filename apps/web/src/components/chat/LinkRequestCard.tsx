@@ -37,6 +37,8 @@ import { ANOTHER_ADDRESS, LinkMachineBadge } from "../settings/LinkMachineSelect
 import { Button } from "../ui/button";
 import { Dialog } from "../ui/dialog";
 import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Spinner } from "../ui/spinner";
 import { Radio, RadioGroup } from "../ui/radio-group";
 import { WizardFooter, WizardHeader, WizardPanel, WizardPopup, WizardSteps } from "../ui/wizard";
 import { WorkLogRow } from "./WorkLog";
@@ -372,9 +374,10 @@ function LinkRequestDialog(props: {
                   />
                 ) : null}
                 {asksAddress ? (
-                  <label className="block space-y-1.5">
-                    <span className="block text-xs font-medium text-foreground">Address</span>
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`${formId}-address`}>Address</Label>
                     <Input
+                      id={`${formId}-address`}
                       value={address}
                       onChange={(event) => setAddress(event.target.value)}
                       placeholder="https://machine.tailnet.ts.net"
@@ -383,12 +386,12 @@ function LinkRequestDialog(props: {
                       spellCheck={false}
                     />
                     {target.kind === "machine" ? (
-                      <span className="block text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         This app has no address for {target.label} that another machine can reach.
                         Enter its https or Tailscale address.
-                      </span>
+                      </p>
                     ) : null}
-                  </label>
+                  </div>
                 ) : null}
               </>
             ) : (
@@ -399,11 +402,10 @@ function LinkRequestDialog(props: {
                 {useExisting ? null : (
                   <>
                     {canMint ? null : (
-                      <label className="block space-y-1.5">
-                        <span className="block text-xs font-medium text-foreground">
-                          Pairing code
-                        </span>
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`${formId}-code`}>Pairing code</Label>
                         <Input
+                          id={`${formId}-code`}
                           value={pairingCode}
                           onChange={(event) => setPairingCode(event.target.value)}
                           placeholder="Paste the code"
@@ -412,11 +414,11 @@ function LinkRequestDialog(props: {
                           nativeInput
                           spellCheck={false}
                         />
-                        <span className="block text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           Create a link on {targetName}: Settings → Connections → Create link, then
                           paste its code here.
-                        </span>
-                      </label>
+                        </p>
+                      </div>
                     )}
                     <LinkAccessPicker value={access} onChange={setAccess} disabled={busy} />
                   </>
@@ -430,7 +432,7 @@ function LinkRequestDialog(props: {
               </p>
             ) : null}
             {error !== null ? (
-              <p role="alert" className="text-xs text-destructive">
+              <p role="alert" className="text-sm text-destructive">
                 {error}
               </p>
             ) : null}
@@ -459,6 +461,7 @@ function LinkRequestDialog(props: {
             type="submit"
             disabled={busy || (finishesHere ? !ready : !machineReady)}
           >
+            {busy ? <Spinner /> : null}
             {busy ? "Linking…" : useExisting ? "Use this link" : finishesHere ? "Link" : "Continue"}
           </Button>
         </WizardFooter>
@@ -477,9 +480,7 @@ function MachinePicker(props: {
   const labelId = useId();
   return (
     <div className="space-y-2">
-      <span id={labelId} className="block text-xs font-medium">
-        Machine
-      </span>
+      <Label id={labelId}>Machine</Label>
       <RadioGroup
         aria-labelledby={labelId}
         value={props.value}

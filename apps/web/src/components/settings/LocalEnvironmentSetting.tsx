@@ -7,6 +7,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogPanel,
   AlertDialogPopup,
   AlertDialogTitle,
 } from "../ui/alert-dialog";
@@ -62,7 +63,7 @@ export function LocalEnvironmentSetting() {
           if (!open) setError(null);
         }}
       >
-        <AlertDialogPopup>
+        <AlertDialogPopup size="sm">
           <AlertDialogHeader>
             <AlertDialogTitle>
               {enabled ? "Turn off local environment?" : "Turn on local environment?"}
@@ -73,7 +74,11 @@ export function LocalEnvironmentSetting() {
                 : "T3 Code will restart and start running a server on this computer again."}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {error ? <p className="px-6 pb-4 text-sm text-destructive">{error}</p> : null}
+          {error ? (
+            <AlertDialogPanel>
+              <p className="text-sm text-destructive">{error}</p>
+            </AlertDialogPanel>
+          ) : null}
           <AlertDialogFooter>
             <AlertDialogClose disabled={isUpdating} render={<Button variant="outline" />}>
               Cancel

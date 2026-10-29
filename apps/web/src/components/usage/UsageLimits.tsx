@@ -280,7 +280,7 @@ export function ResetCreditDialog({
 }) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogPopup>
+      <AlertDialogPopup size="sm">
         <AlertDialogHeader>
           <AlertDialogTitle>Use a reset credit?</AlertDialogTitle>
           <AlertDialogDescription>

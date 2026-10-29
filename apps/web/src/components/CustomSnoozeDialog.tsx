@@ -85,7 +85,7 @@ function CustomSnoozeDialog() {
         if (!open) finish(null);
       }}
     >
-      <DialogPopup className="sm:max-w-sm">
+      <DialogPopup size="sm">
         <form
           className="flex min-h-0 flex-col"
           onSubmit={(event) => {
@@ -221,7 +221,7 @@ function CustomSnoozeDialog() {
               </div>
             </div>
             {error && (
-              <p role="alert" className="text-destructive">
+              <p role="alert" className="text-sm text-destructive">
                 {error}
               </p>
             )}
@@ -229,7 +229,7 @@ function CustomSnoozeDialog() {
           <DialogFooter>
             <Button
               type="button"
-              variant="ghost-muted"
+              variant="outline"
               className="sm:mr-auto"
               onClick={() => {
                 finish(null);

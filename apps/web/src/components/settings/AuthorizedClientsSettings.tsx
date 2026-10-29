@@ -28,6 +28,8 @@ import {
 } from "./ConnectionsSettings.logic";
 import { useNowSecond } from "../../hooks/useNowSecond";
 import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Spinner } from "../ui/spinner";
 import { Checkbox } from "../ui/checkbox";
 import {
   Dialog,
@@ -330,7 +332,7 @@ const PairingLinkListRow = memo(function PairingLinkListRow({
                 {shareablePairingUrl ? "Show link" : "Show code"}
               </DialogTrigger>
             )}
-            <DialogPopup className="max-w-md">
+            <DialogPopup size="sm">
               <DialogHeader>
                 <DialogTitle>
                   {isRevealValueUrl
@@ -367,15 +369,14 @@ const PairingLinkListRow = memo(function PairingLinkListRow({
                   </div>
                 ) : null}
               </DialogPanel>
-              <DialogFooter variant="bare">
-                <Button variant="outline" onClick={() => setIsRevealDialogOpen(false)}>
-                  Done
+              <DialogFooter>
+                <Button
+                  variant={canCopyToClipboard ? "outline" : "default"}
+                  onClick={() => setIsRevealDialogOpen(false)}
+                >
+                  {canCopyToClipboard ? "Close" : "Done"}
                 </Button>
-                {canCopyToClipboard ? (
-                  <Button variant="outline" onClick={handleCopyCode}>
-                    Copy code
-                  </Button>
-                ) : null}
+                {canCopyToClipboard ? <Button onClick={handleCopyCode}>Copy code</Button> : null}
               </DialogFooter>
             </DialogPopup>
           </Dialog>
@@ -654,7 +655,7 @@ export const AuthorizedClientsHeaderAction = memo(function AuthorizedClientsHead
             </Button>
           }
         />
-        <DialogPopup className="max-w-md">
+        <DialogPopup>
           <DialogHeader>
             <DialogTitle>Create pairing link</DialogTitle>
             <DialogDescription>
@@ -662,18 +663,17 @@ export const AuthorizedClientsHeaderAction = memo(function AuthorizedClientsHead
             </DialogDescription>
           </DialogHeader>
           <DialogPanel>
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-foreground">
-                Client label (optional)
-              </span>
+            <div className="space-y-1.5">
+              <Label htmlFor="pairing-link-label">Client label (optional)</Label>
               <Input
+                id="pairing-link-label"
                 value={pairingLabel}
                 onChange={(event) => setPairingLabel(event.target.value)}
                 placeholder="e.g. Living room iPad"
                 disabled={isCreatingPairingLink}
                 autoFocus
               />
-            </label>
+            </div>
             <section className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -739,16 +739,16 @@ export const AuthorizedClientsHeaderAction = memo(function AuthorizedClientsHead
                   ),
                 )}
               </div>
-              {selectedScopes.length === 0 ? (
-                <p className="text-xs text-destructive">Select at least one permission.</p>
-              ) : selectedScopes.includes(AuthAccessWriteScope) ? (
-                <p className="text-xs text-warning">
-                  This client can create or revoke access for other devices.
-                </p>
-              ) : null}
             </section>
+            {selectedScopes.length === 0 ? (
+              <p className="text-sm text-destructive">Select at least one permission.</p>
+            ) : selectedScopes.includes(AuthAccessWriteScope) ? (
+              <p className="text-sm text-warning">
+                This client can create or revoke access for other devices.
+              </p>
+            ) : null}
           </DialogPanel>
-          <DialogFooter variant="bare">
+          <DialogFooter>
             <Button
               variant="outline"
               disabled={isCreatingPairingLink}
@@ -760,7 +760,14 @@ export const AuthorizedClientsHeaderAction = memo(function AuthorizedClientsHead
               disabled={isCreatingPairingLink || selectedScopes.length === 0}
               onClick={() => void handleCreatePairingLink()}
             >
-              {isCreatingPairingLink ? "Creating…" : "Create link"}
+              {isCreatingPairingLink ? (
+                <>
+                  <Spinner size="sm" />
+                  Creating…
+                </>
+              ) : (
+                "Create link"
+              )}
             </Button>
           </DialogFooter>
         </DialogPopup>

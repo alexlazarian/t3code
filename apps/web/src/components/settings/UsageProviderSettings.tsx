@@ -141,7 +141,7 @@ function RemoveUsageProviderButton({
         Remove
       </Button>
       <AlertDialog open={open} onOpenChange={setOpen}>
-        <AlertDialogPopup>
+        <AlertDialogPopup size="sm">
           <AlertDialogHeader>
             <AlertDialogTitle>Remove {label}?</AlertDialogTitle>
             <AlertDialogDescription>

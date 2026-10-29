@@ -41,6 +41,7 @@ import { usePeerLinkHosts } from "~/state/peerLinks";
 import { LoadBalancingSettings } from "./LoadBalancingSettings";
 import { PullRequestRoutingSettings } from "./PullRequestRoutingSettings";
 import { Input } from "../ui/input";
+import { Label } from "../ui/label";
 import {
   Dialog,
   DialogClose,
@@ -1193,7 +1194,7 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
                 setPendingDesktopServerExposureMode(null);
             }}
           >
-            <AlertDialogPopup>
+            <AlertDialogPopup size="sm">
               <AlertDialogHeader>
                 <AlertDialogTitle>
                   {pendingDesktopServerExposureMode === "network-accessible"
@@ -1211,7 +1212,7 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
                   disabled={isUpdatingDesktopServerExposure}
                   render={<Button variant="outline" disabled={isUpdatingDesktopServerExposure} />}
                 >
-                  <span className="[text-box:trim-both_cap_alphabetic]">Cancel</span>
+                  Cancel
                 </AlertDialogClose>
                 <Button
                   variant="default"
@@ -1223,13 +1224,11 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
                   }
                 >
                   {isUpdatingDesktopServerExposure && <Spinner size="sm" />}
-                  <span className="[text-box:trim-both_cap_alphabetic]">
-                    {isUpdatingDesktopServerExposure
-                      ? "Restarting…"
-                      : pendingDesktopServerExposureMode === "network-accessible"
-                        ? "Restart and enable"
-                        : "Restart and disable"}
-                  </span>
+                  {isUpdatingDesktopServerExposure
+                    ? "Restarting…"
+                    : pendingDesktopServerExposureMode === "network-accessible"
+                      ? "Restart and enable"
+                      : "Restart and disable"}
                 </Button>
               </AlertDialogFooter>
             </AlertDialogPopup>
@@ -1241,7 +1240,7 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
               if (!open) setPendingWslChange(null);
             }}
           >
-            <AlertDialogPopup>
+            <AlertDialogPopup size="sm">
               <AlertDialogHeader>
                 <AlertDialogTitle>
                   {pendingWslChange?.kind === "disable"
@@ -1349,7 +1348,7 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
               setDisableTailscaleServeDialogOpen(open);
             }}
           >
-            <AlertDialogPopup>
+            <AlertDialogPopup size="sm">
               <AlertDialogHeader>
                 <AlertDialogTitle>Disable Tailscale HTTPS?</AlertDialogTitle>
                 <AlertDialogDescription>
@@ -1387,7 +1386,7 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
               if (!open) setPendingTailscaleServeEndpoint(null);
             }}
           >
-            <DialogPopup className="max-w-md">
+            <DialogPopup size="sm">
               <DialogHeader>
                 <DialogTitle>Set up Tailscale HTTPS?</DialogTitle>
                 <DialogDescription>
@@ -1396,10 +1395,10 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
                 </DialogDescription>
               </DialogHeader>
               <DialogPanel>
-                <label className="block">
-                  <span className="text-sm font-medium text-foreground">HTTPS port</span>
+                <div className="space-y-2">
+                  <Label htmlFor="tailscale-https-port">HTTPS port</Label>
                   <Input
-                    className="mt-2"
+                    id="tailscale-https-port"
                     type="number"
                     inputMode="numeric"
                     min={1}
@@ -1409,11 +1408,8 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
                     onChange={(event) => setTailscaleServePortInput(event.target.value)}
                     disabled={isUpdatingTailscaleServe}
                   />
-                </label>
-                {!isTailscaleServePortValid ? (
-                  <p className="mt-2 text-xs text-destructive">Enter a port from 1 to 65535.</p>
-                ) : null}
-                <div className="rounded-md border border-border/70 bg-muted/20 px-3 py-2">
+                </div>
+                <div className="rounded-xl border bg-muted/40 p-3">
                   <p className="text-xs font-medium text-muted-foreground">HTTPS endpoint</p>
                   <Tooltip>
                     <TooltipTrigger
@@ -1428,6 +1424,9 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
                     ) : null}
                   </Tooltip>
                 </div>
+                {!isTailscaleServePortValid ? (
+                  <p className="text-sm text-destructive">Enter a port from 1 to 65535.</p>
+                ) : null}
               </DialogPanel>
               <DialogFooter>
                 <DialogClose

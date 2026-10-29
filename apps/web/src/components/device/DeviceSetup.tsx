@@ -233,7 +233,7 @@ export function DeviceSetup(props: {
           </section>
         ) : null}
         {props.state.hostStatus === "failed" && props.state.hostStatusDetail ? (
-          <p role="alert" className="mt-3 text-xs text-destructive">
+          <p role="alert" className="text-sm text-destructive">
             {props.state.hostStatusDetail}
           </p>
         ) : null}
@@ -260,6 +260,7 @@ export function DeviceSetup(props: {
             disabled={!canConfigure || !ready || pending !== null}
             onClick={() => void update("complete", { onboardingCompleted: true })}
           >
+            {pending === "complete" ? <Spinner /> : null}
             {pending === "complete" ? "Saving…" : "Done"}
           </Button>
         )}

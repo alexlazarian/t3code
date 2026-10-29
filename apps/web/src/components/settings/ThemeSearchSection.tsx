@@ -464,7 +464,7 @@ export function ThemeSearchSection({
           if (!nextOpen) setPendingUpdate(null);
         }}
       >
-        <AlertDialogPopup>
+        <AlertDialogPopup size="sm">
           <AlertDialogHeader>
             <AlertDialogTitle>Update “{pendingUpdate?.name}”?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -475,6 +475,7 @@ export function ThemeSearchSection({
           <AlertDialogFooter>
             <AlertDialogClose render={<Button variant="outline" />}>Cancel</AlertDialogClose>
             <Button
+              variant="destructive"
               onClick={() => {
                 const extension = pendingUpdate;
                 setPendingUpdate(null);

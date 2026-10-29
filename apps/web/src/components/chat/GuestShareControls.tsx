@@ -34,6 +34,7 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Input } from "../ui/input";
+import { Spinner } from "../ui/spinner";
 import { useAssetUrls } from "~/assets/assetUrls";
 import { type ChatFileAttachment, isImageAttachment } from "../../types";
 import { buildExpandedImagePreview, type ExpandedImagePreview } from "./ExpandedImagePreview";
@@ -108,7 +109,7 @@ function GuestShareDialog({
         if (!open && state.status !== "creating") onClose();
       }}
     >
-      <DialogPopup className="max-w-lg">
+      <DialogPopup size="sm">
         <DialogHeader>
           <DialogTitle>Share with guest</DialogTitle>
           <DialogDescription>
@@ -138,32 +139,27 @@ function GuestShareDialog({
             </p>
           )}
           {state.status === "failed" ? (
-            <p role="alert" className="text-destructive text-xs">
+            <p role="alert" className="text-sm text-destructive">
               {state.message}
             </p>
           ) : null}
         </DialogPanel>
         <DialogFooter>
           {state.status === "created" ? (
-            <Button size="sm" onClick={onClose}>
-              Done
+            <Button variant="outline" onClick={onClose}>
+              Close
             </Button>
           ) : (
             <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onClose}
-                disabled={state.status === "creating"}
-              >
+              <Button variant="outline" onClick={onClose} disabled={state.status === "creating"}>
                 Cancel
               </Button>
               <Button
-                size="sm"
                 onClick={() => void create()}
                 disabled={!canCreate || state.status === "creating"}
               >
-                {state.status === "creating" ? "Creating..." : "Create link"}
+                {state.status === "creating" ? <Spinner /> : null}
+                {state.status === "creating" ? "Creating…" : "Create link"}
               </Button>
             </>
           )}

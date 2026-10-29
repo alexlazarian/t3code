@@ -71,6 +71,7 @@ import {
 } from "../ui/menu";
 import { readLocalApi } from "~/localApi";
 
+import { Spinner } from "../ui/spinner";
 import { toastManager } from "../ui/toast";
 import {
   AlertDialog,
@@ -78,6 +79,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogPanel,
   AlertDialogPopup,
   AlertDialogTitle,
 } from "../ui/alert-dialog";
@@ -1444,24 +1446,28 @@ function BrowserProfilesSetting({ disabled }: { readonly disabled: boolean }) {
           }
         }}
       >
-        <AlertDialogPopup>
+        <AlertDialogPopup size="sm">
           <AlertDialogHeader>
             <AlertDialogTitle>Remove “{profilePendingRemoval?.name}”?</AlertDialogTitle>
             <AlertDialogDescription>
               Its cookies and logins are deleted. Desktop tabs already open in this profile stay
               open until you close them; server browser tabs close now.
             </AlertDialogDescription>
-            {profileRemovalError ? (
-              <p aria-live="polite" className="text-sm text-destructive">
-                {profileRemovalError}
-              </p>
-            ) : null}
-            {!removalAvailable ? (
-              <p className="text-sm text-muted-foreground">
-                Connect to an environment to remove this profile and its data.
-              </p>
-            ) : null}
           </AlertDialogHeader>
+          {!removalAvailable || profileRemovalError ? (
+            <AlertDialogPanel>
+              {!removalAvailable ? (
+                <p className="text-sm text-muted-foreground">
+                  Connect to an environment to remove this profile and its data.
+                </p>
+              ) : null}
+              {profileRemovalError ? (
+                <p aria-live="polite" className="text-sm text-destructive">
+                  {profileRemovalError}
+                </p>
+              ) : null}
+            </AlertDialogPanel>
+          ) : null}
           <AlertDialogFooter>
             <AlertDialogClose
               disabled={profileRemovalInFlight}
@@ -1478,7 +1484,14 @@ function BrowserProfilesSetting({ disabled }: { readonly disabled: boolean }) {
                 }
               }}
             >
-              {profileRemovalInFlight ? "Removing…" : "Remove profile"}
+              {profileRemovalInFlight ? (
+                <>
+                  <Spinner size="sm" />
+                  Removing…
+                </>
+              ) : (
+                "Remove profile"
+              )}
             </Button>
           </AlertDialogFooter>
         </AlertDialogPopup>

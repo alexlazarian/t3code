@@ -104,6 +104,7 @@ import {
 } from "../ui/dialog";
 import { Input } from "../ui/input";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
+import { Spinner } from "../ui/spinner";
 import { Switch } from "../ui/switch";
 import { Textarea } from "../ui/textarea";
 import { stackedThreadToast, toastManager } from "../ui/toast";
@@ -835,13 +836,12 @@ function WebhookDeliveriesDialog({
         if (!next) onClose();
       }}
     >
-      <DialogPopup className="max-w-2xl">
+      <DialogPopup size="lg">
         <DialogHeader>
           <DialogTitle>Deliveries · {task.title}</DialogTitle>
           <DialogDescription>Recent requests to this task's webhook URL.</DialogDescription>
         </DialogHeader>
         <DialogPanel>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
           {selectedId !== null && selected === null && selectedQuery.error === null ? (
             <p className="text-sm text-muted-foreground" role="status">
               Loading delivery…
@@ -939,23 +939,24 @@ function WebhookDeliveriesDialog({
               ))}
             </ul>
           )}
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
         </DialogPanel>
         <DialogFooter>
           {selectedId !== null ? (
-            <Button variant="outline" size="sm" onClick={() => setSelectedId(null)}>
+            <Button variant="outline" className="sm:mr-auto" onClick={() => setSelectedId(null)}>
               Back
             </Button>
           ) : (
             <Button
               variant="outline"
-              size="sm"
+              className="sm:mr-auto"
               disabled={deliveriesQuery.isPending}
               onClick={deliveriesQuery.refresh}
             >
               Refresh
             </Button>
           )}
-          <DialogClose render={<Button size="sm" />}>Done</DialogClose>
+          <DialogClose render={<Button variant="outline" />}>Close</DialogClose>
         </DialogFooter>
       </DialogPopup>
     </Dialog>
@@ -1081,7 +1082,7 @@ function ScheduledTaskEditorDialog({
       }}
     >
       {/* The form owns the draft so a keystroke re-renders it, not the dialog chrome. */}
-      <DialogPopup className="max-w-xl">
+      <DialogPopup>
         <ScheduledTaskEditorForm
           initialEnvironmentId={initialEnvironmentId}
           task={task}
@@ -1284,9 +1285,6 @@ function ScheduledTaskEditorForm({
       <DialogPanel>
         {/* Fieldsets default to min-width: min-content, which lets one wide control widen the form past the dialog. */}
         <fieldset disabled={saving} className="min-w-0 space-y-5">
-          {!connected ? (
-            <p className="text-sm text-destructive">Reconnect this environment before saving.</p>
-          ) : null}
           <Field label="Runs on" htmlFor="scheduled-task-environment">
             <Select
               value={environmentId}
@@ -1349,16 +1347,6 @@ function ScheduledTaskEditorForm({
               </SelectPopup>
             </Select>
           </Field>
-          {tasksQuery.error ? (
-            <p className="text-sm text-destructive" role="status">
-              {tasksQuery.error}
-            </p>
-          ) : null}
-          {editingTaskMissing ? (
-            <p className="text-xs text-destructive" role="status">
-              This scheduled task no longer exists.
-            </p>
-          ) : null}
           <Field label="Name" htmlFor="scheduled-task-title">
             <Input
               id="scheduled-task-title"
@@ -1757,18 +1745,37 @@ function ScheduledTaskEditorForm({
             />
           </div>
         </fieldset>
+        {!connected ? (
+          <p className="text-sm text-destructive">Reconnect this environment before saving.</p>
+        ) : null}
+        {tasksQuery.error ? (
+          <p className="text-sm text-destructive" role="status">
+            {tasksQuery.error}
+          </p>
+        ) : null}
+        {editingTaskMissing ? (
+          <p className="text-sm text-destructive" role="status">
+            This scheduled task no longer exists.
+          </p>
+        ) : null}
       </DialogPanel>
 
       <DialogFooter>
-        <DialogClose render={<Button variant="outline" size="sm" disabled={saving} />}>
-          Cancel
-        </DialogClose>
+        <DialogClose render={<Button variant="outline" disabled={saving} />}>Cancel</DialogClose>
         <Button
-          size="sm"
           disabled={!canOperate || saving || editingTaskMissing || !connected || !tasksQuery.data}
           onClick={() => void submit()}
         >
-          {draft.editingId ? "Save task" : "Create task"}
+          {saving ? (
+            <>
+              <Spinner size="sm" />
+              {draft.editingId ? "Saving…" : "Creating…"}
+            </>
+          ) : draft.editingId ? (
+            "Save task"
+          ) : (
+            "Create task"
+          )}
         </Button>
       </DialogFooter>
     </>

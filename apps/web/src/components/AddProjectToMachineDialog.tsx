@@ -49,6 +49,7 @@ import {
 } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { Spinner } from "./ui/spinner";
 import { MiddleTruncate } from "./ui/middle-truncate";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "./ui/select";
 import { Toggle, ToggleGroup } from "./ui/toggle-group";
@@ -212,7 +213,7 @@ function AddProjectToMachineDialog({ request }: { request: AddProjectToMachineRe
         if (!open) close();
       }}
     >
-      <DialogPopup className="sm:max-w-xl">
+      <DialogPopup size="default">
         <form
           className="flex min-h-0 flex-col"
           onSubmit={(event) => {
@@ -350,7 +351,7 @@ function AddProjectToMachineDialog({ request }: { request: AddProjectToMachineRe
                   ) : null}
                 </div>
                 {ignoredFiles.error ? (
-                  <p className="text-destructive-foreground text-xs">{ignoredFiles.error}</p>
+                  <p className="text-sm text-destructive">{ignoredFiles.error}</p>
                 ) : files.length === 0 ? (
                   <p className="text-muted-foreground text-xs">
                     {ignoredFiles.isSuccess
@@ -381,14 +382,21 @@ function AddProjectToMachineDialog({ request }: { request: AddProjectToMachineRe
               </div>
             ) : null}
 
-            {error ? <p className="text-destructive-foreground text-sm">{error}</p> : null}
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
           </DialogPanel>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={close}>
               Cancel
             </Button>
             <Button type="submit" disabled={unavailable || submitting}>
-              {submitting ? "Starting…" : `Clone to ${target?.label ?? "machine"}`}
+              {submitting ? (
+                <>
+                  <Spinner />
+                  Starting…
+                </>
+              ) : (
+                `Clone to ${target?.label ?? "machine"}`
+              )}
             </Button>
           </DialogFooter>
         </form>

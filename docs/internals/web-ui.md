@@ -38,6 +38,17 @@ Build new UI the same way. Compose or extend a component instead of copying its 
 When a call site repeats a treatment another one already uses, make it a variant or a slot on the
 shared component. A new composer banner or notice uses the `ComposerBanner` slots.
 
+## Dialogs
+
+Every dialog shares one look, set in [`dialog.tsx`](../../apps/web/src/components/ui/dialog.tsx) and
+[`alert-dialog.tsx`](../../apps/web/src/components/ui/alert-dialog.tsx).
+
+- Pick `size` `sm`, `default`, or `lg` on the popup. No width classes.
+- Compose `DialogHeader` (Title and Description), `DialogPanel` (`AlertDialogPanel` in alerts), then `DialogFooter`.
+- Cancel is an outline button and comes first. One filled primary or destructive button comes last. Default button size.
+- An inline error is one `text-sm text-destructive` line at the end of the panel.
+- Busy is a `Spinner` in the primary button.
+
 ## Handlers in large components
 
 V8 gives every closure created in one render a single shared scope. A memoized handler keeps

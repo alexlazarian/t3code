@@ -38,6 +38,8 @@ import {
   DialogTrigger,
 } from "../ui/dialog";
 import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Spinner } from "../ui/spinner";
 import { stackedThreadToast, toastManager } from "../ui/toast";
 import { ITEM_ROW_CLASSNAME, ITEM_ROW_INNER_CLASSNAME } from "./itemRows";
 import { LinkAccessPicker } from "./LinkAccessPicker";
@@ -262,7 +264,7 @@ function LinkEnvironmentAction({ environmentId }: { readonly environmentId: Envi
           </Button>
         }
       />
-      <DialogPopup className="max-w-md">
+      <DialogPopup>
         <DialogHeader>
           <DialogTitle>Link an environment</DialogTitle>
           <DialogDescription>
@@ -294,9 +296,10 @@ function LinkEnvironmentAction({ environmentId }: { readonly environmentId: Envi
               </p>
             ) : null}
             {needsAddress ? (
-              <label className="block space-y-1.5">
-                <span className="block text-xs font-medium text-foreground">Address</span>
+              <div className="space-y-1.5">
+                <Label htmlFor={`${formId}-address`}>Address</Label>
                 <Input
+                  id={`${formId}-address`}
                   value={address}
                   onChange={(event) => {
                     setAddress(event.target.value);
@@ -310,17 +313,18 @@ function LinkEnvironmentAction({ environmentId }: { readonly environmentId: Envi
                   spellCheck={false}
                 />
                 {machine !== null ? (
-                  <span className="block text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     This app has no address for {machine.label} that another machine can reach.
                     Enter its https or Tailscale address.
-                  </span>
+                  </p>
                 ) : null}
-              </label>
+              </div>
             ) : null}
             {selected === null || canMint ? null : (
-              <label className="block space-y-1.5">
-                <span className="block text-xs font-medium text-foreground">Pairing code</span>
+              <div className="space-y-1.5">
+                <Label htmlFor={`${formId}-pairing-code`}>Pairing code</Label>
                 <Input
+                  id={`${formId}-pairing-code`}
                   value={pairingCode}
                   onChange={(event) => setPairingCode(event.target.value)}
                   placeholder={
@@ -334,22 +338,29 @@ function LinkEnvironmentAction({ environmentId }: { readonly environmentId: Envi
                   spellCheck={false}
                 />
                 {machine !== null ? (
-                  <span className="block text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     Create a link on {machine.label}: Settings → Connections → Create link, then
                     paste its code here.
-                  </span>
+                  </p>
                 ) : null}
-              </label>
+              </div>
             )}
             <LinkAccessPicker value={access} onChange={setAccess} disabled={busy} />
           </form>
         </DialogPanel>
-        <DialogFooter variant="bare">
+        <DialogFooter>
           <DialogClose disabled={busy} render={<Button variant="outline" type="button" />}>
             Cancel
           </DialogClose>
           <Button form={formId} type="submit" disabled={busy || !ready}>
-            {busy ? "Linking…" : "Link"}
+            {busy ? (
+              <>
+                <Spinner size="sm" />
+                Linking…
+              </>
+            ) : (
+              "Link"
+            )}
           </Button>
         </DialogFooter>
       </DialogPopup>

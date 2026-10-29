@@ -19,9 +19,17 @@ import {
   parseVsCodeThemeFile,
   resolveThemeLabelCollisions,
 } from "../../vscodeThemeImport";
-import { Alert } from "../ui/alert";
 import { Button } from "../ui/button";
-import { Dialog, DialogHeader, DialogPanel, DialogPopup, DialogTitle } from "../ui/dialog";
+import {
+  Dialog,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogPanel,
+  DialogPopup,
+  DialogTitle,
+} from "../ui/dialog";
+import { Label } from "../ui/label";
 import { ThemeSearchSection } from "./ThemeSearchSection";
 
 /**
@@ -176,9 +184,12 @@ export function ThemeImportDialog({
         else close();
       }}
     >
-      <DialogPopup className="max-w-3xl overflow-hidden">
+      <DialogPopup size="lg" className="overflow-hidden">
         <DialogHeader>
           <DialogTitle>Add a theme</DialogTitle>
+          <DialogDescription>
+            Search for a theme or import a T3 Code or VS Code theme file.
+          </DialogDescription>
         </DialogHeader>
         <ThemeImportBody
           key={session.id}
@@ -422,128 +433,128 @@ function ThemeImportBody({
   };
 
   return (
-    <DialogPanel>
-      <ThemeSearchSection
-        onInstalled={(themes, context) => {
-          onImportedMany(themes, context);
-          onClose();
-        }}
-        signal={signal}
-      />
+    <>
+      <DialogPanel>
+        <ThemeSearchSection
+          onInstalled={(themes, context) => {
+            onImportedMany(themes, context);
+            onClose();
+          }}
+          signal={signal}
+        />
 
-      <div className="flex items-center gap-3" aria-hidden>
-        <div className="h-px flex-1 bg-border" />
-        <span className="text-muted-foreground text-2xs uppercase tracking-wider">
-          or import a file
-        </span>
-        <div className="h-px flex-1 bg-border" />
-      </div>
+        <div className="flex items-center gap-3" aria-hidden>
+          <div className="h-px flex-1 bg-border" />
+          <span className="text-muted-foreground text-2xs uppercase tracking-wider">
+            or import a file
+          </span>
+          <div className="h-px flex-1 bg-border" />
+        </div>
 
-      {(() => {
-        const dropHandlers = {
-          onDragEnter: (event: DragEvent<HTMLDivElement>) => {
-            event.preventDefault();
-            setIsDropTarget(true);
-          },
-          onDragOver: (event: DragEvent<HTMLDivElement>) => {
-            event.preventDefault();
-            setIsDropTarget(true);
-          },
-          onDragLeave: (event: DragEvent<HTMLDivElement>) => {
-            if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
-            setIsDropTarget(false);
-          },
-          onDrop: handleDrop,
-        };
-        const fileInput = (
-          <input
-            ref={fileInputRef}
-            accept=".json,application/json"
-            className="sr-only"
-            onChange={handleFileChange}
-            multiple
-            type="file"
-          />
-        );
-        const chooseButton = (label = "Choose files") => (
-          <Button disabled={isReading} size="sm" variant="outline" onClick={openFilePicker}>
-            <DownloadIcon />
-            {isReading ? "Reading…" : label}
-          </Button>
-        );
-        const editorSection = () => (
-          <div className="space-y-2">
-            <div className="flex items-baseline justify-between gap-3">
-              <label className="text-sm font-medium" htmlFor="theme-json-editor">
-                Theme JSON
-              </label>
-            </div>
-            <ThemeJsonEditor id="theme-json-editor" onChange={setJson} value={json} />
-          </div>
-        );
-        if (conflicts) {
-          return (
-            <div className="space-y-3">
-              <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
-                <p className="text-sm font-medium">Already installed</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {conflicts.map((theme) => theme.label).join(", ")}
-                </p>
+        {(() => {
+          const dropHandlers = {
+            onDragEnter: (event: DragEvent<HTMLDivElement>) => {
+              event.preventDefault();
+              setIsDropTarget(true);
+            },
+            onDragOver: (event: DragEvent<HTMLDivElement>) => {
+              event.preventDefault();
+              setIsDropTarget(true);
+            },
+            onDragLeave: (event: DragEvent<HTMLDivElement>) => {
+              if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+              setIsDropTarget(false);
+            },
+            onDrop: handleDrop,
+          };
+          const fileInput = (
+            <input
+              ref={fileInputRef}
+              accept=".json,application/json"
+              className="sr-only"
+              onChange={handleFileChange}
+              multiple
+              type="file"
+            />
+          );
+          const chooseButton = (label = "Choose files") => (
+            <Button disabled={isReading} size="sm" variant="outline" onClick={openFilePicker}>
+              <DownloadIcon />
+              {isReading ? "Reading…" : label}
+            </Button>
+          );
+          const editorSection = () => (
+            <div className="space-y-2">
+              <div className="flex items-baseline justify-between gap-3">
+                <Label htmlFor="theme-json-editor">Theme JSON</Label>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button size="sm" onClick={() => resolveConflicts("update")}>
-                  Update existing
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => resolveConflicts("copy")}>
-                  Keep both
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setConflicts(null)}>
-                  Back
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => onClose()}>
-                  Cancel
-                </Button>
-              </div>
+              <ThemeJsonEditor id="theme-json-editor" onChange={setJson} value={json} />
             </div>
           );
-        }
-        return (
-          <div className="space-y-4">
-            <div
-              className={cn(
-                "flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed px-3 py-3 transition-colors",
-                isDropTarget ? "border-ring bg-accent/20" : "border-border/80 bg-muted/20",
-              )}
-              {...dropHandlers}
-            >
-              <div className="min-w-0">
-                <p className="text-sm font-medium">Theme file</p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {fileName ?? "Drop T3 Code or VS Code .json files"}
-                </p>
+          if (conflicts) {
+            return (
+              <div className="space-y-3">
+                <div className="rounded-xl border bg-muted/40 p-3">
+                  <p className="text-sm font-medium">Already installed</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {conflicts.map((theme) => theme.label).join(", ")}
+                  </p>
+                </div>
               </div>
-              {chooseButton()}
-              {fileInput}
+            );
+          }
+          return (
+            <div className="space-y-4">
+              <div
+                className={cn(
+                  "flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed px-3 py-3 transition-colors",
+                  isDropTarget ? "border-ring bg-accent/20" : "border-border/80 bg-muted/20",
+                )}
+                {...dropHandlers}
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">Theme file</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {fileName ?? "Drop T3 Code or VS Code .json files"}
+                  </p>
+                </div>
+                {chooseButton()}
+                {fileInput}
+              </div>
+              {editorSection()}
             </div>
-            {editorSection()}
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button variant="ghost" onClick={() => onClose()}>
-                Cancel
-              </Button>
-              <Button disabled={!json.trim() || isReading} onClick={handleSubmit}>
-                <PlusIcon />
-                Add theme
-              </Button>
-            </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
-      {error ? (
-        <Alert aria-live="polite" variant="error">
-          {error}
-        </Alert>
-      ) : null}
-    </DialogPanel>
+        {error ? (
+          <p aria-live="polite" className="text-sm text-destructive">
+            {error}
+          </p>
+        ) : null}
+      </DialogPanel>
+      <DialogFooter>
+        <Button variant="outline" onClick={() => onClose()}>
+          Cancel
+        </Button>
+        {conflicts ? (
+          <>
+            <Button variant="outline" onClick={() => setConflicts(null)}>
+              Back
+            </Button>
+            <Button variant="outline" onClick={() => resolveConflicts("copy")}>
+              Keep both
+            </Button>
+            <Button variant="destructive" onClick={() => resolveConflicts("update")}>
+              Update existing
+            </Button>
+          </>
+        ) : (
+          <Button disabled={!json.trim() || isReading} onClick={handleSubmit}>
+            <PlusIcon />
+            Add theme
+          </Button>
+        )}
+      </DialogFooter>
+    </>
   );
 }

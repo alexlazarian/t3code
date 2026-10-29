@@ -1,4 +1,3 @@
-import { DownloadIcon } from "lucide-react";
 import { useSyncExternalStore } from "react";
 import type { RelayClientInstallProgressStage } from "@t3tools/contracts";
 
@@ -59,11 +58,8 @@ export function RelayClientInstallDialog() {
         }
       }}
     >
-      <DialogPopup className="max-w-md" showCloseButton={isConfirming}>
+      <DialogPopup size="sm" showCloseButton={isConfirming}>
         <DialogHeader>
-          <div className="flex size-9 items-center justify-center rounded-lg border border-border/70 bg-muted/60">
-            <DownloadIcon aria-hidden className="size-4.5 text-muted-foreground" />
-          </div>
           <DialogTitle>
             {isInstalling ? "Installing relay client" : "Install relay client?"}
           </DialogTitle>

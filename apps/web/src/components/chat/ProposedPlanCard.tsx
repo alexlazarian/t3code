@@ -20,6 +20,8 @@ import ChatMarkdown from "../ChatMarkdown";
 import { EllipsisIcon } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Spinner } from "../ui/spinner";
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "../ui/menu";
 import { cn } from "~/lib/utils";
 import { Badge } from "../ui/badge";
@@ -239,7 +241,7 @@ export const ProposedPlanCard = memo(function ProposedPlanCard({
           }
         }}
       >
-        <DialogPopup className="max-w-xl">
+        <DialogPopup size="sm">
           <SavePlanToWorkspaceForm
             initialPath={lastSavePath || downloadFilename}
             placeholder={downloadFilename}
@@ -283,8 +285,8 @@ function SavePlanToWorkspaceForm({
         </DialogDescription>
       </DialogHeader>
       <DialogPanel>
-        <label htmlFor={savePathInputId} className="grid gap-1.5">
-          <span className="text-xs font-medium text-foreground">Workspace path</span>
+        <div className="grid gap-1.5">
+          <Label htmlFor={savePathInputId}>Workspace path</Label>
           <Input
             id={savePathInputId}
             value={savePath}
@@ -293,14 +295,15 @@ function SavePlanToWorkspaceForm({
             spellCheck={false}
             disabled={saving}
           />
-        </label>
+        </div>
       </DialogPanel>
       <DialogFooter>
-        <Button variant="outline" size="sm" onClick={onCancel} disabled={saving}>
+        <Button variant="outline" onClick={onCancel} disabled={saving}>
           Cancel
         </Button>
-        <Button size="sm" onClick={() => onSave(savePath)} disabled={!canWriteFiles || saving}>
-          {saving ? "Saving..." : "Save"}
+        <Button onClick={() => onSave(savePath)} disabled={!canWriteFiles || saving}>
+          {saving ? <Spinner /> : null}
+          {saving ? "Saving…" : "Save"}
         </Button>
       </DialogFooter>
     </>

@@ -29,6 +29,7 @@ import { TunnelLimitAlert } from "./TunnelUsage";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { Dialog } from "../ui/dialog";
+import { Spinner } from "../ui/spinner";
 import { Switch } from "../ui/switch";
 import { toastManager } from "../ui/toast";
 import { WizardSteps, WizardPopup, WizardHeader, WizardPanel, WizardFooter } from "../ui/wizard";
@@ -275,13 +276,14 @@ function ConfiguredConnectOnboardingDialog() {
         >
           {step === "publish" ? (
             <>
-              <Button variant="ghost" disabled={isApplying} onClick={() => setStep("devices")}>
+              <Button variant="outline" disabled={isApplying} onClick={() => setStep("devices")}>
                 Not now
               </Button>
               <Button
                 disabled={isApplying || !canManageRelay || linkStateData === null}
                 onClick={() => void applyPublishSelection()}
               >
+                {isApplying ? <Spinner /> : null}
                 {isApplying ? "Enabling…" : "Continue"}
               </Button>
             </>
@@ -340,10 +342,10 @@ function PublishStep({
           onCheckedChange={onPublishAgentActivityChange}
         />
       </div>
-      {operationError ? <p className="text-xs text-destructive">{operationError}</p> : null}
       {tunnelLimit !== null ? (
         <OnboardingTunnelLimitAlert onOpenAccountPage={onOpenAccountPage} />
       ) : null}
+      {operationError ? <p className="text-sm text-destructive">{operationError}</p> : null}
     </div>
   );
 }

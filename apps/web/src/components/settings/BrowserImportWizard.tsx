@@ -119,7 +119,7 @@ export function BrowserImportWizard({
 
   return (
     <Dialog open onOpenChange={(open) => (open || !canCloseWizard(step) ? undefined : onClose())}>
-      <DialogPopup className="max-w-lg" showCloseButton={canCloseWizard(step)}>
+      <DialogPopup showCloseButton={canCloseWizard(step)}>
         {step.step === "quit" ? (
           <QuitStep source={source} onCancel={onClose} onRechecked={recheckAfterQuit} />
         ) : step.step === "fullDiskAccess" ? (
@@ -287,12 +287,12 @@ function FullDiskAccessStep({
           ]}
         />
         {openingError || permission.error ? (
-          <p role="status" className="mt-3 text-xs text-muted-foreground">
+          <p role="status" className="text-xs text-muted-foreground">
             {openingError ?? permission.error}
           </p>
         ) : null}
         {!permission.isReady(["fullDiskAccess"]) ? (
-          <p className="mt-3 text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {stillRequired
               ? "Access is still required. Quit and reopen T3 Code if you just allowed it, then retry the import."
               : "If access doesn't update after you allow it, quit and reopen T3 Code, then retry the import."}
@@ -390,7 +390,7 @@ function ConfigureStep({
           </section>
         </div>
         {targetFeedback ? (
-          <p role="alert" className="mt-3 text-sm text-destructive">
+          <p role="alert" className="text-sm text-destructive">
             {targetFeedback}
           </p>
         ) : null}
@@ -537,7 +537,7 @@ function DoneStep({
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Skipped
           </p>
-          <p className="mt-1 text-sm text-foreground">{formatSkippedDomains(skippedDomains)}</p>
+          <p className="text-sm text-foreground">{formatSkippedDomains(skippedDomains)}</p>
         </DialogPanel>
       ) : null}
       <DialogFooter>

@@ -12,6 +12,14 @@ import {
 } from "~/components/ui/dialog-styles";
 import { ScrollArea } from "~/components/ui/scroll-area";
 
+type DialogSize = "sm" | "default" | "lg";
+
+const DIALOG_SIZE_CLASS: Record<DialogSize, string> = {
+  sm: "max-w-md",
+  default: "max-w-lg",
+  lg: "max-w-3xl",
+};
+
 const ControlledOpenContext = createContext<boolean | undefined>(undefined);
 
 function RetainedWhileClosed({ open, children }: { open: boolean; children: ReactNode }) {
@@ -87,11 +95,13 @@ function DialogPopup({
   showCloseButton = true,
   bottomStickOnMobile = true,
   variant = "default",
+  size = "default",
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean;
   bottomStickOnMobile?: boolean;
   variant?: "default" | "media";
+  size?: DialogSize;
 }) {
   return (
     <DialogPortal>
@@ -108,7 +118,7 @@ function DialogPopup({
           className={cn(
             variant === "media" ? DIALOG_MEDIA_POPUP_CLASS : DIALOG_POPUP_CLASS,
             "row-start-2 text-popover-foreground",
-            variant === "default" && "max-h-full max-w-lg",
+            variant === "default" && ["max-h-full", DIALOG_SIZE_CLASS[size]],
             bottomStickOnMobile && DIALOG_MOBILE_SHEET_CLASS,
             className,
           )}
@@ -145,19 +155,11 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-function DialogFooter({
-  className,
-  variant = "default",
-  ...props
-}: React.ComponentProps<"div"> & {
-  variant?: "default" | "bare";
-}) {
+function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "flex flex-col-reverse gap-2 px-6 sm:flex-row sm:justify-end sm:rounded-b-[calc(var(--radius-2xl)-1px)]",
-        variant === "default" && "border-t bg-muted/72 py-4",
-        variant === "bare" && "py-4",
+        "flex flex-col-reverse gap-2 px-6 sm:flex-row sm:justify-end sm:rounded-b-[calc(var(--radius-2xl)-1px)] border-t bg-muted/72 py-4",
         className,
       )}
       data-slot="dialog-footer"
@@ -195,7 +197,7 @@ function DialogPanel({
     <ScrollArea scrollFade={scrollFade}>
       <div
         className={cn(
-          "space-y-4 p-6 in-[[data-slot=dialog-popup]:has([data-slot=dialog-header])]:pt-1 in-[[data-slot=dialog-popup]:has([data-slot=dialog-footer]:not(.border-t))]:pb-1",
+          "space-y-4 p-6 in-[[data-slot=dialog-popup]:has([data-slot=dialog-header])]:pt-1",
           className,
         )}
         data-slot="dialog-panel"
@@ -206,6 +208,8 @@ function DialogPanel({
 }
 
 export {
+  DIALOG_SIZE_CLASS,
+  type DialogSize,
   ControlledOpenContext,
   renderRetainedPopup,
   Dialog,

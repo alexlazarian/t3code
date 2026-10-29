@@ -86,12 +86,7 @@ export function ProviderWizardAuthenticationStep({
         </SettingsGroup>
       </WizardPanel>
       <WizardFooter>
-        <Button
-          size="sm"
-          variant={signedIn ? "default" : "outline"}
-          disabled={active}
-          onClick={onFinish}
-        >
+        <Button variant={signedIn ? "default" : "outline"} disabled={active} onClick={onFinish}>
           {signedIn ? "Done" : "Skip for now"}
         </Button>
       </WizardFooter>

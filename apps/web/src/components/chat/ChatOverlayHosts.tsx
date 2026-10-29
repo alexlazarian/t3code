@@ -152,7 +152,7 @@ export function BranchRestoreConfirmHost(props: {
         if (!nextOpen) closeThreadOverlay(branchRestoreConfirmAtom);
       }}
     >
-      <AlertDialogPopup>
+      <AlertDialogPopup size="sm">
         <AlertDialogHeader>
           <AlertDialogTitle>
             Switch to <code className="font-medium">{props.threadBranch}</code>?

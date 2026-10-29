@@ -27,6 +27,7 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Input } from "../ui/input";
+import { Label } from "../ui/label";
 import { ScrollArea } from "../ui/scroll-area";
 import { Toggle, ToggleGroup } from "../ui/toggle-group";
 
@@ -60,7 +61,7 @@ export function ProjectIconPickerDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogPopup className="w-full sm:w-[32rem]">
+      <DialogPopup>
         {/* The popup mounts per open, so the draft below starts from `current` each time. */}
         <ProjectIconPickerBody
           current={current}
@@ -138,8 +139,14 @@ function ProjectIconPickerBody({
 
         {mode !== "emoji" ? (
           <div>
-            <div className="mb-2 text-xs font-medium text-muted-foreground">Color</div>
-            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Icon color">
+            <Label className="mb-2" id="project-icon-color-label">
+              Color
+            </Label>
+            <div
+              className="flex flex-wrap gap-1.5"
+              role="group"
+              aria-labelledby="project-icon-color-label"
+            >
               {PROJECT_ICON_COLORS.map((option) => (
                 <button
                   key={option.value}
@@ -200,9 +207,7 @@ function ProjectIconPickerBody({
               className="size-12"
             />
             <div className="flex-1 space-y-2">
-              <label htmlFor="project-monogram" className="text-sm font-medium">
-                Letters
-              </label>
+              <Label htmlFor="project-monogram">Letters</Label>
               <Input
                 id="project-monogram"
                 value={letters}
@@ -238,12 +243,12 @@ function ProjectIconPickerBody({
               </div>
             </ScrollArea>
             <div>
-              <div className="mb-2 text-xs font-medium text-muted-foreground">
+              <Label className="mb-2" htmlFor="project-custom-emoji">
                 Or paste any emoji
-              </div>
+              </Label>
               <Input
+                id="project-custom-emoji"
                 value={customEmoji}
-                aria-label="Custom emoji"
                 placeholder="Paste an emoji"
                 onChange={(event) => {
                   const value = event.currentTarget.value;

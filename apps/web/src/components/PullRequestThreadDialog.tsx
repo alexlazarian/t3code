@@ -33,6 +33,7 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 import { Spinner } from "./ui/spinner";
 import { toastManager } from "./ui/toast";
 
@@ -88,7 +89,6 @@ export function PullRequestThreadDialog({
   );
   const sourceControlPresentation = getSourceControlPresentation(gitStatus?.sourceControlProvider);
   const terminology = sourceControlPresentation.terminology;
-  const SourceControlIcon = sourceControlPresentation.Icon;
 
   const parsedReference = parsePullRequestReference(reference);
   const parsedDebouncedReference = parsePullRequestReference(debouncedReference);
@@ -195,7 +195,7 @@ export function PullRequestThreadDialog({
       }}
     >
       <DialogPopup
-        className="max-w-xl"
+        size="default"
         initialFocus={() => {
           referenceInputRef.current?.focus();
           referenceInputRef.current?.select();
@@ -203,21 +203,19 @@ export function PullRequestThreadDialog({
         }}
       >
         <DialogHeader>
-          <DialogTitle className="flex items-center">
-            <SourceControlIcon className="me-2 size-4" />
-            Checkout {terminology.singular}
-          </DialogTitle>
+          <DialogTitle>Checkout {terminology.singular}</DialogTitle>
           <DialogDescription>
             Resolve a {sourceControlPresentation.providerName} {terminology.singular}, then create
             the draft thread in the main repo or in a dedicated worktree.
           </DialogDescription>
         </DialogHeader>
         <DialogPanel>
-          <label className="grid gap-1.5">
-            <span className="text-xs font-medium text-foreground capitalize">
-              {terminology.singular}
-            </span>
+          <div className="grid gap-1.5">
+            <Label htmlFor="pull-request-thread-reference">
+              <span className="capitalize">{terminology.singular}</span>
+            </Label>
             <Input
+              id="pull-request-thread-reference"
               ref={referenceInputRef}
               placeholder={`${terminology.shortLabel} URL, checkout command, or #42`}
               value={reference}
@@ -238,10 +236,10 @@ export function PullRequestThreadDialog({
                 }
               }}
             />
-          </label>
+          </div>
 
           {resolvedPullRequest ? (
-            <div className="rounded-xl border border-border/70 bg-muted/24 p-3">
+            <div className="rounded-xl border bg-muted/40 p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate font-medium text-sm">{resolvedPullRequest.title}</p>
@@ -258,19 +256,18 @@ export function PullRequestThreadDialog({
           ) : null}
 
           {isResolving ? (
-            <div className="flex items-center gap-2 text-muted-foreground text-xs">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
               <Spinner size="sm" />
-              Resolving {terminology.singular}...
+              Resolving {terminology.singular}…
             </div>
           ) : null}
 
-          {errorMessage ? <p className="text-destructive text-xs">{errorMessage}</p> : null}
+          {errorMessage ? <p className="text-sm text-destructive">{errorMessage}</p> : null}
         </DialogPanel>
         <DialogFooter>
           <Button
             type="button"
             variant="outline"
-            size="sm"
             onClick={() => onOpenChange(false)}
             disabled={preparePullRequestThreadAction.isPending}
           >
@@ -278,7 +275,6 @@ export function PullRequestThreadDialog({
           </Button>
           <Button
             type="button"
-            size="sm"
             variant="outline"
             onClick={() => handleConfirm("local")}
             disabled={
@@ -289,11 +285,17 @@ export function PullRequestThreadDialog({
               preparePullRequestThreadAction.isPending
             }
           >
-            {preparingMode === "local" ? "Preparing local..." : "Local"}
+            {preparingMode === "local" ? (
+              <>
+                <Spinner />
+                Preparing local…
+              </>
+            ) : (
+              "Local"
+            )}
           </Button>
           <Button
             type="button"
-            size="sm"
             onClick={() => handleConfirm("worktree")}
             disabled={
               !preparePullRequestThreadAction.isAllowed ||
@@ -304,7 +306,14 @@ export function PullRequestThreadDialog({
               preparePullRequestThreadAction.isPending
             }
           >
-            {preparingMode === "worktree" ? "Preparing worktree..." : "Worktree"}
+            {preparingMode === "worktree" ? (
+              <>
+                <Spinner />
+                Preparing worktree…
+              </>
+            ) : (
+              "Worktree"
+            )}
           </Button>
         </DialogFooter>
       </DialogPopup>

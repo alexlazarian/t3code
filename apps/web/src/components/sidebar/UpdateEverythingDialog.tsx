@@ -11,13 +11,13 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogPanel,
   AlertDialogPopup,
   AlertDialogTitle,
 } from "../ui/alert-dialog";
 import { Button } from "../ui/button";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
 import { MiddleTruncate } from "../ui/middle-truncate";
-import { ScrollArea } from "../ui/scroll-area";
 import type { RestartingMachine, UpdateEverythingRow } from "./updateEverything.logic";
 
 const isRunning = (status: string) =>
@@ -66,7 +66,7 @@ export function UpdateEverythingDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       {/* Refocusing the trigger after a pointer close shows its focus ring and opens its tooltip. */}
       <AlertDialogPopup
-        className="sm:max-w-xl"
+        size="lg"
         initialFocus={cancelRef}
         finalFocus={(closeType) => closeType === "keyboard"}
       >
@@ -114,7 +114,7 @@ function UpdateEverythingDialogContent({
 
   return (
     <>
-      <AlertDialogHeader className="shrink-0">
+      <AlertDialogHeader>
         <AlertDialogTitle>
           Update {updating.length} {updating.length === 1 ? "machine" : "machines"}?
         </AlertDialogTitle>
@@ -130,8 +130,8 @@ function UpdateEverythingDialogContent({
             : null}
         </AlertDialogDescription>
       </AlertDialogHeader>
-      <ScrollArea scrollFade>
-        <div className="flex flex-col gap-3 px-6 pb-4">
+      <AlertDialogPanel>
+        <div className="flex flex-col gap-3">
           {/* Machine names truncate first. Provider lists wrap between names, never inside one. */}
           <div className="grid grid-cols-[minmax(4rem,max-content)_max-content_minmax(min-content,1fr)_max-content] gap-x-4 text-sm">
             <div className="col-span-full grid grid-cols-subgrid border-b pb-1.5 text-muted-foreground text-xs">
@@ -194,7 +194,7 @@ function UpdateEverythingDialogContent({
             </Collapsible>
           ) : null}
         </div>
-      </ScrollArea>
+      </AlertDialogPanel>
       <AlertDialogFooter>
         {running > 0 ? (
           <p className="self-center text-muted-foreground text-sm max-sm:order-1 max-sm:text-center sm:mr-auto">

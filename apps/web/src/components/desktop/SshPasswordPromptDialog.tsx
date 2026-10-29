@@ -18,6 +18,8 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Spinner } from "../ui/spinner";
 
 function describeSshTarget(request: DesktopSshPasswordPromptRequest): string {
   return request.username ? `${request.username}@${request.destination}` : request.destination;
@@ -154,7 +156,7 @@ function ActiveSshPasswordPrompt({
         }
       }}
     >
-      <DialogPopup className="max-w-md" initialFocus={inputRef} showCloseButton={false}>
+      <DialogPopup size="sm" initialFocus={inputRef}>
         <DialogHeader>
           <DialogTitle>SSH verification required</DialogTitle>
           <DialogDescription>
@@ -174,7 +176,7 @@ function ActiveSshPasswordPrompt({
           >
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-medium text-foreground">{request.prompt}</p>
+                <Label htmlFor={`${formId}-password`}>{request.prompt}</Label>
                 {remainingLabel ? (
                   <span
                     className={
@@ -191,28 +193,29 @@ function ActiveSshPasswordPrompt({
                 ref={inputRef}
                 autoComplete="current-password"
                 disabled={isResponding || isExpired}
+                id={`${formId}-password`}
                 name="ssh-password"
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
               />
             </div>
+            <p className="text-sm text-muted-foreground">
+              SSH keys may replace a password, but your server can still require a verification
+              code.
+            </p>
             {visibleResponseError ? (
               <p className="text-sm text-destructive">{visibleResponseError}</p>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                SSH keys may replace a password, but your server can still require a verification
-                code.
-              </p>
-            )}
+            ) : null}
           </form>
         </DialogPanel>
         <DialogFooter>
           <Button disabled={isResponding} type="button" variant="outline" onClick={cancelPrompt}>
-            {isExpired ? "Dismiss" : "Cancel"}
+            {isExpired ? "Close" : "Cancel"}
           </Button>
           <Button disabled={isResponding || isExpired} form={formId} type="submit">
-            Continue
+            {isResponding ? <Spinner /> : null}
+            {isResponding ? "Continuing…" : "Continue"}
           </Button>
         </DialogFooter>
       </DialogPopup>

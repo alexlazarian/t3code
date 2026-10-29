@@ -12,6 +12,7 @@ import { usePullRequestLinking } from "~/hooks/usePullRequestLinking";
 import { appAtomRegistry } from "~/rpc/atomRegistry";
 import { Atom } from "effect/reactivity";
 import { Button } from "../ui/button";
+import { Spinner } from "~/components/ui/spinner";
 import {
   Dialog,
   DialogDescription,
@@ -121,7 +122,7 @@ function LinkPullRequestDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => (pending ? undefined : onOpenChange(next))}>
-      <DialogPopup className="max-w-xl" initialFocus={inputRef}>
+      <DialogPopup size="sm" initialFocus={inputRef}>
         <DialogHeader>
           <DialogTitle>Link pull request</DialogTitle>
           <DialogDescription>
@@ -145,19 +146,18 @@ function LinkPullRequestDialog({
             }}
           />
           {resolved !== null && "link" in resolved ? (
-            <p className="truncate text-muted-foreground text-xs">
+            <p className="truncate text-muted-foreground text-sm">
               {resolved.link.host}/{resolved.link.repository} #{resolved.link.number}
             </p>
           ) : null}
           {(validation ?? submitError) ? (
-            <p className="text-destructive text-xs">{validation ?? submitError}</p>
+            <p className="text-sm text-destructive">{validation ?? submitError}</p>
           ) : null}
         </DialogPanel>
         <DialogFooter>
           <Button
             type="button"
             variant="outline"
-            size="sm"
             onClick={() => onOpenChange(false)}
             disabled={pending}
           >
@@ -165,11 +165,17 @@ function LinkPullRequestDialog({
           </Button>
           <Button
             type="button"
-            size="sm"
             onClick={() => void submit()}
             disabled={pending || resolved === null || "error" in resolved}
           >
-            {pending ? "Linking..." : "Link"}
+            {pending ? (
+              <>
+                <Spinner />
+                Linking…
+              </>
+            ) : (
+              "Link"
+            )}
           </Button>
         </DialogFooter>
       </DialogPopup>

@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Input } from "../ui/input";
+import { Label } from "../ui/label";
 import { Spinner } from "../ui/spinner";
 import { SecretInput } from "./SecretInput";
 import {
@@ -54,6 +55,7 @@ export function SimlockDeviceHostEditor(props: {
   onClose: () => void;
 }) {
   const [draft, setDraft] = useState(props.host);
+  const fieldId = useId();
   const [urlEdited, setUrlEdited] = useState(false);
   const machineGateways = useAtomValue(
     machineGatewaysAtom(
@@ -94,9 +96,10 @@ export function SimlockDeviceHostEditor(props: {
     min: number,
     max: number,
   ) => (
-    <label className="block space-y-1.5">
-      <span>{label}</span>
+    <div className="grid gap-1.5">
+      <Label htmlFor={`${fieldId}-${field}`}>{label}</Label>
       <Input
+        id={`${fieldId}-${field}`}
         type="number"
         min={min}
         max={max}
@@ -107,7 +110,7 @@ export function SimlockDeviceHostEditor(props: {
           setDraft((current) => ({ ...current, [field]: value }));
         }}
       />
-    </label>
+    </div>
   );
 
   return (
@@ -134,9 +137,10 @@ export function SimlockDeviceHostEditor(props: {
             </DialogDescription>
           </DialogHeader>
           <DialogPanel>
-            <label className="block space-y-1.5 text-sm">
-              <span>Name</span>
+            <div className="grid gap-1.5">
+              <Label htmlFor={`${fieldId}-name`}>Name</Label>
               <Input
+                id={`${fieldId}-name`}
                 autoFocus
                 required
                 value={draft.label}
@@ -146,10 +150,11 @@ export function SimlockDeviceHostEditor(props: {
                   setDraft((current) => ({ ...current, label }));
                 }}
               />
-            </label>
-            <label className="block space-y-1.5 text-sm">
-              <span>Gateway URL</span>
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor={`${fieldId}-gateway-url`}>Gateway URL</Label>
               <Input
+                id={`${fieldId}-gateway-url`}
                 required
                 type="url"
                 placeholder="https://gateway.example.ts.net:4700"
@@ -161,7 +166,7 @@ export function SimlockDeviceHostEditor(props: {
                   setDraft((current) => ({ ...current, gatewayUrl }));
                 }}
               />
-            </label>
+            </div>
             <div className="space-y-3">
               {props.environments.map((environment) => (
                 <SimlockTokenField
@@ -195,17 +200,18 @@ export function SimlockDeviceHostEditor(props: {
               {props.isNew ? null : " Saving restarts this host, which releases its devices."}
             </p>
             {problem === null || !gatewayUrl ? null : (
-              <p className="text-xs text-destructive" role="alert">
+              <p className="text-sm text-destructive" role="alert">
                 {problem}
               </p>
             )}
           </DialogPanel>
           <DialogFooter>
-            <Button type="button" variant="ghost" disabled={props.busy} onClick={props.onClose}>
+            <Button type="button" variant="outline" disabled={props.busy} onClick={props.onClose}>
               Cancel
             </Button>
             <Button type="submit" disabled={props.busy || problem !== null}>
-              {props.busy ? <Spinner size="xs" /> : null} Save host
+              {props.busy ? <Spinner /> : null}
+              {props.busy ? "Saving…" : "Save host"}
             </Button>
           </DialogFooter>
         </form>
@@ -260,10 +266,8 @@ function SimlockTokenField(props: {
       </span>
     ) : null;
   return (
-    <div className="space-y-1.5 text-sm">
-      <label htmlFor={id} className="block">
-        {props.label}
-      </label>
+    <div className="grid gap-1.5">
+      <Label htmlFor={id}>{props.label}</Label>
       <div className="flex items-center gap-2">
         <SecretInput
           id={id}

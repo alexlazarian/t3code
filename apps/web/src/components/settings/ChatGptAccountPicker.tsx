@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { ProviderAuthMethod } from "@t3tools/contracts";
+import { Button } from "../ui/button";
 import { RadioGroup, Radio } from "../ui/radio-group";
 import {
   Dialog,
@@ -8,6 +9,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogPanel,
 } from "../ui/dialog";
 import { ChatGptConnectionButton } from "./ChatGptConnectionButton";
 
@@ -37,14 +39,14 @@ export function ChatGptAccountPicker({
         if (!value) onClose();
       }}
     >
-      <DialogPopup>
+      <DialogPopup size="sm">
         <DialogHeader>
           <DialogTitle>Reconnect ChatGPT</DialogTitle>
           <DialogDescription>
             On OpenAI, sign in with the account you choose here.
           </DialogDescription>
         </DialogHeader>
-        <div className="px-6 pb-6">
+        <DialogPanel>
           <RadioGroup
             aria-label="ChatGPT account to connect"
             value={selectedMethodId}
@@ -64,8 +66,11 @@ export function ChatGptAccountPicker({
               <span className="font-medium">Use a different account</span>
             </label>
           </RadioGroup>
-        </div>
+        </DialogPanel>
         <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
           <ChatGptConnectionButton onClick={() => onSelect(selectedMethodId)} />
         </DialogFooter>
       </DialogPopup>

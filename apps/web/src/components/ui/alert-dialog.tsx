@@ -6,7 +6,13 @@ import {
   DIALOG_MOBILE_SHEET_CLASS,
   DIALOG_POPUP_CLASS,
 } from "~/components/ui/dialog-styles";
-import { ControlledOpenContext, renderRetainedPopup } from "~/components/ui/dialog";
+import {
+  ControlledOpenContext,
+  DIALOG_SIZE_CLASS,
+  type DialogSize,
+  renderRetainedPopup,
+} from "~/components/ui/dialog";
+import { ScrollArea } from "~/components/ui/scroll-area";
 
 function AlertDialog<Payload>(props: AlertDialogPrimitive.Root.Props<Payload>) {
   return (
@@ -46,9 +52,11 @@ function AlertDialogPopup({
   className,
   bottomStickOnMobile = true,
   portalContainer,
+  size = "default",
   ...props
 }: AlertDialogPrimitive.Popup.Props & {
   bottomStickOnMobile?: boolean;
+  size?: DialogSize;
   portalContainer?: AlertDialogPrimitive.Portal.Props["container"];
 }) {
   return (
@@ -60,7 +68,8 @@ function AlertDialogPopup({
         <AlertDialogPrimitive.Popup
           className={cn(
             DIALOG_POPUP_CLASS,
-            "row-start-2 max-h-full max-w-lg text-popover-foreground",
+            "row-start-2 max-h-full text-popover-foreground",
+            DIALOG_SIZE_CLASS[size],
             bottomStickOnMobile && DIALOG_MOBILE_SHEET_CLASS,
             className,
           )}
@@ -86,24 +95,35 @@ function AlertDialogHeader({ className, ...props }: React.ComponentProps<"div">)
   );
 }
 
-function AlertDialogFooter({
-  className,
-  variant = "default",
-  ...props
-}: React.ComponentProps<"div"> & {
-  variant?: "default" | "bare";
-}) {
+function AlertDialogFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "flex flex-col-reverse gap-2 px-6 sm:flex-row sm:justify-end sm:rounded-b-[calc(var(--radius-2xl)-1px)]",
-        variant === "default" && "border-t bg-muted/72 py-4",
-        variant === "bare" && "pb-6",
+        "flex flex-col-reverse gap-2 px-6 sm:flex-row sm:justify-end sm:rounded-b-[calc(var(--radius-2xl)-1px)] border-t bg-muted/72 py-4",
         className,
       )}
       data-slot="alert-dialog-footer"
       {...props}
     />
+  );
+}
+
+function AlertDialogPanel({
+  className,
+  scrollFade = true,
+  ...props
+}: React.ComponentProps<"div"> & { scrollFade?: boolean }) {
+  return (
+    <ScrollArea scrollFade={scrollFade}>
+      <div
+        className={cn(
+          "space-y-4 p-6 in-[[data-slot=alert-dialog-popup]:has([data-slot=alert-dialog-header])]:pt-1",
+          className,
+        )}
+        data-slot="alert-dialog-panel"
+        {...props}
+      />
+    </ScrollArea>
   );
 }
 
@@ -143,6 +163,7 @@ export {
   AlertDialogPopup as AlertDialogContent,
   AlertDialogHeader,
   AlertDialogFooter,
+  AlertDialogPanel,
   AlertDialogTitle,
   AlertDialogDescription,
   AlertDialogClose,

@@ -65,6 +65,7 @@ import { WizardPopup, WizardHeader, WizardSteps, WizardPanel, WizardFooter } fro
 import { StartTruncatedPath } from "./StartTruncatedPath";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
+import { Label } from "~/components/ui/label";
 import {
   Dialog,
   DialogDescription,
@@ -596,9 +597,7 @@ function PublishRepositoryDialog(props: PublishRepositoryDialogProps) {
 
         <WizardPanel>
           <div className={cn("space-y-2", publishWizardStep !== 0 && "hidden")}>
-            <span id="publish-provider-cards-label" className="text-xs font-medium text-foreground">
-              Provider
-            </span>
+            <Label id="publish-provider-cards-label">Provider</Label>
             <RadioGroup
               value={publishProvider}
               onValueChange={(value) => {
@@ -670,12 +669,7 @@ function PublishRepositoryDialog(props: PublishRepositoryDialogProps) {
 
           <div className={cn("space-y-5", publishWizardStep !== 1 && "hidden")}>
             <div className="space-y-2">
-              <label
-                htmlFor="publish-repository-path"
-                className="text-xs font-medium text-foreground"
-              >
-                Repository
-              </label>
+              <Label htmlFor="publish-repository-path">Repository</Label>
               <div className="flex items-stretch overflow-hidden rounded-md border border-input bg-background focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-ring">
                 <span className="flex shrink-0 items-center gap-1.5 border-r border-input bg-muted/50 px-2.5 font-mono text-xs text-muted-foreground">
                   <currentPublishProvider.Icon className="size-3.5" />
@@ -702,12 +696,7 @@ function PublishRepositoryDialog(props: PublishRepositoryDialogProps) {
             </div>
 
             <div className="space-y-2">
-              <span
-                id="publish-visibility-cards-label"
-                className="text-xs font-medium text-foreground"
-              >
-                Visibility
-              </span>
+              <Label id="publish-visibility-cards-label">Visibility</Label>
               <RadioGroup
                 value={publishVisibility}
                 onValueChange={(value) =>
@@ -776,8 +765,8 @@ function PublishRepositoryDialog(props: PublishRepositoryDialogProps) {
               </button>
               {publishAdvancedOpen ? (
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <label className="space-y-1.5" htmlFor="publish-remote-name">
-                    <span className="text-xs font-medium text-foreground">Remote</span>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="publish-remote-name">Remote</Label>
                     <Input
                       id="publish-remote-name"
                       value={publishRemoteName}
@@ -785,14 +774,9 @@ function PublishRepositoryDialog(props: PublishRepositoryDialogProps) {
                       placeholder="origin"
                       disabled={publishRepositoryAction.isPending}
                     />
-                  </label>
+                  </div>
                   <div className="space-y-1.5">
-                    <span
-                      id="publish-protocol-label"
-                      className="text-xs font-medium text-foreground"
-                    >
-                      Protocol
-                    </span>
+                    <Label id="publish-protocol-label">Protocol</Label>
                     <ToggleGroup
                       value={[publishProtocol]}
                       onValueChange={(next) => {
@@ -816,20 +800,16 @@ function PublishRepositoryDialog(props: PublishRepositoryDialogProps) {
               <div
                 role="status"
                 aria-live="polite"
-                className="flex items-center gap-2 rounded-md border border-input bg-muted/40 px-3 py-2 text-xs text-muted-foreground dark:border-transparent dark:bg-white/[0.035]"
+                className="flex items-center gap-2 text-sm text-muted-foreground"
               >
-                <Spinner size="sm" aria-hidden />
-                Publishing repository to {publishProviderLabel}...
+                <Spinner aria-hidden />
+                Publishing repository to {publishProviderLabel}…
               </div>
             ) : null}
             {publishError && !publishRepositoryAction.isPending ? (
-              <div
-                role="alert"
-                className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive"
-              >
-                <p className="font-medium">Publish failed</p>
-                <p className="mt-0.5 text-destructive/90">{publishError}</p>
-              </div>
+              <p role="alert" className="text-sm text-destructive">
+                {publishError}
+              </p>
             ) : null}
           </div>
 
@@ -859,7 +839,6 @@ function PublishRepositoryDialog(props: PublishRepositoryDialogProps) {
                 </div>
                 <Button
                   variant="outline"
-                  size="sm"
                   className="w-full"
                   onClick={() => {
                     void openLink(publishResult.repository.url).catch(() => undefined);
@@ -905,8 +884,8 @@ function PublishRepositoryDialog(props: PublishRepositoryDialogProps) {
                 <Button disabled={!canSubmitPublishRepository} onClick={submitPublishRepository}>
                   {publishRepositoryAction.isPending ? (
                     <>
-                      <Spinner size="sm" aria-hidden />
-                      Publishing...
+                      <Spinner aria-hidden />
+                      Publishing…
                     </>
                   ) : (
                     "Publish"
@@ -1661,13 +1640,13 @@ export default function GitActionsControl({
           }
         }}
       >
-        <DialogPopup>
+        <DialogPopup size="default">
           <DialogHeader>
             <DialogTitle>{COMMIT_DIALOG_TITLE}</DialogTitle>
             <DialogDescription>{COMMIT_DIALOG_DESCRIPTION}</DialogDescription>
           </DialogHeader>
           <DialogPanel>
-            <div className="space-y-3 rounded-xl bg-zinc-25 p-3 text-sm ring-1 ring-black/5 dark:bg-white/[0.035] dark:ring-white/5">
+            <div className="space-y-3 rounded-xl border bg-muted/40 p-3 text-sm">
               <div className="grid grid-cols-[auto_1fr] items-center gap-x-2 gap-y-1">
                 <span className="text-muted-foreground">Branch</span>
                 <span className="flex items-center justify-between gap-2">
@@ -1785,8 +1764,9 @@ export default function GitActionsControl({
               </div>
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-medium">Commit message (optional)</p>
+              <Label htmlFor="commit-dialog-message">Commit message (optional)</Label>
               <Textarea
+                id="commit-dialog-message"
                 value={dialogCommitMessage}
                 onChange={(event) => setDialogCommitMessage(event.target.value)}
                 placeholder="Leave empty to auto-generate"
@@ -1794,10 +1774,9 @@ export default function GitActionsControl({
               />
             </div>
           </DialogPanel>
-          <DialogFooter variant="bare">
+          <DialogFooter>
             <Button
               variant="outline"
-              size="sm"
               onClick={() => {
                 setIsCommitDialogOpen(false);
                 setDialogCommitMessage("");
@@ -1809,17 +1788,12 @@ export default function GitActionsControl({
             </Button>
             <Button
               variant="outline"
-              size="sm"
               disabled={!canChangeThreadBranch || noneSelected}
               onClick={runDialogActionOnNewBranch}
             >
               Commit on new branch
             </Button>
-            <Button
-              size="sm"
-              disabled={!canWriteSourceControl || noneSelected}
-              onClick={runDialogAction}
-            >
+            <Button disabled={!canWriteSourceControl || noneSelected} onClick={runDialogAction}>
               Commit
             </Button>
           </DialogFooter>
@@ -1840,37 +1814,30 @@ export default function GitActionsControl({
           if (!open) setPendingDefaultBranchAction(null);
         }}
       >
-        <DialogPopup className="max-w-xl">
+        <DialogPopup size="default">
           <DialogHeader>
             <DialogTitle>
               {pendingDefaultBranchActionCopy?.title ?? "Run action on default branch?"}
             </DialogTitle>
             <DialogDescription>{pendingDefaultBranchActionCopy?.description}</DialogDescription>
-            {featureBranchUnavailableReason && (
-              <p className="text-xs text-muted-foreground">{featureBranchUnavailableReason}</p>
-            )}
           </DialogHeader>
-          <DialogFooter variant="bare" className="sm:flex-wrap sm:items-center">
-            <Button
-              className="w-full sm:mr-auto sm:w-auto"
-              variant="outline"
-              size="sm"
-              onClick={() => setPendingDefaultBranchAction(null)}
-            >
-              Abort
+          {featureBranchUnavailableReason && (
+            <DialogPanel>
+              <p className="text-sm text-muted-foreground">{featureBranchUnavailableReason}</p>
+            </DialogPanel>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingDefaultBranchAction(null)}>
+              Cancel
             </Button>
             <Button
-              className="w-full max-w-full sm:w-auto"
               variant="outline"
-              size="sm-multiline"
               onClick={() => continuePendingDefaultBranchAction(false)}
               disabled={!canWriteSourceControl}
             >
               {pendingDefaultBranchActionCopy?.continueLabel ?? "Continue"}
             </Button>
             <Button
-              className="w-full max-w-full sm:w-auto"
-              size="sm-multiline"
               onClick={() => continuePendingDefaultBranchAction(true)}
               disabled={!canChangeThreadBranch || featureBranchUnavailableReason !== null}
             >

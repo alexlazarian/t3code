@@ -484,7 +484,7 @@ export function ThreadDetailsPrRow({
       )}
       {rowAction === "merge" ? (
         <AlertDialog open={confirmingMerge} onOpenChange={(open) => setConfirmingMerge(open)}>
-          <AlertDialogPopup>
+          <AlertDialogPopup size="sm">
             <AlertDialogHeader>
               <AlertDialogTitle>Merge {terminology.singular}?</AlertDialogTitle>
               <AlertDialogDescription>
@@ -492,11 +492,8 @@ export function ThreadDetailsPrRow({
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogClose render={<Button variant="outline" size="sm" />}>
-                Cancel
-              </AlertDialogClose>
+              <AlertDialogClose render={<Button variant="outline" />}>Cancel</AlertDialogClose>
               <Button
-                size="sm"
                 disabled={actionPending}
                 onClick={() => {
                   setConfirmingMerge(false);

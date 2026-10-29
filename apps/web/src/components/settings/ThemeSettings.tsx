@@ -1,5 +1,4 @@
 import {
-  CheckIcon,
   CopyIcon,
   MoonIcon,
   PaintbrushIcon,
@@ -32,9 +31,11 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogPanel,
   AlertDialogPopup,
   AlertDialogTitle,
 } from "../ui/alert-dialog";
+import { Checkbox } from "../ui/checkbox";
 import { Button } from "../ui/button";
 import { stackedThreadToast, toastManager } from "../ui/toast";
 import { Tooltip, TooltipPopup, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
@@ -896,7 +897,7 @@ export function ThemeLibrary({
         open={isImportOpen}
       />
       <AlertDialog open={isThemeRemovalOpen} onOpenChange={setIsThemeRemovalOpen}>
-        <AlertDialogPopup>
+        <AlertDialogPopup size={canRemoveCollection ? "default" : "sm"}>
           <AlertDialogHeader>
             <AlertDialogTitle>
               {canRemoveCollection
@@ -910,26 +911,24 @@ export function ThemeLibrary({
             </AlertDialogDescription>
           </AlertDialogHeader>
           {canRemoveCollection ? (
-            <div className="grid max-h-72 grid-cols-1 gap-2 overflow-y-auto px-6 pb-6 sm:grid-cols-2">
-              {removeDialogCollectionThemes.map((customTheme) => {
-                const checked = themeIdsToRemoveSet.has(customTheme.id);
-                const card = getThemeCardDefinition(customTheme);
-                const checkboxId = `remove-theme-${customTheme.id}`;
-                return (
-                  <label
-                    className="group relative flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-border/70 bg-muted/25 p-3 has-checked:border-ring has-checked:bg-accent/20 hover:bg-muted/40"
-                    htmlFor={checkboxId}
-                    key={customTheme.id}
-                  >
-                    <span className="absolute right-2 top-2 inline-grid size-5 grid-cols-1 sm:size-4">
-                      <input
+            <AlertDialogPanel>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {removeDialogCollectionThemes.map((customTheme) => {
+                  const checked = themeIdsToRemoveSet.has(customTheme.id);
+                  const card = getThemeCardDefinition(customTheme);
+                  const checkboxId = `remove-theme-${customTheme.id}`;
+                  return (
+                    <label
+                      className="group relative flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border bg-muted/40 p-3 has-data-checked:border-ring has-data-checked:bg-accent/20"
+                      htmlFor={checkboxId}
+                      key={customTheme.id}
+                    >
+                      <Checkbox
                         checked={checked}
-                        className="col-start-1 row-start-1 size-full appearance-none rounded-sm border border-input bg-background outline-none checked:border-primary checked:bg-primary focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring checked:focus-visible:inset-ring-3 checked:focus-visible:inset-ring-background dark:not-checked:bg-input/32 forced-colors:appearance-auto"
+                        className="absolute right-2 top-2"
                         id={checkboxId}
                         name="themes-to-remove"
-                        type="checkbox"
-                        onChange={(event) => {
-                          const shouldRemove = event.currentTarget.checked;
+                        onCheckedChange={(shouldRemove) => {
                           setThemeIdsToRemove((current) =>
                             shouldRemove
                               ? [...current, customTheme.id]
@@ -937,27 +936,26 @@ export function ThemeLibrary({
                           );
                         }}
                       />
-                      <CheckIcon className="pointer-events-none col-start-1 row-start-1 size-3.5 shrink-0 self-center justify-self-center stroke-primary-foreground opacity-0 group-has-checked:opacity-100 sm:size-3" />
-                    </span>
-                    <span className="flex min-h-12 items-center justify-center gap-1">
-                      {card.previews.map((preview) => (
-                        <span
-                          className="flex size-11 shrink-0 items-center justify-center"
-                          key={preview.mode}
-                        >
-                          <span className="flex scale-75">
-                            <ThemePreviewCircle colors={preview.colors} mode={preview.mode} />
+                      <span className="flex min-h-12 items-center justify-center gap-1">
+                        {card.previews.map((preview) => (
+                          <span
+                            className="flex size-11 shrink-0 items-center justify-center"
+                            key={preview.mode}
+                          >
+                            <span className="flex scale-75">
+                              <ThemePreviewCircle colors={preview.colors} mode={preview.mode} />
+                            </span>
                           </span>
-                        </span>
-                      ))}
-                    </span>
-                    <p className="max-w-full truncate text-center text-base font-medium text-foreground sm:text-sm">
-                      {customTheme.label}
-                    </p>
-                  </label>
-                );
-              })}
-            </div>
+                        ))}
+                      </span>
+                      <p className="max-w-full truncate text-center text-base font-medium text-foreground sm:text-sm">
+                        {customTheme.label}
+                      </p>
+                    </label>
+                  );
+                })}
+              </div>
+            </AlertDialogPanel>
           ) : null}
           <AlertDialogFooter>
             <AlertDialogClose render={<Button variant="outline" />}>Cancel</AlertDialogClose>

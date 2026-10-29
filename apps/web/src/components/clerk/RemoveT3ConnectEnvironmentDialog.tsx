@@ -6,6 +6,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogPanel,
   AlertDialogPopup,
   AlertDialogTitle,
 } from "../ui/alert-dialog";
@@ -34,13 +35,15 @@ export function RemoveT3ConnectEnvironmentDialog({
           if (!open) onCancel();
         }}
       >
-        <AlertDialogPopup>
+        <AlertDialogPopup size="sm">
           <AlertDialogHeader>
             <AlertDialogTitle>Remove {shownLabel} from this device?</AlertDialogTitle>
             <AlertDialogDescription>
               This forgets its pairing, credentials, and cached threads here.
             </AlertDialogDescription>
-            <AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogPanel>
+            <p className="text-sm text-muted-foreground">
               It stays on your T3 Connect account and keeps its host space. Deregister it in{" "}
               {openAccountPage ? (
                 <InlineButton
@@ -55,8 +58,8 @@ export function RemoveT3ConnectEnvironmentDialog({
                 "T3 Connect settings"
               )}{" "}
               to free it.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+            </p>
+          </AlertDialogPanel>
           <AlertDialogFooter>
             <AlertDialogClose render={<Button variant="outline" />}>Cancel</AlertDialogClose>
             <Button variant="destructive" onClick={onConfirm}>

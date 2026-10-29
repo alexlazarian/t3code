@@ -71,16 +71,9 @@ export function UsageModelDialog({
         if (!open) onClose();
       }}
     >
-      <DialogPopup className="max-w-3xl">
+      <DialogPopup size="lg">
         <DialogHeader>
-          <div className="flex items-center gap-2">
-            <ProviderInstanceIcon
-              driverKind={presentation.driverKind}
-              displayName={presentation.label}
-              iconClassName="size-5"
-            />
-            <DialogTitle>{model.model}</DialogTitle>
-          </div>
+          <DialogTitle>{model.model}</DialogTitle>
           <DialogDescription>
             {presentation.label}
             {costUnknown ? "" : ` · ${formatPercent(model.costShare)} of cost`}
@@ -88,6 +81,14 @@ export function UsageModelDialog({
         </DialogHeader>
         <DialogPanel>
           <div className="flex flex-col gap-8">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <ProviderInstanceIcon
+                driverKind={presentation.driverKind}
+                displayName={presentation.label}
+                iconClassName="size-5"
+              />
+              {presentation.label}
+            </div>
             <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
               {stats.map((stat) => (
                 <div key={stat.label} className="flex min-w-0 flex-col gap-0.5">
@@ -136,8 +137,8 @@ export function UsageModelDialog({
           </div>
         </DialogPanel>
         {model.unpricedTokens > 0 ? (
-          <DialogFooter variant="bare" className="items-center sm:justify-between">
-            <span className="text-xs text-muted-foreground">
+          <DialogFooter>
+            <span className="text-xs text-muted-foreground sm:mr-auto">
               {formatTokens(model.unpricedTokens)} tokens have no known price
             </span>
             <Button onClick={onSetPrice}>Set price</Button>

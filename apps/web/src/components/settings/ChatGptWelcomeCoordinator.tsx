@@ -6,11 +6,12 @@ import { OpenAI } from "../Icons";
 import { Button } from "../ui/button";
 import {
   Dialog,
-  DialogPopup,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogPanel,
+  DialogPopup,
+  DialogTitle,
 } from "../ui/dialog";
 import { ChatGptUsageButton } from "./ChatGptUsageButton";
 
@@ -61,20 +62,24 @@ export function ChatGptWelcomeCoordinator() {
         if (!open) dismiss();
       }}
     >
-      <DialogPopup>
+      <DialogPopup size="sm">
         <DialogHeader>
-          <OpenAI className="mb-2 size-8" aria-hidden="true" />
           <DialogTitle>Your ChatGPT plan is connected</DialogTitle>
           <DialogDescription>
             Eligible usage in T3 Code uses your ChatGPT plan. Manage your shared usage and any
             credit settings in ChatGPT.
           </DialogDescription>
-          <p className="text-xs text-muted-foreground">
-            {next?.providerName} on {next?.environmentLabel}
-          </p>
         </DialogHeader>
+        <DialogPanel>
+          <div className="flex items-center gap-3 rounded-xl border bg-muted/40 p-3">
+            <OpenAI className="size-6 shrink-0" aria-hidden="true" />
+            <p className="min-w-0 text-sm text-muted-foreground">
+              {next?.providerName} on {next?.environmentLabel}
+            </p>
+          </div>
+        </DialogPanel>
         <DialogFooter>
-          <ChatGptUsageButton />
+          <ChatGptUsageButton size="default" className="sm:mr-auto" />
           <Button onClick={dismiss}>Continue</Button>
         </DialogFooter>
       </DialogPopup>

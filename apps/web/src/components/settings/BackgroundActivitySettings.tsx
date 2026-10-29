@@ -122,7 +122,7 @@ function BackgroundActivityAdvancedDialog({
 
   return (
     <Dialog open={open && canWriteSettings} onOpenChange={onOpenChange}>
-      <DialogPopup className="max-w-xl">
+      <DialogPopup>
         <DialogHeader>
           <DialogTitle>Background Activity</DialogTitle>
           <DialogDescription>
@@ -360,13 +360,16 @@ function BackgroundActivityAdvancedDialog({
         </DialogPanel>
         <DialogFooter>
           <Button
-            variant="outline"
+            variant="destructive-outline"
+            className="sm:mr-auto"
             disabled={!canWriteSettings}
             onClick={() => updateSettings(resetBackgroundActivitySettings())}
           >
             Reset all
           </Button>
-          <Button onClick={() => onOpenChange(false)}>Done</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
         </DialogFooter>
       </DialogPopup>
     </Dialog>

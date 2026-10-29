@@ -50,6 +50,7 @@ import {
 } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { Spinner } from "./ui/spinner";
 import { Popover, PopoverPopup, PopoverTrigger } from "./ui/popover";
 import { Switch } from "./ui/switch";
 import { Textarea } from "./ui/textarea";
@@ -187,7 +188,7 @@ export function ProjectScriptEditorDialog({
         }}
       >
         {/* The form owns its fields so a keystroke re-renders it, not the dialog chrome. */}
-        <DialogPopup>
+        <DialogPopup size="default">
           {shown ? (
             <ProjectScriptEditorForm
               key={shown.key}
@@ -209,7 +210,7 @@ export function ProjectScriptEditorDialog({
       </Dialog>
 
       <AlertDialog open={deleteConfirmOpen && canEditActions} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogPopup>
+        <AlertDialogPopup size="sm">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete action "{deleteName}"?</AlertDialogTitle>
             <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
@@ -495,7 +496,7 @@ function ProjectScriptEditorForm({
                 Open this URL in the in-app preview when this action runs.
               </p>
             </div>
-            <label className="flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2 text-sm dark:border-transparent dark:bg-white/[0.035]">
+            <label className="flex items-center justify-between gap-3 rounded-xl border bg-muted/40 px-3 py-2 text-sm">
               <span>Run automatically on worktree creation</span>
               <Switch
                 checked={runOnWorktreeCreate}
@@ -503,7 +504,7 @@ function ProjectScriptEditorForm({
               />
             </label>
             <label
-              className={`flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2 text-sm dark:border-transparent dark:bg-white/[0.035] ${
+              className={`flex items-center justify-between gap-3 rounded-xl border bg-muted/40 px-3 py-2 text-sm ${
                 runOnWorktreeCreate ? "" : "opacity-60"
               }`}
             >
@@ -514,7 +515,7 @@ function ProjectScriptEditorForm({
                 onCheckedChange={(checked) => setWaitForSetup(Boolean(checked))}
               />
             </label>
-            <label className="flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2 text-sm dark:border-transparent dark:bg-white/[0.035]">
+            <label className="flex items-center justify-between gap-3 rounded-xl border bg-muted/40 px-3 py-2 text-sm">
               <span>Run in the thread's worktree when the thread settles</span>
               <Switch
                 checked={runOnSettle}
@@ -522,7 +523,7 @@ function ProjectScriptEditorForm({
               />
             </label>
             <label
-              className={`flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2 text-sm dark:border-transparent dark:bg-white/[0.035] ${
+              className={`flex items-center justify-between gap-3 rounded-xl border bg-muted/40 px-3 py-2 text-sm ${
                 previewUrl.trim().length === 0 ? "opacity-60" : ""
               }`}
             >
@@ -537,12 +538,12 @@ function ProjectScriptEditorForm({
           </fieldset>
         </form>
       </DialogPanel>
-      <DialogFooter variant="bare">
+      <DialogFooter>
         {isEditing && (
           <Button
             type="button"
             variant="destructive-outline"
-            className="mr-auto"
+            className="sm:mr-auto"
             disabled={isSaving || !canEditActions}
             onClick={() => onRequestDelete(name)}
           >
@@ -553,7 +554,16 @@ function ProjectScriptEditorForm({
           Cancel
         </Button>
         <Button form={formId} type="submit" disabled={isSaving || !canEditActions}>
-          {isSaving ? "Saving…" : isEditing ? "Save changes" : "Save action"}
+          {isSaving ? (
+            <>
+              <Spinner />
+              Saving…
+            </>
+          ) : isEditing ? (
+            "Save changes"
+          ) : (
+            "Save action"
+          )}
         </Button>
       </DialogFooter>
     </>
