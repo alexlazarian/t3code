@@ -54,7 +54,6 @@ import { useRightPanelStore } from "../../rightPanelStore";
 import { useOpenPrLink } from "../../lib/openPullRequestLink";
 import { useUiStateStore } from "../../uiStateStore";
 import { useThreadSelectionStore } from "../../threadSelectionStore";
-import { useProjectAccentColor } from "../../hooks/useProjectAccentColor";
 import { projectFillColor } from "../../projectAccentColor.logic";
 import { deriveActiveWorkStartedAt } from "../../session-logic";
 import { create } from "zustand";
@@ -153,6 +152,37 @@ const useSubagentsExpandedStore = create<{
 // inverted colors, so every label, light and action inside reads on the light fill.
 export const SIDEBAR_ACTIVE_ROW_CLASS =
   "bg-sidebar-foreground text-sidebar *:[--contrast-foreground:var(--sidebar)] *:[--contrast-sidebar-foreground:var(--sidebar)] *:[--contrast-muted-foreground:color-mix(in_oklab,var(--sidebar)_68%,var(--sidebar-foreground))] *:[--contrast-sidebar-muted-foreground:color-mix(in_oklab,var(--sidebar)_68%,var(--sidebar-foreground))] *:[--contrast-secondary-label:color-mix(in_oklab,var(--sidebar)_68%,var(--sidebar-foreground))] *:[--contrast-placeholder:color-mix(in_oklab,var(--sidebar)_68%,var(--sidebar-foreground))]";
+
+/** The project icon with the provider glyph in its corner; folder rows already sit under their project, so they show the glyph alone. */
+function SidebarThreadTile(props: {
+  project: ProjectFaviconProject | null;
+  providerEntry: SidebarProviderEntry | null;
+  displayName: string;
+}) {
+  const driverKind = props.providerEntry?.driverKind ?? null;
+  const glyph =
+    driverKind === null ? null : (
+      <ProviderInstanceIcon
+        driverKind={driverKind}
+        displayName={props.displayName}
+        acpRegistryAgentId={props.providerEntry?.acpRegistryAgentId}
+        acpRegistryIconUrl={props.providerEntry?.acpRegistryIconUrl}
+        iconClassName={props.project ? "size-2.5" : "size-3.5"}
+      />
+    );
+  if (props.project === null) {
+    return <span className="flex size-4 items-center justify-center">{glyph}</span>;
+  }
+  return (
+    // bg-inherit keeps the badge's cutout the row's own color through hover and selection.
+    <span className="relative flex size-4 bg-inherit">
+      <ProjectFavicon project={props.project} className="size-4" />
+      {glyph ? (
+        <span className="absolute -right-1 -bottom-1 flex bg-inherit p-px">{glyph}</span>
+      ) : null}
+    </span>
+  );
+}
 
 /** The project name in its Overview column color; muted when the project has no color. */
 export function SidebarProjectTag(props: {
@@ -615,9 +645,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
     variant,
     variantAction,
   } = props;
-  // A folder row sits under its project's name, so it shows no project tag.
   const inFolder = variant === "folder" || variant === "folder-multiline";
-  const projectAccentColor = useProjectAccentColor(inFolder ? null : props.project);
   const threadRef = scopeThreadRef(thread.environmentId, thread.id);
   const threadKey = scopedThreadKey(threadRef);
   const canOperateThread = useEnvironmentScope(thread.environmentId, AuthOrchestrationOperateScope);
@@ -1226,7 +1254,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
               aria-busy={isRegeneratingTitle || undefined}
               className={cn(
                 rowSurfaceClassName,
-                "grid grid-cols-[0.625rem_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-px border-b border-sidebar-border px-2 py-0.75",
+                "grid grid-cols-[0.625rem_auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-px border-b border-sidebar-border px-2 py-0.75",
               )}
               onClick={handleClick}
               onDoubleClick={handleDoubleClick}
@@ -1241,6 +1269,15 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
               tone={light}
               strobe={working || runningSubagents > 0}
               strobeDelay={overviewStrobeDelay(threadKey)}
+            />
+          </span>
+          <span className="flex bg-inherit">
+            <SidebarThreadTile
+              project={inFolder ? null : props.project}
+              providerEntry={providerEntry}
+              displayName={
+                providerEntry?.displayName ?? thread.runtime?.providerName ?? modelInstanceId
+              }
             />
           </span>
           <span className="flex min-w-0 items-center gap-1.5">
@@ -1267,7 +1304,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
             {props.sweepAction !== null ? dragDestination : null}
           </span>
           {hasDetailLine ? (
-            <span className="col-span-2 col-start-2 flex min-w-0 items-center gap-1.5 text-xs leading-4 text-muted-foreground">
+            <span className="col-span-2 col-start-3 flex min-w-0 items-center gap-1.5 text-xs leading-4 text-muted-foreground">
               {step ? (
                 <span aria-hidden className="flex min-w-0 flex-1">
                   <StepText step={step} />
@@ -1288,13 +1325,6 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
                   {machineLabel}
                 </span>
               ) : null}
-              {inFolder ? null : (
-                <SidebarProjectTag
-                  name={props.projectDisplayName ?? "No project"}
-                  color={projectAccentColor}
-                  inverted={props.isActive}
-                />
-              )}
             </span>
           ) : null}
           {props.jumpLabel ? <JumpHintBadge label={props.jumpLabel} /> : null}
