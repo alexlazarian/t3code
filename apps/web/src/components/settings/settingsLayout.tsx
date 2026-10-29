@@ -592,7 +592,7 @@ export function SettingsPageContainer({
           element.scrollTop = recallSettingsScroll(pathname);
         }}
         onScroll={(event) => rememberSettingsScroll(pathname, event.currentTarget.scrollTop)}
-        className="topbar-scroll-fade scrollbar-gutter-both flex-1 overflow-y-auto"
+        className="scrollbar-gutter-both flex-1 overflow-y-auto"
         data-settings-page-scroll
       >
         <WorkspacePageContainer width="full" className={className}>

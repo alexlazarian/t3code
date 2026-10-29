@@ -221,10 +221,7 @@ export function PullRequestsColumn({
         {rightPanelControl}
       </WorkspacePageHeader>
 
-      <div
-        ref={scrollRef}
-        className="topbar-scroll-fade scrollbar-gutter-both min-h-0 flex-1 overflow-y-auto"
-      >
+      <div ref={scrollRef} className="scrollbar-gutter-both min-h-0 flex-1 overflow-y-auto">
         <div className="flex min-h-full flex-col">
           <div
             ref={inFlowSearchRef}
