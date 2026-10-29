@@ -2,7 +2,6 @@ import { ChevronLeftIcon, ChevronRightIcon, Maximize2Icon, XIcon } from "lucide-
 import type { ComponentProps, PointerEvent } from "react";
 
 import { Button } from "../ui/button";
-import { Kbd } from "../ui/kbd";
 import type { OverviewPaneNav } from "./Overview.logic";
 
 const stopDrag = (event: PointerEvent) => event.stopPropagation();
@@ -72,7 +71,7 @@ export function OverviewPaneHandle(props: {
         )}
         <Button variant="ghost-muted" size="xs" onClick={onClose}>
           <XIcon aria-hidden />
-          Close <Kbd>Esc</Kbd>
+          Close
         </Button>
       </div>
     </div>
