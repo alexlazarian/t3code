@@ -58,6 +58,7 @@ import { DispatchModeLimit, exceededDispatchModeLimit } from "./DispatchModeLimi
 import { projectTurnItemForDetail } from "./WireProjection.ts";
 import * as LegacyV1ThreadImporter from "./legacy/LegacyV1ThreadImporter.ts";
 import * as ServerSettings from "../serverSettings.ts";
+import * as McpInvocationContext from "../mcp/McpInvocationContext.ts";
 
 export type ThreadManagementSendMode = "auto" | "queue" | "steer" | "restart";
 
@@ -682,6 +683,31 @@ const make = Effect.gen(function* () {
 
   const assertDispatchTargetEnabled = (command: OrchestrationV2ServerCommand) => {
     switch (command.type) {
+      case "thread.suggestions.resolve":
+        return Effect.gen(function* () {
+          const caller = yield* Effect.serviceOption(McpInvocationContext.McpInvocationContext);
+          if (Option.isSome(caller)) {
+            return yield* new Orchestrator.OrchestratorDispatchError({
+              commandId: command.commandId,
+              commandType: command.type,
+              cause: "Only a user can accept or dismiss thread suggestions.",
+            });
+          }
+          if (command.action === "dismiss") return;
+          const projection = yield* orchestrator.getThreadRecords(command.threadId, ["turnItems"], {
+            turnItemTypes: ["thread_suggestion"],
+          });
+          const suggestion = projection.turnItems.find((item) => item.id === command.turnItemId);
+          if (suggestion?.type !== "thread_suggestion" || suggestion.suggestionStatus !== "pending")
+            return;
+          for (const thread of suggestion.threads) {
+            yield* assertProviderInstanceEnabled({
+              projectId: projection.thread.projectId,
+              commandId: command.commandId,
+              instanceId: thread.modelSelection.instanceId,
+            });
+          }
+        });
       case "message.dispatch":
         return orchestrator.getThreadRecords(command.threadId, []).pipe(
           Effect.flatMap((projection) =>

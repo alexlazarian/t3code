@@ -19,6 +19,7 @@ import { ThreadHandoffDivider, ThreadHandoffRow } from "./thread-handoff-row";
 import { GuestBubbleTint, GuestMessageName } from "./guestMessageStyle";
 import { ThreadGuestPendingMessage, useThreadGuestShare } from "./ThreadGuestShareBar";
 import { LinkRequestCard } from "./LinkRequestCard";
+import { ThreadSuggestionCard } from "./ThreadSuggestionCard";
 import { SecretRequestCard } from "./SecretRequestCard";
 import { AppActivityIndicator } from "../../components/ui/AppActivityIndicator";
 import {
@@ -1452,6 +1453,19 @@ function renderFeedEntry(
         projectedItem={entry.activities[0]!.projectedItem}
         iconColor={iconSubtleColor}
         surfaceColor={props.screenColor}
+      />
+    );
+  }
+
+  if (
+    entry.type === "activity-group" &&
+    entry.activities.length === 1 &&
+    entry.activities[0]?.projectedItem.item.type === "thread_suggestion"
+  ) {
+    return (
+      <ThreadSuggestionCard
+        environmentId={props.environmentId}
+        item={entry.activities[0].projectedItem.item}
       />
     );
   }

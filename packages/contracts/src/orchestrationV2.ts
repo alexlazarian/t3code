@@ -433,10 +433,35 @@ const LenientThreadOpens = Schema.NullOr(OrchestrationV2ThreadOpens).pipe(
   Schema.catchDecoding(() => Effect.succeedSome(null)),
 );
 
+export const OrchestrationV2InitialPrompt = Schema.Struct({
+  text: TrimmedNonEmptyString.check(Schema.isMaxLength(121_000)),
+  skill: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(512))),
+});
+
+export const OrchestrationV2ThreadSuggestion = Schema.Struct({
+  threadId: ThreadId,
+  title: TrimmedNonEmptyString.check(Schema.isMaxLength(512)),
+  prompt: TrimmedNonEmptyString.check(Schema.isMaxLength(120_000)),
+  skill: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(512))),
+  modelSelection: ModelSelection,
+});
+
+const OrchestrationV2ThreadSuggestionFields = {
+  type: Schema.Literal("thread_suggestion"),
+  reason: TrimmedNonEmptyString.check(Schema.isMaxLength(2_000)),
+  suggestionStatus: Schema.Literals(["pending", "accepted", "dismissed"]),
+  threads: Schema.Array(OrchestrationV2ThreadSuggestion).check(
+    Schema.isMinLength(1),
+    Schema.isMaxLength(10),
+  ),
+  resolution: Schema.optional(Schema.Literals(["drafts", "start"])),
+};
+
 export const OrchestrationV2AppThread = Schema.Struct({
   ...OrchestrationV2CreationFields,
   id: ThreadId,
   projectId: ProjectId,
+  initialPrompt: Schema.optional(OrchestrationV2InitialPrompt),
   title: TrimmedNonEmptyString,
   providerInstanceId: ProviderInstanceId,
   modelSelection: ModelSelection,
@@ -1737,6 +1762,10 @@ export const OrchestrationV2TurnItem = Schema.Union([
   }),
   Schema.Struct({
     ...OrchestrationV2TurnItemBaseFields,
+    ...OrchestrationV2ThreadSuggestionFields,
+  }),
+  Schema.Struct({
+    ...OrchestrationV2TurnItemBaseFields,
     ...OrchestrationV2SecretRequestFields,
   }),
   Schema.Struct({
@@ -2612,6 +2641,10 @@ export const OrchestrationV2TurnItemJson = Schema.Union([
   }),
   Schema.Struct({
     ...OrchestrationV2TurnItemJsonBaseFields,
+    ...OrchestrationV2ThreadSuggestionFields,
+  }),
+  Schema.Struct({
+    ...OrchestrationV2TurnItemJsonBaseFields,
     ...OrchestrationV2SecretRequestFields,
   }),
   Schema.Struct({
@@ -2906,6 +2939,13 @@ export const OrchestrationV2DomainEventJson = Schema.Union([
 export type OrchestrationV2DomainEventJson = typeof OrchestrationV2DomainEventJson.Type;
 
 export const OrchestrationV2Command = Schema.Union([
+  Schema.Struct({
+    type: Schema.Literal("thread.suggestions.resolve"),
+    commandId: CommandId,
+    threadId: ThreadId,
+    turnItemId: TurnItemId,
+    action: Schema.Literals(["drafts", "start", "dismiss"]),
+  }),
   Schema.Struct({
     type: Schema.Literal("thread.stop"),
     commandId: CommandId,
@@ -3516,6 +3556,16 @@ const OrchestrationV2InternalCommand = Schema.Union([
         }),
       }),
     ),
+  }),
+  Schema.Struct({
+    type: Schema.Literal("thread.suggestions.record"),
+    commandId: CommandId,
+    threadId: ThreadId,
+    runId: RunId,
+    nodeId: NodeId,
+    turnItemId: TurnItemId,
+    reason: OrchestrationV2ThreadSuggestionFields.reason,
+    threads: OrchestrationV2ThreadSuggestionFields.threads,
   }),
   /**
    * Internal so no client can mark a request saved without the value being

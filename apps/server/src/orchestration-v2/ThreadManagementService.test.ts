@@ -15,6 +15,7 @@ import {
   ProviderInstanceId,
   RunId,
   ThreadId,
+  TurnItemId,
 } from "@t3tools/contracts";
 import * as Deferred from "effect/Deferred";
 import * as DateTime from "effect/DateTime";
@@ -28,6 +29,7 @@ import * as Stream from "effect/Stream";
 import * as TestClock from "effect/testing/TestClock";
 
 import * as ServerSettings from "../serverSettings.ts";
+import * as McpInvocationContext from "../mcp/McpInvocationContext.ts";
 import * as SqlitePersistence from "../persistence/Sqlite.ts";
 import * as CommandReceiptStore from "./CommandReceiptStore.ts";
 import * as Orchestrator from "./Orchestrator.ts";
@@ -596,3 +598,34 @@ it.effect.each([
     expect(dispatched).toEqual(settles ? ["thread.settle"] : []);
   }),
 );
+
+it.effect("refuses suggestion acceptance and dismissal by MCP callers", () => {
+  const dispatched: Array<string> = [];
+  const layerTest = layerDispatchChokepointTest(ServerSettings.layerTest({}))(dispatched);
+  return Effect.gen(function* () {
+    const threads = yield* ThreadManagementService.ThreadManagementService;
+    for (const action of ["drafts", "start", "dismiss"] as const) {
+      const error = yield* threads
+        .dispatch({
+          type: "thread.suggestions.resolve",
+          commandId: CommandId.make(`suggestion:mcp:${action}`),
+          threadId: ThreadId.make("thread:thread-management:chokepoint"),
+          turnItemId: TurnItemId.make("suggestion:untrusted"),
+          action,
+        })
+        .pipe(Effect.flip);
+      expect(error._tag).toBe("OrchestratorDispatchError");
+    }
+    expect(dispatched).toEqual([]);
+  }).pipe(
+    Effect.provide(layerTest),
+    Effect.provideService(McpInvocationContext.McpInvocationContext, {
+      environmentId: EnvironmentId.make("environment:test"),
+      issuedAt: 0,
+      requestNamespace: "test",
+      capabilities: new Set(["orchestration"] as const),
+      thread: undefined,
+      client: { sessionId: "mcp-client", label: "Agent", access: "full-access" },
+    }),
+  );
+});

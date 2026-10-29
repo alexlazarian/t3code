@@ -360,6 +360,28 @@ describe("composerDraftStore unsent draft marker", () => {
   });
 });
 
+it("initializes suggested prompts once and preserves edits and intentional clearing after reload", () => {
+  resetComposerDraftStore();
+  const threadRef = scopeThreadRef(TEST_ENVIRONMENT_ID, ThreadId.make("suggested-draft"));
+  const store = useComposerDraftStore.getState();
+  store.initializePrompt(threadRef, "Suggested prompt");
+  expect(store.getComposerDraft(threadRef)?.prompt).toBe("Suggested prompt");
+  store.setPrompt(threadRef, "My edit");
+  store.initializePrompt(threadRef, "Suggested prompt");
+  expect(store.getComposerDraft(threadRef)?.prompt).toBe("My edit");
+  store.setPrompt(threadRef, "");
+  const persisted = partializeComposerDraftStoreState(useComposerDraftStore.getState());
+  const merge = useComposerDraftStore.persist.getOptions().merge!;
+  resetComposerDraftStore();
+  useComposerDraftStore.setState(merge(persisted, useComposerDraftStore.getState()));
+  store.initializePrompt(threadRef, "Suggested prompt");
+  expect(store.getComposerDraft(threadRef)?.prompt).toBe("");
+  const editedRef = scopeThreadRef(TEST_ENVIRONMENT_ID, ThreadId.make("existing-draft"));
+  store.setPrompt(editedRef, "Already edited");
+  store.initializePrompt(editedRef, "Suggested prompt");
+  expect(store.getComposerDraft(editedRef)?.prompt).toBe("Already edited");
+});
+
 describe("composerDraftStore file attachments", () => {
   const threadId = ThreadId.make("thread-files");
   const threadRef = scopeThreadRef(TEST_ENVIRONMENT_ID, threadId);

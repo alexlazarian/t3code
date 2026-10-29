@@ -25,6 +25,7 @@ import {
 import { checkpointWorkspace } from "@t3tools/provider-testing/replayWorkspace";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
+import * as Result from "effect/Result";
 import * as Fiber from "effect/Fiber";
 import * as Layer from "effect/Layer";
 import * as Queue from "effect/Queue";
@@ -1848,6 +1849,49 @@ describe("OrchestratorMcpService provider resolution", () => {
               threads: [{ target: { driverKind: driver, model } }],
               clientRequestId: "create-retry",
             };
+            for (const target of [
+              { environmentId: EnvironmentId.make("elsewhere") },
+              { projectId: ProjectId.make("elsewhere") },
+            ]) {
+              const rejected = yield* service
+                .suggestThreads(scope, {
+                  reason: "Separate investigations.",
+                  threads: [{ title: "Investigate", prompt: "Inspect the issue.", target }],
+                  clientRequestId: "suggest-invalid-target",
+                })
+                .pipe(Effect.flip);
+              assert.equal(rejected.code, "invalid_request");
+            }
+            const suggested = yield* service.suggestThreads(scope, {
+              reason: "Separate investigations.",
+              threads: [
+                {
+                  title: "Investigate",
+                  prompt: "Inspect the issue.",
+                  target: { driverKind: driver, model },
+                },
+              ],
+              clientRequestId: "suggest-retry",
+            });
+            const suggestedParent = yield* orchestrator.getThreadProjection(parentThreadId);
+            const suggestion = suggestedParent.turnItems.find(
+              (item) => item.id === suggested.turnItemId,
+            );
+            assert.equal(suggestion?.type, "thread_suggestion");
+            if (suggestion?.type !== "thread_suggestion")
+              return yield* Effect.die("Missing suggestion");
+            assert.equal(suggestion.suggestionStatus, "pending");
+            assert.equal(
+              suggestion.threads[0]?.modelSelection.instanceId,
+              parentEnabled ? codexInstanceId : altInstanceId,
+            );
+            assert.isTrue(
+              Result.isFailure(
+                yield* orchestrator
+                  .getThreadProjection(suggestion.threads[0]!.threadId)
+                  .pipe(Effect.result),
+              ),
+            );
             const first = yield* service.createThreads(scope, request);
             const child = first.threads[0]!;
             const selection = parentEnabled

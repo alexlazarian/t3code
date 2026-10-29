@@ -8,6 +8,8 @@ import {
   OrchestratorMcpEnvironmentUnlinkInput,
   OrchestratorMcpEnvironmentUnlinkResult,
   OrchestratorMcpCreateThreadsInput,
+  OrchestratorMcpSuggestThreadsInput,
+  OrchestratorMcpSuggestThreadsResult,
   OrchestratorMcpCreateThreadsResult,
   OrchestratorMcpDelegateTaskInput,
   OrchestratorMcpDelegateTaskResult,
@@ -207,6 +209,18 @@ const RequestSecretTool = Tool.make("request_secret", {
   .annotate(Tool.Title, "Request a secret from the user")
   .annotate(Tool.Destructive, false);
 
+const SuggestThreadsTool = Tool.make("suggest_threads", {
+  description:
+    "Offer the user separate top-level threads for independent topics. Creates a durable suggestion card, never threads or turns. Returns immediately; continue answering. Include a reason and useful starting prompts; optional skill names are included in those prompts on acceptance. Provider and model inherit unless target is supplied. Always uses this project and environment; omit target.environmentId and target.projectId. The user alone chooses Create drafts, Create and start, or Dismiss, even after this turn ends. Do not poll or accept your own suggestions. Explicit requests to create threads use create_threads or t3_thread_launch instead.",
+  parameters: OrchestratorMcpSuggestThreadsInput,
+  success: OrchestratorMcpSuggestThreadsResult,
+  failure: OrchestratorMcpFailure,
+  failureMode: "return",
+  dependencies,
+})
+  .annotate(Tool.Title, "Suggest T3 threads")
+  .annotate(Tool.Destructive, false);
+
 const CreateThreadsTool = Tool.make("create_threads", {
   description:
     "Create new top-level threads in this checkout. Not delegation. One thread or its own worktree: `t3_thread_launch`. Project, branch, and worktree inherit.",
@@ -359,6 +373,7 @@ export const OrchestratorToolkit = Toolkit.make(
   DeleteScheduledTaskTool,
   RequestSecretTool,
   CreateThreadsTool,
+  SuggestThreadsTool,
   ThreadListTool,
   ThreadReadTool,
   ThreadUpdateTool,

@@ -276,6 +276,26 @@ export const OrchestratorMcpCreateThreadsInput = Schema.Struct({
 });
 export type OrchestratorMcpCreateThreadsInput = typeof OrchestratorMcpCreateThreadsInput.Type;
 
+export const OrchestratorMcpSuggestThreadsInput = Schema.Struct({
+  reason: TrimmedNonEmptyString.check(Schema.isMaxLength(2_000)),
+  threads: Schema.Array(
+    Schema.Struct({
+      title: OrchestratorMcpTitle,
+      prompt: OrchestratorMcpPrompt,
+      skill: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(512))),
+      target: Schema.optional(OrchestratorMcpTarget),
+    }),
+  ).check(Schema.isMinLength(1), Schema.isMaxLength(10)),
+  clientRequestId: OrchestratorMcpClientRequestId,
+});
+export type OrchestratorMcpSuggestThreadsInput = typeof OrchestratorMcpSuggestThreadsInput.Type;
+
+export const OrchestratorMcpSuggestThreadsResult = Schema.Struct({
+  turnItemId: TurnItemId,
+  status: Schema.Literal("pending"),
+});
+export type OrchestratorMcpSuggestThreadsResult = typeof OrchestratorMcpSuggestThreadsResult.Type;
+
 export const OrchestratorMcpCreatedThreadStatus = Schema.Union([
   Schema.Literal("idle"),
   Schema.Literal("preparing"),

@@ -604,6 +604,14 @@ export default function ChatView(props: ChatViewProps) {
     return draft ? composerDraftHasUserContent({ ...draft, prompt: "" }) : false;
   });
   const setComposerDraftPrompt = useComposerDraftStore((store) => store.setPrompt);
+  const initialThreadPrompt = serverProjection?.thread.initialPrompt?.text;
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- Hydrate the local composer from the server's durable draft when this thread opens.
+  useEffect(() => {
+    if (!initialThreadPrompt || routeKind !== "server") return;
+    const store = useComposerDraftStore.getState();
+    store.initializePrompt(baseComposerDraftTarget, initialThreadPrompt);
+  }, [baseComposerDraftTarget, initialThreadPrompt, routeKind]);
+
   const setDraftThreadContext = useComposerDraftStore((store) => store.setDraftThreadContext);
   const composerImagesRef = useRef<ComposerImageAttachment[]>([]);
   const composerFilesRef = useRef<ComposerFileAttachment[]>([]);

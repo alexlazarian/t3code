@@ -1408,3 +1408,129 @@ it.effect("dispatch records the command outcome and its duration", () =>
     assert.strictEqual((yield* durations).count - durationsBefore, 1);
   }).pipe(Effect.provide(layerTest)),
 );
+
+it.effect.each(["drafts", "start", "dismiss"] as const)(
+  "resolves thread suggestions once across devices with %s",
+  (action) =>
+    Effect.gen(function* () {
+      const orchestrator = yield* Orchestrator.OrchestratorV2;
+      const threadId = ThreadId.make(`suggestion-parent:${action}`);
+      yield* orchestrator.dispatch({
+        type: "thread.create",
+        commandId: CommandId.make("suggestion-parent:create"),
+        threadId,
+        projectId: ProjectId.make("suggestion-project"),
+        title: "Parent",
+        modelSelection,
+        runtimeMode: "full-access",
+        interactionMode: "default",
+        branch: "feature",
+        worktreePath: "/repo",
+        createdBy: "user",
+        creationSource: "web",
+      });
+      yield* orchestrator.dispatch({
+        type: "message.dispatch",
+        commandId: CommandId.make("suggestion-parent:start"),
+        threadId,
+        messageId: MessageId.make("suggestion-parent:message"),
+        text: "Discuss two independent topics.",
+        attachments: [],
+        dispatchMode: { type: "start_immediately" },
+        createdBy: "user",
+        creationSource: "web",
+      });
+      const parent = yield* orchestrator.getThreadProjection(threadId);
+      const run = parent.runs[0]!;
+      assert.isNotNull(run.rootNodeId);
+      const turnItemId = TurnItemId.make("thread-suggestion:test");
+      const threads = ["one", "two"].map((title) => ({
+        threadId: ThreadId.make(`suggestion-child:${title}`),
+        title,
+        prompt: `Investigate ${title}.`,
+        skill: "platform-investigate",
+        modelSelection,
+      }));
+      const record = {
+        type: "thread.suggestions.record" as const,
+        commandId: CommandId.make("suggestion:record"),
+        threadId,
+        runId: run.id,
+        nodeId: run.rootNodeId!,
+        turnItemId,
+        reason: "Each topic can be investigated separately.",
+        threads,
+      };
+      yield* orchestrator.dispatch(record);
+      yield* orchestrator.dispatch(record);
+      assert.equal((yield* orchestrator.getThreadProjection(threadId)).runs.length, 1);
+      for (const thread of threads) {
+        assert.isTrue(
+          Result.isFailure(
+            yield* orchestrator.getThreadProjection(thread.threadId).pipe(Effect.result),
+          ),
+        );
+      }
+      yield* orchestrator.dispatch({
+        type: "thread.stop",
+        commandId: CommandId.make("suggestion-parent:stop"),
+        threadId,
+      });
+      const resolve = {
+        type: "thread.suggestions.resolve" as const,
+        commandId: CommandId.make("suggestion:resolve:first-device"),
+        threadId,
+        turnItemId,
+        action,
+      };
+      yield* orchestrator.dispatch(resolve);
+      yield* orchestrator.dispatch(resolve);
+      yield* orchestrator.dispatch({
+        ...resolve,
+        commandId: CommandId.make("suggestion:resolve:second-device"),
+        action: action === "dismiss" ? "start" : "dismiss",
+      });
+      const resolved = yield* orchestrator.getThreadProjection(threadId);
+      const cards = resolved.turnItems.filter((item) => item.type === "thread_suggestion");
+      assert.equal(cards.length, 1);
+      assert.equal(cards[0]?.suggestionStatus, action === "dismiss" ? "dismissed" : "accepted");
+      for (const thread of threads) {
+        if (action === "dismiss") {
+          assert.isTrue(
+            Result.isFailure(
+              yield* orchestrator.getThreadProjection(thread.threadId).pipe(Effect.result),
+            ),
+          );
+          continue;
+        }
+        const created = yield* orchestrator.getThreadProjection(thread.threadId);
+        assert.equal(created.thread.branch, "feature");
+        assert.deepEqual(created.thread.modelSelection, modelSelection);
+        const prompt = `Use the platform-investigate skill.\n\n${thread.prompt}`;
+        if (action === "start") {
+          assert.equal(created.messages.length, 1);
+          assert.equal(created.messages[0]?.text, prompt);
+          assert.equal(created.runs.length, 1);
+          assert.isUndefined(created.thread.initialPrompt);
+        } else {
+          assert.equal(created.messages.length, 0);
+          assert.equal(created.runs.length, 0);
+          assert.equal(created.thread.initialPrompt?.text, prompt);
+          yield* orchestrator.dispatch({
+            type: "message.dispatch",
+            commandId: CommandId.make(`suggestion:send:${thread.title}`),
+            threadId: thread.threadId,
+            messageId: MessageId.make(`suggestion:message:${thread.title}`),
+            text: prompt,
+            attachments: [],
+            dispatchMode: { type: "start_immediately" },
+            createdBy: "user",
+            creationSource: "web",
+          });
+          const sent = yield* orchestrator.getThreadProjection(thread.threadId);
+          assert.isUndefined(sent.thread.initialPrompt);
+          assert.equal(sent.messages.length, 1);
+        }
+      }
+    }).pipe(Effect.provide(layerTest)),
+);

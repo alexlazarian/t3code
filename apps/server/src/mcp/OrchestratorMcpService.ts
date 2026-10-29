@@ -18,6 +18,8 @@ import {
   type OrchestratorMcpCapabilitiesResult,
   type OrchestratorMcpModelOption,
   type OrchestratorMcpCreateThreadsInput,
+  type OrchestratorMcpSuggestThreadsInput,
+  type OrchestratorMcpSuggestThreadsResult,
   type OrchestratorMcpCreateThreadsResult,
   type OrchestratorMcpCreatedThread,
   type OrchestratorMcpDelegateTaskInput,
@@ -164,6 +166,10 @@ export interface OrchestratorMcpServiceShape {
     scope: McpInvocationScope,
     input: OrchestratorMcpTaskCancelInput,
   ) => Effect.Effect<OrchestratorMcpTaskCancelResult, OrchestratorMcpFailure>;
+  readonly suggestThreads: (
+    scope: McpInvocationScope,
+    input: OrchestratorMcpSuggestThreadsInput,
+  ) => Effect.Effect<OrchestratorMcpSuggestThreadsResult, OrchestratorMcpFailure>;
   readonly createThreads: (
     scope: McpInvocationScope,
     input: OrchestratorMcpCreateThreadsInput,
@@ -906,6 +912,8 @@ function turnItemText(item: OrchestrationV2TurnItem): string | null {
       return `Forked to thread ${item.targetThreadId}.`;
     case "thread_created":
       return `Created thread ${item.targetThreadId} with ${item.targetProviderInstanceId} (${item.targetModel}).`;
+    case "thread_suggestion":
+      return `${item.reason} (${item.suggestionStatus})`;
     case "secret_request":
       return `Asked the user for ${item.label}: ${item.secretStatus}.`;
     case "link_request":
@@ -2593,6 +2601,75 @@ const make = Effect.gen(function* () {
         status: "cancel_requested",
       };
     }),
+    suggestThreads: Effect.fn("OrchestratorMcpService.suggestThreads")(
+      function* (callerScope, input) {
+        const { scope, parent } = yield* loadThreadCaller(callerScope, "suggest_threads");
+        const run = ThreadManagementService.latestActiveRun(parent);
+        if (
+          run === undefined ||
+          run.rootNodeId === null ||
+          run.providerInstanceId !== scope.thread.providerInstanceId
+        ) {
+          return yield* failure(
+            "parent_not_active",
+            "Suggestions require an active run owned by this MCP provider session.",
+          );
+        }
+        if (
+          input.threads.some(
+            (thread) =>
+              thread.target?.environmentId !== undefined || thread.target?.projectId !== undefined,
+          )
+        ) {
+          return yield* failure(
+            "invalid_request",
+            "Suggested threads use this thread's project and environment. Omit target.environmentId and target.projectId.",
+          );
+        }
+        const key = yield* requestKey(input.clientRequestId);
+        const turnItemId = TurnItemId.make(
+          `turn-item:thread-suggestion:${stablePart(scope.thread.threadId)}:${stablePart(key)}`,
+        );
+        const providers = yield* loadProviders;
+        const threads = yield* Effect.forEach(
+          input.threads,
+          (request, index) =>
+            Effect.gen(function* () {
+              const target = yield* resolveTargetRechecking({
+                parent,
+                target: request.target,
+                providers,
+              });
+              return {
+                threadId: stableThreadId({ scope, requestKey: `suggestion:${key}`, index }),
+                title: request.title,
+                prompt: request.prompt,
+                ...(request.skill === undefined ? {} : { skill: request.skill }),
+                modelSelection: target.modelSelection,
+              };
+            }),
+          { concurrency: 1 },
+        );
+        yield* threadManagement
+          .dispatch({
+            type: "thread.suggestions.record",
+            commandId: stableCommandId({
+              scope,
+              requestKey: key,
+              operation: "suggest-threads",
+              index: 0,
+            }),
+            threadId: scope.thread.threadId,
+            runId: run.id,
+            nodeId: run.rootNodeId,
+            turnItemId,
+            reason: input.reason,
+            threads,
+          })
+          .pipe(Effect.mapError(threadManagementFailure));
+        return { turnItemId, status: "pending" };
+      },
+    ),
     createThreads: Effect.fn("OrchestratorMcpService.createThreads")(
       function* (callerScope, input) {
         const { scope, parent } = yield* loadThreadCaller(callerScope, "create_threads");

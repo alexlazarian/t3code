@@ -13,7 +13,7 @@ import {
   deriveThreadRuntime,
   threadRuntimeHasInterruptibleRun,
 } from "@t3tools/client-runtime/state/thread-execution";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   CommandId,
@@ -65,11 +65,13 @@ import {
   clearComposerDraft,
   clearComposerDraftContent,
   composerContextImportsAtom,
+  composerDraftsLoadedAtom,
   getComposerDraftSnapshot,
   mergeComposerDraftContent,
   removeComposerDraftAttachment,
   scheduleUnusedComposerAttachmentCleanup,
   setComposerDraftText,
+  initializeComposerDraftPrompt,
   updateComposerDraftSettings,
   useComposerDraft,
   useComposerDraftSettings,
@@ -288,6 +290,14 @@ export function useThreadComposerState() {
   const selectedDraft = useComposerDraftSettings(selectedThreadKey);
   const selectedThreadQueueCount = selectedThreadQueuedMessages.length;
   const selectedThread = selectedThreadShell;
+  const initialThreadPrompt = selectedThreadProjection?.projection.thread.initialPrompt?.text;
+  const composerDraftsLoaded = useAtomValue(composerDraftsLoadedAtom);
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- Hydrate the local composer from the server's durable draft when this thread opens.
+  useEffect(() => {
+    if (!composerDraftsLoaded || !selectedThreadKey || !initialThreadPrompt) return;
+    initializeComposerDraftPrompt(selectedThreadKey, initialThreadPrompt);
+  }, [composerDraftsLoaded, selectedThreadKey, initialThreadPrompt]);
+
   const modelSelection = selectedDraft.modelSelection ?? selectedThread?.modelSelection ?? null;
   const serverConfig = selectedEnvironmentRuntime?.serverConfig;
   const pendingHandoff = resolvePendingHandoff(

@@ -529,6 +529,8 @@ function commandThreadId(command: OrchestrationV2ServerCommand): ThreadId {
     case "delegated_task.completion-delivery.dispose":
     case "thread.created.record":
       return command.parentThreadId;
+    case "thread.suggestions.resolve":
+    case "thread.suggestions.record":
     case "secret_request.record":
     case "link_request.record":
       return command.threadId;
@@ -5088,6 +5090,21 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
     effects: Ref.Ref<Array<PendingOrchestrationEffectV2>>,
   ) {
     let projection = yield* getProjectionWithPendingEvents(command.threadId, events);
+    if (projection.thread.initialPrompt !== undefined) {
+      const { initialPrompt: _initialPrompt, ...thread } = projection.thread;
+      const now = yield* DateTime.now;
+      yield* emit(
+        events,
+        command,
+      )({
+        type: "thread.metadata-updated",
+        threadId: command.threadId,
+        providerInstanceId: thread.providerInstanceId,
+        occurredAt: now,
+        payload: { ...thread, updatedAt: now },
+      });
+      projection = { ...projection, thread };
+    }
     if (command.manualContinuationOfRunId !== undefined) {
       const source = projection.runs.find((run) => run.id === command.manualContinuationOfRunId);
       const limited = latestRootProviderFailure(source ?? null, projection.turnItems);
@@ -8247,6 +8264,181 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
       });
     },
   );
+
+  const dispatchThreadSuggestionsRecord = Effect.fn(
+    "orchestrationV2.dispatch.threadSuggestionsRecord",
+  )(function* (
+    command: Extract<
+      OrchestrationV2InternalCommand,
+      { readonly type: "thread.suggestions.record" }
+    >,
+    events: Ref.Ref<Array<OrchestrationV2DomainEvent>>,
+  ) {
+    const projection = yield* projectionStore
+      .getThreadRecords(
+        command.threadId,
+        ["runs", "nodes", "turnItems", "attempts", "providerTurns"],
+        { turnItemTypes: ["thread_suggestion"], messageRoles: [] },
+      )
+      .pipe(
+        Effect.mapError(
+          (cause) => new OrchestratorProjectionError({ threadId: command.threadId, cause }),
+        ),
+      );
+    const run = projection.runs.find((candidate) => candidate.id === command.runId);
+    if (run === undefined || run.rootNodeId !== command.nodeId) {
+      return yield* new OrchestratorDispatchError({
+        commandId: command.commandId,
+        commandType: command.type,
+        cause: "The suggestion must belong to its originating run.",
+      });
+    }
+    if (projection.turnItems.some((item) => item.id === command.turnItemId)) return;
+    const now = yield* DateTime.now;
+    yield* emit(
+      events,
+      command,
+    )({
+      type: "turn-item.updated",
+      threadId: command.threadId,
+      runId: run.id,
+      nodeId: command.nodeId,
+      providerInstanceId: run.providerInstanceId,
+      occurredAt: now,
+      payload: {
+        id: command.turnItemId,
+        threadId: command.threadId,
+        runId: run.id,
+        nodeId: command.nodeId,
+        providerThreadId: run.providerThreadId,
+        providerTurnId: providerTurnForRun(projection, run)?.id ?? null,
+        nativeItemRef: null,
+        parentItemId: null,
+        ordinal: yield* nextTurnItemOrdinal(projection),
+        status: "completed",
+        title: "Suggested threads",
+        startedAt: now,
+        completedAt: now,
+        updatedAt: now,
+        type: "thread_suggestion",
+        reason: command.reason,
+        suggestionStatus: "pending",
+        threads: command.threads,
+      },
+    });
+  });
+
+  const dispatchThreadSuggestionsResolve = Effect.fn(
+    "orchestrationV2.dispatch.threadSuggestionsResolve",
+  )(function* (
+    command: Extract<OrchestrationV2Command, { readonly type: "thread.suggestions.resolve" }>,
+    events: Ref.Ref<Array<OrchestrationV2DomainEvent>>,
+    effects: Ref.Ref<Array<PendingOrchestrationEffectV2>>,
+  ) {
+    const projection = yield* projectionStore
+      .getThreadRecords(
+        command.threadId,
+        ["runs", "nodes", "turnItems", "attempts", "providerTurns"],
+        { turnItemTypes: ["thread_suggestion"], messageRoles: [] },
+      )
+      .pipe(
+        Effect.mapError(
+          (cause) => new OrchestratorProjectionError({ threadId: command.threadId, cause }),
+        ),
+      );
+    const item = projection.turnItems.find((candidate) => candidate.id === command.turnItemId);
+    if (item?.type !== "thread_suggestion") {
+      return yield* new OrchestratorDispatchError({
+        commandId: command.commandId,
+        commandType: command.type,
+        cause: "The thread suggestion was not found.",
+      });
+    }
+    if (item.suggestionStatus !== "pending") return;
+    const now = yield* DateTime.now;
+    if (command.action !== "dismiss") {
+      for (const suggestion of item.threads) {
+        yield* dispatchThreadCreate(
+          {
+            type: "thread.create",
+            commandId: command.commandId,
+            threadId: suggestion.threadId,
+            projectId: projection.thread.projectId,
+            title: suggestion.title,
+            modelSelection: suggestion.modelSelection,
+            runtimeMode: projection.thread.runtimeMode,
+            interactionMode: projection.thread.interactionMode,
+            branch: projection.thread.branch,
+            worktreePath: projection.thread.worktreePath,
+            ...(projection.thread.linkOrigin === undefined
+              ? {}
+              : { linkOrigin: projection.thread.linkOrigin }),
+            createdBy: "user",
+            creationSource: "web",
+          },
+          events,
+        );
+        const text =
+          suggestion.skill === undefined
+            ? suggestion.prompt
+            : `Use the ${suggestion.skill} skill.\n\n${suggestion.prompt}`;
+        if (command.action === "start") {
+          yield* dispatchMessage(
+            {
+              type: "message.dispatch",
+              commandId: command.commandId,
+              threadId: suggestion.threadId,
+              messageId: MessageId.make(`suggestion:${item.id}:${suggestion.threadId}`),
+              text,
+              attachments: [],
+              modelSelection: suggestion.modelSelection,
+              dispatchMode: { type: "start_immediately" },
+              createdBy: "user",
+              creationSource: "web",
+            },
+            events,
+            effects,
+          );
+        } else {
+          const created = yield* getProjectionWithPendingEvents(suggestion.threadId, events);
+          yield* emit(
+            events,
+            command,
+          )({
+            type: "thread.metadata-updated",
+            threadId: suggestion.threadId,
+            providerInstanceId: suggestion.modelSelection.instanceId,
+            occurredAt: now,
+            payload: {
+              ...created.thread,
+              initialPrompt: {
+                text,
+                ...(suggestion.skill === undefined ? {} : { skill: suggestion.skill }),
+              },
+              updatedAt: now,
+            },
+          });
+        }
+      }
+    }
+    yield* emit(
+      events,
+      command,
+    )({
+      type: "turn-item.updated",
+      threadId: command.threadId,
+      ...(item.runId === null ? {} : { runId: item.runId }),
+      ...(item.nodeId === null ? {} : { nodeId: item.nodeId }),
+      providerInstanceId: projection.thread.providerInstanceId,
+      occurredAt: now,
+      payload: {
+        ...item,
+        suggestionStatus: command.action === "dismiss" ? "dismissed" : "accepted",
+        ...(command.action === "dismiss" ? {} : { resolution: command.action }),
+        updatedAt: now,
+      },
+    });
+  });
 
   const dispatchSecretRequestRecord = Effect.fn("orchestrationV2.dispatch.secretRequestRecord")(
     function* (
@@ -12868,6 +13060,12 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
       case "thread.created.record":
         yield* dispatchCreatedThreadRecord(command, events);
         break;
+      case "thread.suggestions.record":
+        yield* dispatchThreadSuggestionsRecord(command, events);
+        break;
+      case "thread.suggestions.resolve":
+        yield* dispatchThreadSuggestionsResolve(command, events, effects);
+        break;
       case "secret_request.record":
         yield* dispatchSecretRequestRecord(command, events);
         break;
@@ -12974,6 +13172,8 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
           command.type === "thread.background-work.settle" ||
           command.type === "thread.stop" ||
           command.type === "subagent.stop" ||
+          command.type === "thread.suggestions.record" ||
+          command.type === "thread.suggestions.resolve" ||
           // Closing a share again, or after it ended, is not an error.
           command.type === "thread.guest-share.close",
         (_planned) =>

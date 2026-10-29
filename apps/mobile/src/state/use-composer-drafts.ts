@@ -359,6 +359,7 @@ export class ComposerDraftPersistenceError extends Schema.TaggedError<ComposerDr
 }
 
 export interface ComposerDraft {
+  readonly initialPromptInitialized?: boolean;
   readonly text: string;
   readonly context?: OrchestrationMessageContext;
   readonly attachments: ReadonlyArray<DraftComposerAttachment>;
@@ -424,6 +425,7 @@ const PersistedComposerContextSchema = Schema.Struct({
 });
 
 const ComposerDraftSchema = Schema.Struct({
+  initialPromptInitialized: Schema.optional(Schema.Boolean),
   text: Schema.String,
   context: Schema.optional(PersistedComposerContextSchema),
   attachments: Schema.Array(DraftComposerAttachmentSchema),
@@ -619,7 +621,7 @@ function withComposerDraft(
   draftKey: string,
   draft: ComposerDraft,
 ): Record<string, ComposerDraft> {
-  if (isEmptyDraft(draft) && draft.project === undefined) {
+  if (isEmptyDraft(draft) && !draft.initialPromptInitialized && draft.project === undefined) {
     const next = { ...current };
     delete next[draftKey];
     return next;
@@ -683,7 +685,12 @@ export function decodePersistedComposerState(value: unknown): {
           ),
         )
         // Retain contentless drafts with import receipts to prevent re-importing native shares after restart.
-        .filter(([, draft]) => !isEmptyDraft(draft) || (draft.importedShareIds?.length ?? 0) > 0)
+        .filter(
+          ([, draft]) =>
+            !isEmptyDraft(draft) ||
+            draft.initialPromptInitialized ||
+            (draft.importedShareIds?.length ?? 0) > 0,
+        )
         // Queued-edit sessions are memory-only; persisted drafts would outlive their run association and become unreachable.
         .filter(([key]) => !isQueuedEditDraftKey(key)),
     ),
@@ -753,7 +760,9 @@ async function writePersistedComposerState(
     const file = await getComposerDraftsFile();
     operation = "encode";
     const nonEmptyDrafts = Object.fromEntries(
-      Object.entries(drafts).filter(([, draft]) => !isEmptyDraft(draft)),
+      Object.entries(drafts).filter(
+        ([, draft]) => !isEmptyDraft(draft) || draft.initialPromptInitialized,
+      ),
     );
     const document = {
       schemaVersion: COMPOSER_DRAFTS_SCHEMA_VERSION,
@@ -1281,6 +1290,19 @@ export function setStickyComposerModelSelection(modelSelection: ModelSelection):
   schedulePersistComposerState();
 }
 
+export function initializeComposerDraftPrompt(draftKey: string, text: string): void {
+  updateComposerDrafts((current) => {
+    const draft = normalizeDraft(current[draftKey]);
+    if (draft.initialPromptInitialized) return current;
+    return withComposerDraft(current, draftKey, {
+      ...draft,
+      initialPromptInitialized: true,
+      text:
+        draft.text.length > 0 || draft.attachments.length > 0 || draft.context ? draft.text : text,
+    });
+  });
+}
+
 export function setComposerDraftText(draftKey: string, value: string): void {
   let removed: ReadonlyArray<DraftComposerAttachment> = [];
   updateComposerDrafts((current) => {
@@ -1582,7 +1604,7 @@ export function clearComposerDraftContentState(
     text: "",
     attachments: [],
   };
-  if (isEmptyDraft(draft)) {
+  if (isEmptyDraft(draft) && !draft.initialPromptInitialized) {
     const next = { ...current };
     delete next[draftKey];
     return next;
@@ -1599,7 +1621,7 @@ export function restoreComposerDraftSnapshotState(
   snapshot: ComposerDraft,
 ): Record<string, ComposerDraft> {
   const next = { ...current };
-  if (isEmptyDraft(snapshot)) {
+  if (isEmptyDraft(snapshot) && !snapshot.initialPromptInitialized) {
     delete next[draftKey];
   } else {
     next[draftKey] = snapshot;

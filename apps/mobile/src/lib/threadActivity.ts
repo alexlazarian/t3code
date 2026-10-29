@@ -511,7 +511,8 @@ function itemIsProminent(item: OrchestrationV2TurnItem): boolean {
     item.type === "system_notice" ||
     item.type === "proposed_plan" ||
     item.type === "secret_request" ||
-    item.type === "link_request"
+    item.type === "link_request" ||
+    item.type === "thread_suggestion"
   );
 }
 
@@ -631,6 +632,8 @@ function itemIcon(item: OrchestrationV2TurnItem): ThreadFeedActivity["icon"] {
     case "fork":
     case "thread_created":
       return "zap";
+    case "thread_suggestion":
+      return "zap";
     case "secret_request":
       return "lock";
     case "link_request":
@@ -692,6 +695,8 @@ function itemSummary(
       return "Thread forked";
     case "thread_created":
       return "Thread created";
+    case "thread_suggestion":
+      return "Suggested threads";
     case "secret_request":
       return item.label;
     case "link_request":
@@ -753,6 +758,7 @@ function itemPreview(item: OrchestrationV2TurnItem): string | null {
     case "fork":
     case "thread_created":
       return item.targetThreadId;
+    case "thread_suggestion":
     case "secret_request":
     case "link_request":
       return item.reason || null;

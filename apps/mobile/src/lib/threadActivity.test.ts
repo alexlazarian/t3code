@@ -863,7 +863,7 @@ describe("buildThreadFeed", () => {
     ]);
   });
 
-  it("folds subagents while keeping created-thread and fork cards visible", () => {
+  it("folds subagents while keeping created-thread, fork, and suggestion cards visible", () => {
     const { providerThreadId: _providerThreadId, ...forkBase } = base(
       "item-fork",
       "2026-06-20T00:00:02.000Z",
@@ -895,11 +895,26 @@ describe("buildThreadFeed", () => {
         targetProviderInstanceId: ProviderInstanceId.make("codex"),
         targetModel: "gpt-5.4",
       },
+      {
+        ...base("item-suggestion", "2026-06-20T00:00:04.500Z", 5),
+        type: "thread_suggestion",
+        reason: "Independent follow-up",
+        suggestionStatus: "pending",
+        threads: [
+          {
+            threadId: sourceThreadId,
+            title: "Follow-up",
+            prompt: "Inspect configuration",
+            modelSelection: { instanceId: ProviderInstanceId.make("codex"), model: "gpt-5.4" },
+          },
+        ],
+      },
     ] satisfies ReadonlyArray<OrchestrationV2TurnItem>;
     const projectedResources = [
       projected(resourceItems[0]!, 1),
       projected(resourceItems[1]!, 2),
       projected(resourceItems[2]!, 4),
+      projected(resourceItems[3]!, 5),
     ];
     const feed = buildThreadFeed([
       projected(userMessage(), 0),
@@ -907,13 +922,15 @@ describe("buildThreadFeed", () => {
       projectedResources[1]!,
       projected(command("2026-06-20T00:00:03.000Z"), 3),
       projectedResources[2]!,
-      projected(assistantMessage("2026-06-20T00:00:05.000Z"), 5),
+      projectedResources[3]!,
+      projected(assistantMessage("2026-06-20T00:00:05.000Z"), 6),
     ]);
 
     const collapsed = deriveThreadFeedPresentation(feed, null, new Set());
     expect(collapsed.map((entry) => entry.type)).toEqual([
       "message",
       "run-fold",
+      "activity-group",
       "activity-group",
       "activity-group",
       "message",
