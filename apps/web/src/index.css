@@ -1271,15 +1271,25 @@ html[data-theme-token-probe] *::after {
    roles explicit prevents the thread toolbar from falling back to the default
    dark-mode whites while preserving the same theme file across clients. */
 html[data-theme-id] [data-chat-header] {
+  /* Breadcrumb and title use text-foreground utilities; remap them onto the
+     toolbar surface so palettes with a dark toolbar under dark text stay legible. */
+  --contrast-foreground: var(--contrast-toolbar-foreground);
+  --contrast-muted-foreground: color-mix(
+    in oklab,
+    var(--contrast-toolbar-foreground) 68%,
+    var(--toolbar-background)
+  );
   background-color: var(--toolbar-background);
   color: var(--contrast-toolbar-foreground);
 }
 
 /* Live headers read like an Overview card's name bar. The theme selector is
    repeated so the toolbar background above does not cover the tint. */
-[data-chat-header][data-status-tone],
-html[data-theme-id] [data-chat-header][data-status-tone] {
+[data-chat-header][data-status-tone] {
   background-color: color-mix(in oklab, var(--chat-header-status) 16%, var(--muted));
+}
+html[data-theme-id] [data-chat-header][data-status-tone] {
+  background-color: color-mix(in oklab, var(--chat-header-status) 16%, var(--toolbar-background));
 }
 [data-chat-header][data-status-tone="working"] {
   --chat-header-status: var(--status-working);
