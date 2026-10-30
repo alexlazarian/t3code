@@ -98,40 +98,16 @@ export function SubagentToggle(props: {
 /** The lead's row and one row per subagent, as an expanded Overview card shows them. */
 export function SubagentRows(props: {
   readonly threadKey: string;
-  readonly light: OverviewLight;
-  readonly step: OverviewStepLine | null;
-  readonly leadWaiting: boolean;
   readonly subagents: ReadonlyArray<OrchestrationV2ShellSubagent>;
   readonly subagentCount: number;
   readonly onOpen: (subagent: OrchestrationV2ShellSubagent) => void;
   readonly className?: string;
-  /** The open thread, lit like the sidebar's active row; the lead matches on `leadThreadId`. */
+  /** The open thread, lit like the sidebar's active row. */
   readonly activeThreadId?: ThreadId | null;
-  readonly leadThreadId?: ThreadId;
 }) {
-  const { threadKey, light, step, leadWaiting, subagents, subagentCount, activeThreadId } = props;
-  const leadActive = activeThreadId != null && activeThreadId === props.leadThreadId;
+  const { threadKey, subagents, subagentCount, activeThreadId } = props;
   return (
     <div className={cn("leading-relaxed", props.className)}>
-      <div
-        className={cn(
-          "mb-px flex min-w-0 items-center gap-1.25 border-b border-border pb-px",
-          leadActive && SIDEBAR_ACTIVE_ROW_CLASS,
-        )}
-        style={{ "--strobe-delay": overviewStrobeDelay(threadKey, 1) } as CSSProperties}
-      >
-        <StatusLight
-          size="small"
-          tone={leadWaiting ? "idle" : light}
-          strobe={light === "working" && !leadWaiting}
-        />
-        <span className="shrink-0 font-semibold">Lead</span>
-        {step ? (
-          <StepText step={step} className="min-w-0 flex-1" />
-        ) : (
-          <span className="min-w-0 flex-1" />
-        )}
-      </div>
       {subagents.map((subagent, index) => {
         const state = overviewSubagentState(subagent.status);
         const active = activeThreadId != null && subagent.threadId === activeThreadId;

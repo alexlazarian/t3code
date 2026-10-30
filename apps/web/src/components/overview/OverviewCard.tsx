@@ -97,7 +97,6 @@ export const OverviewCard = memo(function OverviewCard(props: {
     lastError: thread.runtime?.lastError ?? null,
     blockedOnThreadWait: thread.blockedOnThreadWait ?? false,
   });
-  const leadWaiting = step?.tone === "dim" && working && runningSubagents > 0;
   const workingSince = working
     ? deriveActiveWorkStartedAt(thread.latestRun, thread.runtime, null)
     : null;
@@ -266,9 +265,6 @@ export const OverviewCard = memo(function OverviewCard(props: {
       {expanded && subagentCount > 0 ? (
         <SubagentRows
           threadKey={threadKey}
-          light={light}
-          step={step}
-          leadWaiting={leadWaiting}
           subagents={subagents}
           subagentCount={subagentCount}
           onOpen={openSubagent}
