@@ -20,6 +20,7 @@ interface PersistedSavedEnvironmentStorageRecord extends Omit<
   "desktopSsh"
 > {
   readonly desktopSsh?: PersistedSavedEnvironmentDesktopSsh;
+  readonly relayManaged?: { readonly relayUrl: string };
   readonly encryptedBearerToken?: string;
 }
 
@@ -48,6 +49,7 @@ const PersistedSavedEnvironmentStorageRecordSchema = Schema.Struct({
   createdAt: Schema.String,
   lastConnectedAt: Schema.NullOr(Schema.String),
   desktopSsh: Schema.optionalKey(DesktopSshTargetSchema),
+  /** Legacy T3 Connect records; decoded only so reads can drop them. */
   relayManaged: Schema.optionalKey(Schema.Struct({ relayUrl: Schema.String })),
   encryptedBearerToken: Schema.optionalKey(Schema.String),
 });

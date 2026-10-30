@@ -22,6 +22,12 @@ describe("ScheduledTaskSchedule", () => {
       everyMs: MIN_SCHEDULED_TASK_INTERVAL_MS - 1,
     });
   });
+
+  it("drops the retired webhook delivery age from persisted and upserted schedules", () => {
+    const legacy = { type: "webhook", signature: null, maxDeliveryAgeMinutes: 90 };
+    expect(decodeSchedule(legacy)).toEqual({ type: "webhook", signature: null });
+    expect(decodeUpsertSchedule(legacy)).toEqual({ type: "webhook", signature: null });
+  });
 });
 
 it.each(["literal", " ", "\t\n", "{{body.bad", "{{unknown.field}}"])(

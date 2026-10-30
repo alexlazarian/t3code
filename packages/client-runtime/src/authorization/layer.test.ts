@@ -51,9 +51,7 @@ const websocketTicket = (ticket: string) =>
     expiresAt: "2026-06-06T01:00:00.000Z",
   });
 
-const makeHarness = Effect.fn("TestRemoteAuthorization.makeHarness")(function* (input: {
-  readonly responses: ReadonlyArray<RecordedResponse>;
-}) {
+const makeHarness = (input: { readonly responses: ReadonlyArray<RecordedResponse> }) => {
   const fetch = recordedFetch(input.responses);
   const layer = RemoteEnvironmentAuthorization.layer.pipe(
     Layer.provideMerge(
@@ -73,10 +71,10 @@ const makeHarness = Effect.fn("TestRemoteAuthorization.makeHarness")(function* (
     ),
   );
   return { layer, fetch };
-});
+};
 
 const prepareDirectBearer = Effect.fn("TestRemoteAuthorization.prepareDirectBearer")(function* (
-  harness: Effect.Success<ReturnType<typeof makeHarness>>,
+  harness: ReturnType<typeof makeHarness>,
   times: number,
 ) {
   const target = new BearerConnectionTarget({
@@ -132,7 +130,7 @@ const prepareDirectBearer = Effect.fn("TestRemoteAuthorization.prepareDirectBear
 describe("RemoteEnvironmentAuthorization", () => {
   it.effect("prepares a cold direct bearer connection with one descriptor request", () =>
     Effect.gen(function* () {
-      const harness = yield* makeHarness({
+      const harness = makeHarness({
         responses: [
           Response.json({
             ...DESCRIPTOR,
@@ -157,7 +155,7 @@ describe("RemoteEnvironmentAuthorization", () => {
 
   it.effect("blocks a warm direct bearer prepare when the environment changes identity", () =>
     Effect.gen(function* () {
-      const harness = yield* makeHarness({
+      const harness = makeHarness({
         responses: [
           Response.json({
             ...DESCRIPTOR,
@@ -188,7 +186,7 @@ describe("RemoteEnvironmentAuthorization", () => {
   );
   it.effect("validates a fresh bearer descriptor while issuing fresh websocket tickets", () =>
     Effect.gen(function* () {
-      const harness = yield* makeHarness({
+      const harness = makeHarness({
         responses: [
           Response.json(DESCRIPTOR),
           websocketTicket("first-ticket"),

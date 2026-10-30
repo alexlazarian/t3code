@@ -3,7 +3,6 @@ import { boundedSnapshotProjection } from "@t3tools/shared/orchestrationV2Bounde
 import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import * as Option from "effect/Option";
 import { HttpClient } from "effect/http";
 
 import type { PreparedConnection } from "../connection/model.ts";

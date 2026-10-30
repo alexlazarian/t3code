@@ -713,7 +713,7 @@ export const OrchestratorMcpScheduledTask = Schema.Struct({
   lastRunStatus: ScheduledTaskRunStatus,
   webhookUrl: Schema.optional(Schema.String).annotate({
     description:
-      "Public URL for the sender. Absent: no T3 Connect tunnel. The user must enable T3 Connect remote access.",
+      "Public URL for the sender. Absent: the environment has no public URL for webhooks.",
   }),
   webhookSignature: Schema.optional(Schema.Literals(["none", "set"])),
 });

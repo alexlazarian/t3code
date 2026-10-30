@@ -5,7 +5,6 @@ import * as Socket from "effect/socket/Socket";
 
 import { layerRemoteHttpClient } from "@t3tools/client-runtime/rpc";
 
-import * as Tracing from "../features/observability/tracing";
 import * as Persistence from "../persistence/layer";
 import * as Crypto from "./crypto";
 import { disposeOnFoundationReplace, type FoundationHotModule } from "./foundation-fast-refresh";
@@ -19,13 +18,11 @@ type RuntimeLayerSource =
   | typeof Socket.layerWebSocketConstructorGlobal
   | typeof Crypto.layer
   | typeof layerHttpClient
-  | typeof Persistence.layer
-  | typeof Tracing.layer;
+  | typeof Persistence.layer;
 
 const layerRuntime = Socket.layerWebSocketConstructorGlobal.pipe(
   Layer.provideMerge(Crypto.layer),
   Layer.provideMerge(layerHttpClient),
-  Layer.provideMerge(Tracing.layer.pipe(Layer.provide(layerHttpClient))),
   Layer.provideMerge(Persistence.layer),
   // These layers read the keychain and the database while they build, and a
   // failed build is kept for the life of the process.

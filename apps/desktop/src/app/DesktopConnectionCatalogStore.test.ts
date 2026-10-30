@@ -131,7 +131,9 @@ describe("DesktopConnectionCatalogStore", () => {
           const store = yield* DesktopConnectionCatalogStore.DesktopConnectionCatalogStore;
           const environment = yield* DesktopEnvironment.DesktopEnvironment;
           const fileSystem = yield* FileSystem.FileSystem;
-          const records: readonly PersistedSavedEnvironmentRecord[] = [
+          const records: ReadonlyArray<
+            PersistedSavedEnvironmentRecord & { readonly relayManaged?: { relayUrl: string } }
+          > = [
             {
               environmentId: EnvironmentId.make("relay-environment"),
               label: "Relay",

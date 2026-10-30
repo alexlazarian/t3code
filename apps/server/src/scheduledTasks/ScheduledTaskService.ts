@@ -1038,7 +1038,6 @@ export const layer = Layer.effect(
                       encoding: input.schedule.signature.encoding,
                       prefix: input.schedule.signature.prefix,
                     },
-              maxDeliveryAgeMinutes: input.schedule.maxDeliveryAgeMinutes ?? null,
               ...(input.schedule.dedupe === undefined
                 ? existingTask?.schedule.type === "webhook" &&
                   existingTask.schedule.dedupe !== undefined

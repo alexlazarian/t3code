@@ -47,9 +47,9 @@ export interface ClientOwnerParams {
 /** Tells the environment, for analytics, which device is connecting. */
 export const readClientOwnerParams = Effect.gen(function* () {
   const device = yield* (yield* ClientCapabilities.AnalyticsDevice).id;
-  return {
-    ...(Option.isSome(device) ? { device: hashTelemetryId(device.value) } : {}),
-  } satisfies ClientOwnerParams;
+  return (
+    Option.isSome(device) ? { device: hashTelemetryId(device.value) } : {}
+  ) satisfies ClientOwnerParams;
 });
 
 export const appendClientConnectionParams = (

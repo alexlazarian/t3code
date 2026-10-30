@@ -235,14 +235,13 @@ export function ThreadQueueSheet({ route }: StaticScreenProps<QueueTarget>) {
           No messages waiting in this queue.
         </Text>
       ) : null}
-      {queuedRuns.map(({ run, text, attachments, context, message }, index) => {
+      {queuedRuns.map(({ run, text, attachments, message }, index) => {
         const controls = resolveThreadQueueRowControls({
           busy: busyRunId !== null,
           canPromoteToSteer: workflow?.canPromoteToSteer ?? false,
           canSendNow: workflow?.canSendNow ?? false,
           editBlocked: editBlockedReason !== null,
           isEditing: editing?.runId === run.id,
-          isGuestMessage: context?.guest !== undefined,
           text,
         });
         const title =
@@ -314,11 +313,6 @@ export function ThreadQueueSheet({ route }: StaticScreenProps<QueueTarget>) {
                         }
                         numberOfLines={1}
                       >
-                        {context?.guest === undefined ? null : (
-                          <Text className="font-t3-medium text-adaptive-fuchsia-600-300">
-                            {`${context.guest.name}  `}
-                          </Text>
-                        )}
                         {title}
                       </Text>
                     </View>

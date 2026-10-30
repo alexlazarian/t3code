@@ -339,7 +339,6 @@ it.effect("checks the configured signature and keeps the secret write-only", () 
       assert.deepEqual(task.schedule, {
         type: "webhook",
         signature: { header: "x-hub-signature-256", encoding: "hex", prefix: "sha256=" },
-        maxDeliveryAgeMinutes: null,
       });
       assert.isTrue(task.webhook?.hasSecret);
 
