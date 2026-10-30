@@ -1,5 +1,11 @@
 import * as DateTime from "effect/DateTime";
 
+import {
+  isLocalLoopbackHost,
+  isPrivateNetworkHost,
+  isSharedAddressSpaceHost,
+  isTailnetHost,
+} from "@t3tools/shared/hostClassification";
 import { getPairingTokenFromUrl, setPairingTokenOnUrl } from "@t3tools/shared/remote";
 import {
   type ServerClientSessionRecord,
@@ -10,13 +16,20 @@ import {
   type AuthClientSession,
   type AuthGrantScope,
   type AuthPairingLink,
+  AuthAccessReadScope,
+  AuthAccessWriteScope,
+  type AuthEnvironmentScope,
   AuthTerminalOperateScope,
   AuthTerminalReadScope,
+  type SessionGrantInput,
+  sessionGrantsScope,
   type DesktopBridge,
   type DesktopServerExposureState,
   type DesktopSshEnvironmentTarget,
   type DesktopUpdateState,
   type DesktopWslState,
+  type EnvironmentId,
+  type ServerDirectEndpoint,
 } from "@t3tools/contracts";
 import {
   getDesktopUpdateDownloadedVersion,
@@ -383,4 +396,122 @@ export function endpointShareHint(endpoint: AdvertisedEndpoint): string {
     case "loopback":
       return "Clients on this machine";
   }
+}
+
+type AccessEnvironmentCandidate = {
+  readonly environmentId: EnvironmentId;
+  readonly entry: { readonly enabled: boolean };
+  readonly connection: { readonly phase: string };
+};
+
+/** Sharing & access targets the app's own server when present, else a connected environment. */
+export function accessEnvironmentOptions<T extends AccessEnvironmentCandidate>(
+  environments: ReadonlyArray<T>,
+  primaryEnvironmentId: EnvironmentId | null,
+): ReadonlyArray<T> {
+  const primary = environments.filter(
+    (environment) => environment.environmentId === primaryEnvironmentId,
+  );
+  const others = environments.filter(
+    (environment) =>
+      environment.environmentId !== primaryEnvironmentId &&
+      environment.entry.enabled &&
+      environment.connection.phase === "connected",
+  );
+  return [...primary, ...others];
+}
+
+export function selectAccessEnvironmentId(
+  options: ReadonlyArray<{ readonly environmentId: EnvironmentId }>,
+  selectedEnvironmentId: EnvironmentId | null,
+): EnvironmentId | null {
+  return (
+    options.find((option) => option.environmentId === selectedEnvironmentId)?.environmentId ??
+    options[0]?.environmentId ??
+    null
+  );
+}
+
+function classifyEndpointHost(hostname: string): AdvertisedEndpoint["reachability"] {
+  if (isLocalLoopbackHost(hostname)) return "loopback";
+  if (isTailnetHost(hostname) || isSharedAddressSpaceHost(hostname)) return "private-network";
+  if (isPrivateNetworkHost(hostname)) return "lan";
+  return "public";
+}
+
+/**
+ * Pairing targets for an environment other than this app's own server: the LAN and tailnet
+ * addresses its server reports, then the routes this client already reaches it on.
+ */
+export function environmentPairingEndpoints(input: {
+  readonly directEndpoints: ReadonlyArray<ServerDirectEndpoint> | undefined;
+  readonly routeUrls: ReadonlyArray<string>;
+}): ReadonlyArray<AdvertisedEndpoint> {
+  const candidates = [
+    ...(input.directEndpoints ?? []).map((endpoint) => ({
+      httpBaseUrl: endpoint.httpBaseUrl,
+      source: "server" as const,
+      tailnet: endpoint.kind === "tailnet",
+    })),
+    ...input.routeUrls.map((httpBaseUrl) => ({
+      httpBaseUrl,
+      source: "user" as const,
+      tailnet: false,
+    })),
+  ];
+  const seen = new Set<string>();
+  const endpoints: Array<AdvertisedEndpoint> = [];
+  for (const candidate of candidates) {
+    let url: URL;
+    try {
+      url = new URL(candidate.httpBaseUrl);
+    } catch {
+      continue;
+    }
+    if (url.protocol !== "http:" && url.protocol !== "https:") continue;
+    const httpBaseUrl = url.origin + "/";
+    if (seen.has(httpBaseUrl)) continue;
+    seen.add(httpBaseUrl);
+    const reachability = candidate.tailnet ? "private-network" : classifyEndpointHost(url.hostname);
+    const tailnet = reachability === "private-network";
+    endpoints.push({
+      id: `${candidate.source}:${httpBaseUrl}`,
+      label: url.host,
+      provider: {
+        id: tailnet ? "tailscale" : "server",
+        label: tailnet ? "Tailscale" : "Server",
+        kind: tailnet ? "private-network" : "core",
+        isAddon: false,
+      },
+      httpBaseUrl,
+      wsBaseUrl: httpBaseUrl.replace(/^http/u, "ws"),
+      reachability,
+      source: candidate.source,
+      status: "unknown",
+    });
+  }
+  return endpoints;
+}
+
+export type AccessPermissions = {
+  /** "denied" means the session there is known and grants neither access scope. */
+  readonly status: "pending" | "granted" | "denied";
+  readonly canRead: boolean;
+  readonly canWrite: boolean;
+  readonly delegatableScopes: ReadonlyArray<AuthEnvironmentScope>;
+};
+
+/** What this client may do on the target environment's access page, from its session there. */
+export function resolveAccessPermissions(session: SessionGrantInput | null): AccessPermissions {
+  if (session === null) {
+    return { status: "pending", canRead: false, canWrite: false, delegatableScopes: [] };
+  }
+  const canRead = sessionGrantsScope(session, AuthAccessReadScope);
+  const canWrite = sessionGrantsScope(session, AuthAccessWriteScope);
+  return {
+    status: canRead || canWrite ? "granted" : "denied",
+    canRead,
+    canWrite,
+    delegatableScopes: session.authenticated ? (session.permissions ?? session.scopes ?? []) : [],
+  };
 }

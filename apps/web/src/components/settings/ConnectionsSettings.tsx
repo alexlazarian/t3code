@@ -3,7 +3,6 @@ import { ChevronRightIcon, EllipsisIcon } from "lucide-react";
 import { useAtomValue } from "@effect/atom-react";
 import { useState } from "react";
 import {
-  AuthAccessReadScope,
   AuthAccessWriteScope,
   AuthEnvironmentMaintainScope,
   type AuthClientSession,
@@ -24,8 +23,12 @@ import * as Cause from "effect/Cause";
 
 import { isLocalEnvironmentDisabled } from "../../localEnvironment";
 import {
+  accessEnvironmentOptions,
   applyWslEnableSelection,
+  environmentPairingEndpoints,
   isWslSettingsRowVisible,
+  resolveAccessPermissions,
+  selectAccessEnvironmentId,
   missingTailscaleEndpointDescription,
   resolveLocalVersionStatusLabel,
 } from "./ConnectionsSettings.logic";
@@ -68,13 +71,8 @@ import { stackedThreadToast, toastManager } from "../ui/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { Button } from "../ui/button";
 import { EnvironmentMachineIcon } from "../EnvironmentMachineIcon";
-import {
-  revokeOtherServerClientSessions,
-  revokeServerClientSession,
-  revokeServerPairingLink,
-  usePrimarySessionState,
-  type ServerClientSessionRecord,
-} from "~/environments/primary";
+import { connectionRoutes, routeHttpBaseUrl } from "@t3tools/client-runtime/connection";
+import { usePrimarySessionState, type ServerClientSessionRecord } from "~/environments/primary";
 import { isDesktopLocalConnectionTarget } from "~/connection/desktopLocal";
 import { useUiStateStore } from "~/uiStateStore";
 import {
@@ -82,9 +80,18 @@ import {
   resolveServerSelfUpdateCapability,
   supportsDesktopAppUpdate,
 } from "~/versionSkew";
-import { authEnvironment } from "~/state/auth";
+import {
+  authEnvironment,
+  revokeClientOn,
+  revokeOtherClientsOn,
+  revokePairingLinkOn,
+} from "~/state/auth";
 import { environmentCatalog } from "~/connection/catalog";
-import { readEnvironmentScope, useEnvironmentScope } from "~/state/session";
+import {
+  readEnvironmentScope,
+  useEnvironmentScope,
+  useEnvironmentSessionState,
+} from "~/state/session";
 import { useEnvironmentQuery } from "~/state/query";
 import {
   desktopNetworkAccessStateAtom,
@@ -156,9 +163,22 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
   });
   const primaryEnvironmentId = primaryEnvironment?.environmentId ?? null;
   const primarySessionState = usePrimarySessionState();
-  const currentSessionScopes = primarySessionState.data?.authenticated
-    ? (primarySessionState.data.permissions ?? primarySessionState.data.scopes ?? null)
-    : null;
+  const accessEnvironments = accessEnvironmentOptions(environments, primaryEnvironmentId);
+  const [selectedAccessEnvironmentId, setSelectedAccessEnvironmentId] =
+    useState<EnvironmentId | null>(null);
+  const accessEnvironmentId = selectAccessEnvironmentId(
+    accessEnvironments,
+    selectedAccessEnvironmentId,
+  );
+  const accessEnvironment =
+    accessEnvironments.find((environment) => environment.environmentId === accessEnvironmentId) ??
+    null;
+  const accessTargetsPrimary =
+    accessEnvironmentId !== null && accessEnvironmentId === primaryEnvironmentId;
+  const accessSessionState = useEnvironmentSessionState(accessEnvironmentId);
+  const accessPermissions = resolveAccessPermissions(
+    accessSessionState.hasError ? null : accessSessionState.data,
+  );
   const currentAuthPolicy = desktopBridge ? null : (primarySessionState.data?.auth.policy ?? null);
   const savedEnvironments = environments.filter(
     (environment) => environment.entry.target._tag !== "PrimaryConnectionTarget",
@@ -271,15 +291,14 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
   const setDefaultAdvertisedEndpointKey = useUiStateStore(
     (state) => state.setDefaultAdvertisedEndpointKey,
   );
-  const canReadAccess = useEnvironmentScope(primaryEnvironmentId, AuthAccessReadScope);
-  const canWriteAccess = useEnvironmentScope(primaryEnvironmentId, AuthAccessWriteScope);
+  const { canRead: canReadAccess, canWrite: canWriteAccess } = accessPermissions;
   const canMaintain = useEnvironmentScope(primaryEnvironmentId, AuthEnvironmentMaintainScope);
   const canManageLocalBackend = !isLocalEnvironmentDisabled() && canMaintain;
   const showsAccess = view === "access";
   const authAccessChanges = useEnvironmentQuery(
-    showsAccess && canReadAccess && primaryEnvironmentId !== null
+    showsAccess && canReadAccess && accessEnvironmentId !== null
       ? authEnvironment.accessChanges({
-          environmentId: primaryEnvironmentId,
+          environmentId: accessEnvironmentId,
           input: null,
         })
       : null,
@@ -459,15 +478,13 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
   };
 
   const handleRevokeDesktopPairingLink = async (id: string) => {
-    if (
-      primaryEnvironmentId === null ||
-      !readEnvironmentScope(primaryEnvironmentId, AuthAccessWriteScope)
-    )
+    const environmentId = accessEnvironmentId;
+    if (environmentId === null || !readEnvironmentScope(environmentId, AuthAccessWriteScope))
       return;
     setRevokingDesktopPairingLinkId(id);
     setDesktopAccessManagementMutationError(null);
     const settled = await settlePromise(async () => {
-      await revokeServerPairingLink(id);
+      await revokePairingLinkOn(environmentId, id);
     });
     if (settled._tag === "Failure") {
       const error = Cause.squash(settled.cause);
@@ -487,15 +504,13 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
   const handleRevokeDesktopClientSession = async (
     sessionId: ServerClientSessionRecord["sessionId"],
   ) => {
-    if (
-      primaryEnvironmentId === null ||
-      !readEnvironmentScope(primaryEnvironmentId, AuthAccessWriteScope)
-    )
+    const environmentId = accessEnvironmentId;
+    if (environmentId === null || !readEnvironmentScope(environmentId, AuthAccessWriteScope))
       return;
     setRevokingDesktopClientSessionId(sessionId);
     setDesktopAccessManagementMutationError(null);
     const settled = await settlePromise(async () => {
-      await revokeServerClientSession(sessionId);
+      await revokeClientOn(environmentId, sessionId);
     });
     if (settled._tag === "Failure") {
       const error = Cause.squash(settled.cause);
@@ -513,15 +528,13 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
   };
 
   const handleRevokeOtherDesktopClients = async () => {
-    if (
-      primaryEnvironmentId === null ||
-      !readEnvironmentScope(primaryEnvironmentId, AuthAccessWriteScope)
-    )
+    const environmentId = accessEnvironmentId;
+    if (environmentId === null || !readEnvironmentScope(environmentId, AuthAccessWriteScope))
       return;
     setIsRevokingOtherDesktopClients(true);
     setDesktopAccessManagementMutationError(null);
     const settled = await settlePromise(async () => {
-      const revokedCount = await revokeOtherServerClientSessions();
+      const revokedCount = await revokeOtherClientsOn(environmentId);
       toastManager.add({
         type: "success",
         title: revokedCount === 1 ? "Revoked 1 other client" : `Revoked ${revokedCount} clients`,
@@ -612,6 +625,16 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
   const defaultDesktopAdvertisedEndpointKey = defaultDesktopAdvertisedEndpoint
     ? endpointDefaultPreferenceKey(defaultDesktopAdvertisedEndpoint)
     : null;
+  const accessPairingEndpoints = accessTargetsPrimary
+    ? visibleDesktopAdvertisedEndpoints
+    : accessEnvironment
+      ? environmentPairingEndpoints({
+          directEndpoints: accessEnvironment.serverConfig?.directEndpoints,
+          routeUrls: connectionRoutes(accessEnvironment.entry).flatMap(
+            (route) => routeHttpBaseUrl(route) ?? [],
+          ),
+        })
+      : EMPTY_ADVERTISED_ENDPOINTS;
   const handleSetDefaultAdvertisedEndpoint = (endpoint: AdvertisedEndpoint) => {
     setDefaultAdvertisedEndpointKey(endpointDefaultPreferenceKey(endpoint));
   };
@@ -921,9 +944,10 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
         </div>
       ) : null}
       <PairingClientsList
-        endpointUrl={desktopServerExposureState?.endpointUrl}
-        endpoints={visibleDesktopAdvertisedEndpoints}
-        defaultEndpointKey={defaultDesktopAdvertisedEndpointKey}
+        endpointUrl={accessTargetsPrimary ? desktopServerExposureState?.endpointUrl : null}
+        endpoints={accessPairingEndpoints}
+        defaultEndpointKey={accessTargetsPrimary ? defaultDesktopAdvertisedEndpointKey : null}
+        allowCurrentOrigin={accessTargetsPrimary}
         isLoading={isLoadingDesktopAccessManagement}
         pairingLinks={visibleDesktopPairingLinks}
         createdPairingCredentials={createdPairingCredentials}
@@ -1004,120 +1028,202 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
     />
   );
 
+  const accessEnvironmentPicker =
+    accessEnvironments.length > 1 ? (
+      <SettingsSection title="Server" hideTitle>
+        <SettingsRow
+          title="Server"
+          description="Pairing links and clients below belong to this server."
+          control={
+            <Select
+              value={accessEnvironmentId ?? ""}
+              onValueChange={(value) => {
+                const next = accessEnvironments.find(
+                  (environment) => environment.environmentId === value,
+                );
+                if (next) setSelectedAccessEnvironmentId(next.environmentId);
+              }}
+            >
+              <SelectTrigger size="sm" className="w-full sm:w-56" aria-label="Server">
+                <SelectValue>{accessEnvironment?.label ?? ""}</SelectValue>
+              </SelectTrigger>
+              <SelectPopup align="end" alignItemWithTrigger={false}>
+                {accessEnvironments.map((environment) => (
+                  <SelectItem
+                    hideIndicator
+                    key={environment.environmentId}
+                    value={environment.environmentId}
+                  >
+                    {environment.label}
+                  </SelectItem>
+                ))}
+              </SelectPopup>
+            </Select>
+          }
+        />
+      </SettingsSection>
+    ) : null;
+
+  const remoteAccessEnvironmentSection =
+    accessEnvironment && !accessTargetsPrimary ? (
+      <SettingsSection
+        {...searchableSetting("connections-environment")}
+        title={accessEnvironment.label}
+        icon={
+          <EnvironmentMachineIcon
+            aria-hidden
+            kind={resolveEnvironmentMachineKind(accessEnvironment.serverConfig)}
+            className="size-4"
+          />
+        }
+      >
+        <SettingsRow
+          title="Version"
+          description={
+            [
+              accessEnvironment.serverConfig?.environment.serverVersion ?? null,
+              accessEnvironment.displayUrl ?? null,
+            ]
+              .filter((value): value is string => value !== null)
+              .join(" · ") || "Loading…"
+          }
+        />
+        <details className="group px-3 sm:px-4">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-md text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+            Permissions
+            <ChevronRightIcon
+              aria-hidden
+              className="size-3 text-muted-foreground group-open:rotate-90"
+            />
+          </summary>
+          <SessionPermissions
+            environmentId={accessEnvironment.environmentId}
+            connected={accessEnvironment.connection.phase === "connected"}
+          />
+        </details>
+      </SettingsSection>
+    ) : null;
+
   const primarySettings = (
     <>
-      {primaryEnvironmentId !== null ? (
+      {accessEnvironment !== null ? (
         <>
-          <SettingsSection
-            {...searchableSetting("connections-environment")}
-            title={
-              primaryEnvironment?.label ?? (desktopBridge ? "This machine" : "Primary environment")
-            }
-            icon={
-              <EnvironmentMachineIcon
-                aria-hidden
-                kind={
-                  primaryServerConfig
-                    ? resolveEnvironmentMachineKind(primaryServerConfig)
-                    : "desktop"
-                }
-                className="size-4"
-              />
-            }
-            headerAction={
-              primaryEnvironmentId !== null ? (
-                <Menu>
-                  <MenuTrigger
-                    render={
-                      <Button
-                        type="button"
-                        variant="ghost-muted"
-                        size="icon-xs"
-                        aria-label="More actions for this machine"
-                      />
-                    }
-                  >
-                    <EllipsisIcon className="size-3.5" />
-                  </MenuTrigger>
-                  <MenuPopup align="end">
-                    <EnvironmentIconMenu
-                      environmentId={primaryEnvironmentId}
-                      serverConfig={primaryServerConfig}
-                    />
-                  </MenuPopup>
-                </Menu>
-              ) : null
-            }
-          >
-            {canManageLocalBackend ? (
-              <SettingsRow
-                title="Version"
-                description={
-                  primaryServerUpdateState.status !== "idle" ? (
-                    <ServerUpdateProgress state={primaryServerUpdateState} />
-                  ) : (
-                    [
-                      primaryServerConfig?.environment.serverVersion ?? null,
-                      primaryEnvironment?.displayUrl ?? null,
-                    ]
-                      .filter((value): value is string => value !== null)
-                      .join(" · ") || "Loading…"
-                  )
-                }
-                control={
-                  primaryVersionMismatch &&
-                  primaryEnvironmentId !== null &&
-                  primaryServerUpdateState.status !== "running" ? (
-                    <ServerUpdateAction
-                      size="sm"
-                      environmentId={primaryEnvironmentId}
-                      serverLabel={
-                        primaryEnvironment ? `${primaryEnvironment.label} server` : "server"
-                      }
-                      selfUpdate={resolveServerSelfUpdateCapability(primaryServerConfig)}
-                      installation={
-                        primaryServerConfig?.environment.capabilities.serverInstallation
-                      }
-                      desktopAppUpdate={supportsDesktopAppUpdate(primaryServerConfig)}
-                      targetVersion={primaryVersionMismatch.clientVersion}
-                      label={
-                        primaryServerUpdateState.status === "failed"
-                          ? "Retry update"
-                          : `Update to ${primaryVersionMismatch.clientVersion}`
-                      }
-                    />
-                  ) : primaryServerUpdateState.status === "idle" && primaryServerConfig ? (
-                    <LocalVersionStatusLabel />
-                  ) : undefined
-                }
-              />
-            ) : null}
-            {canManageLocalBackend && desktopBridge ? (
-              <>
-                {renderNetworkAccessRow()}
-                {renderEndpointRows()}
-                {renderTailscaleRow()}
-                {renderWslRow()}
-              </>
-            ) : canManageLocalBackend ? (
-              renderDisabledNetworkAccessRow()
-            ) : null}
-            {primaryEnvironment ? (
-              <details className="group px-3 sm:px-4">
-                <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-md text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
-                  Permissions
-                  <ChevronRightIcon
-                    aria-hidden
-                    className="size-3 text-muted-foreground group-open:rotate-90"
-                  />
-                </summary>
-                <SessionPermissions
-                  environmentId={primaryEnvironment.environmentId}
-                  connected={primaryEnvironment.connection.phase === "connected"}
+          {accessEnvironmentPicker}
+          {accessTargetsPrimary ? (
+            <SettingsSection
+              {...searchableSetting("connections-environment")}
+              title={
+                primaryEnvironment?.label ??
+                (desktopBridge ? "This machine" : "Primary environment")
+              }
+              icon={
+                <EnvironmentMachineIcon
+                  aria-hidden
+                  kind={
+                    primaryServerConfig
+                      ? resolveEnvironmentMachineKind(primaryServerConfig)
+                      : "desktop"
+                  }
+                  className="size-4"
                 />
-              </details>
-            ) : null}
-          </SettingsSection>
+              }
+              headerAction={
+                primaryEnvironmentId !== null ? (
+                  <Menu>
+                    <MenuTrigger
+                      render={
+                        <Button
+                          type="button"
+                          variant="ghost-muted"
+                          size="icon-xs"
+                          aria-label="More actions for this machine"
+                        />
+                      }
+                    >
+                      <EllipsisIcon className="size-3.5" />
+                    </MenuTrigger>
+                    <MenuPopup align="end">
+                      <EnvironmentIconMenu
+                        environmentId={primaryEnvironmentId}
+                        serverConfig={primaryServerConfig}
+                      />
+                    </MenuPopup>
+                  </Menu>
+                ) : null
+              }
+            >
+              {canManageLocalBackend ? (
+                <SettingsRow
+                  title="Version"
+                  description={
+                    primaryServerUpdateState.status !== "idle" ? (
+                      <ServerUpdateProgress state={primaryServerUpdateState} />
+                    ) : (
+                      [
+                        primaryServerConfig?.environment.serverVersion ?? null,
+                        primaryEnvironment?.displayUrl ?? null,
+                      ]
+                        .filter((value): value is string => value !== null)
+                        .join(" · ") || "Loading…"
+                    )
+                  }
+                  control={
+                    primaryVersionMismatch &&
+                    primaryEnvironmentId !== null &&
+                    primaryServerUpdateState.status !== "running" ? (
+                      <ServerUpdateAction
+                        size="sm"
+                        environmentId={primaryEnvironmentId}
+                        serverLabel={
+                          primaryEnvironment ? `${primaryEnvironment.label} server` : "server"
+                        }
+                        selfUpdate={resolveServerSelfUpdateCapability(primaryServerConfig)}
+                        installation={
+                          primaryServerConfig?.environment.capabilities.serverInstallation
+                        }
+                        desktopAppUpdate={supportsDesktopAppUpdate(primaryServerConfig)}
+                        targetVersion={primaryVersionMismatch.clientVersion}
+                        label={
+                          primaryServerUpdateState.status === "failed"
+                            ? "Retry update"
+                            : `Update to ${primaryVersionMismatch.clientVersion}`
+                        }
+                      />
+                    ) : primaryServerUpdateState.status === "idle" && primaryServerConfig ? (
+                      <LocalVersionStatusLabel />
+                    ) : undefined
+                  }
+                />
+              ) : null}
+              {canManageLocalBackend && desktopBridge ? (
+                <>
+                  {renderNetworkAccessRow()}
+                  {renderEndpointRows()}
+                  {renderTailscaleRow()}
+                  {renderWslRow()}
+                </>
+              ) : canManageLocalBackend ? (
+                renderDisabledNetworkAccessRow()
+              ) : null}
+              {primaryEnvironment ? (
+                <details className="group px-3 sm:px-4">
+                  <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-md text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                    Permissions
+                    <ChevronRightIcon
+                      aria-hidden
+                      className="size-3 text-muted-foreground group-open:rotate-90"
+                    />
+                  </summary>
+                  <SessionPermissions
+                    environmentId={primaryEnvironment.environmentId}
+                    connected={primaryEnvironment.connection.phase === "connected"}
+                  />
+                </details>
+              ) : null}
+            </SettingsSection>
+          ) : (
+            remoteAccessEnvironmentSection
+          )}
 
           {canReadAccess || canWriteAccess ? (
             <FoldedSettingsSection
@@ -1130,7 +1236,8 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
               control={
                 canWriteAccess ? (
                   <AuthorizedClientsHeaderAction
-                    delegatableScopes={currentSessionScopes ?? []}
+                    environmentId={accessEnvironment.environmentId}
+                    delegatableScopes={accessPermissions.delegatableScopes}
                     onPairingLinkCreated={handlePairingLinkCreated}
                     clientSessions={
                       canReadAccess &&
@@ -1160,6 +1267,13 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
                 )}
               </ScrollArea>
             </FoldedSettingsSection>
+          ) : accessPermissions.status === "denied" ? (
+            <SettingsSection title="Authorized clients">
+              <SettingsRow
+                title="Can't manage access here"
+                description={`This app's session on ${accessEnvironment.label} can't view or create pairing links. Pair this app with it again with Full access to share it from here.`}
+              />
+            </SettingsSection>
           ) : null}
           <AlertDialog
             open={pendingDesktopServerExposureMode !== null && canManageLocalBackend}

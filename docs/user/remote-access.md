@@ -272,6 +272,13 @@ pairing links and revoke client sessions. Revoking an unused link prevents new
 pairings; revoke a device's session to remove its existing access. Command-line
 management is available through `t3 auth --help`.
 
+The page also works from any app connected to a server with access-management
+permission, such as a desktop app paired with a background `t3` service. It
+manages the app's own server when that is on; otherwise it manages the connected
+server, with a **Server** picker when there are several. Pairing links use the
+LAN or Tailscale address that server reports, so it must listen on an address
+other devices can reach.
+
 A session with an open connection stays listed after its access credential
 expires.
 

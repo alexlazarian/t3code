@@ -2,14 +2,23 @@ import type {
   AuthAccessSnapshot,
   AuthAccessStreamEvent,
   AuthAccessStreamSnapshotEvent,
+  AuthCreatePairingCredentialInput,
+  AuthSessionId,
 } from "@t3tools/contracts";
 import { WS_METHODS } from "@t3tools/contracts";
+import * as Effect from "effect/Effect";
+import type * as HttpClient from "effect/http/HttpClient";
+import * as Option from "effect/Option";
 import * as Stream from "effect/Stream";
+import * as SubscriptionRef from "effect/SubscriptionRef";
 import { Atom } from "effect/reactivity";
 
+import type { PreparedConnection } from "../connection/model.ts";
 import type { EnvironmentRegistry } from "../connection/registry.ts";
-import { subscribe } from "../rpc/client.ts";
-import { createEnvironmentSubscriptionAtomFamily } from "./runtime.ts";
+import * as EnvironmentSupervisor from "../connection/supervisor.ts";
+import { EnvironmentRpcUnavailableError, subscribe } from "../rpc/client.ts";
+import { executeAuthenticatedEnvironmentHttpRequest } from "./environmentHttpAuth.ts";
+import { createEnvironmentCommand, createEnvironmentSubscriptionAtomFamily } from "./runtime.ts";
 
 export const EMPTY_AUTH_ACCESS_SNAPSHOT: AuthAccessSnapshot = {
   pairingLinks: [],
@@ -85,6 +94,100 @@ export function createAuthEnvironmentAtoms<R, E>(
         subscribe(WS_METHODS.subscribeAuthAccess, {}).pipe(
           Stream.mapAccum(() => EMPTY_AUTH_ACCESS_SNAPSHOT, projectAuthAccessSnapshot),
         ),
+    }),
+  };
+}
+
+const AUTH_ACCESS_TIMEOUT_MS = 10_000;
+
+const withPreparedConnection = Effect.fn("clientRuntime.state.auth.withPreparedConnection")(
+  function* <A, E, R>(use: (prepared: PreparedConnection) => Effect.Effect<A, E, R>) {
+    const supervisor = yield* EnvironmentSupervisor.EnvironmentSupervisor;
+    const prepared = yield* SubscriptionRef.get(supervisor.prepared);
+    if (Option.isNone(prepared)) {
+      return yield* new EnvironmentRpcUnavailableError({
+        environmentId: supervisor.target.environmentId,
+        message: "The environment is not connected.",
+      });
+    }
+    return yield* use(prepared.value);
+  },
+);
+
+/**
+ * Pairing links and client revocation on the target environment, authenticated with
+ * this client's own session there. The server checks `access:write` on each call.
+ */
+export function createAuthAccessCommands<R, E>(
+  runtime: Atom.AtomRuntime<EnvironmentRegistry | HttpClient.HttpClient | R, E>,
+) {
+  return {
+    createPairingCredential: createEnvironmentCommand(runtime, {
+      label: "environment-data:auth:create-pairing-credential",
+      execute: Effect.fn("clientRuntime.state.auth.createPairingCredential")(function* (
+        payload: AuthCreatePairingCredentialInput,
+      ) {
+        return yield* withPreparedConnection((prepared) =>
+          executeAuthenticatedEnvironmentHttpRequest({
+            prepared,
+            group: "auth",
+            method: "POST",
+            url: (urls) => urls.pairingCredential(),
+            timeoutMs: AUTH_ACCESS_TIMEOUT_MS,
+            request: ({ client, headers }) => client.pairingCredential({ headers, payload }),
+          }),
+        );
+      }),
+    }),
+    revokePairingLink: createEnvironmentCommand(runtime, {
+      label: "environment-data:auth:revoke-pairing-link",
+      execute: Effect.fn("clientRuntime.state.auth.revokePairingLink")(function* (id: string) {
+        return yield* withPreparedConnection((prepared) =>
+          executeAuthenticatedEnvironmentHttpRequest({
+            prepared,
+            group: "auth",
+            method: "POST",
+            url: (urls) => urls.revokePairingLink(),
+            timeoutMs: AUTH_ACCESS_TIMEOUT_MS,
+            request: ({ client, headers }) =>
+              client.revokePairingLink({ headers, payload: { id } }),
+          }),
+        );
+      }),
+    }),
+    revokeClient: createEnvironmentCommand(runtime, {
+      label: "environment-data:auth:revoke-client",
+      execute: Effect.fn("clientRuntime.state.auth.revokeClient")(function* (
+        sessionId: AuthSessionId,
+      ) {
+        return yield* withPreparedConnection((prepared) =>
+          executeAuthenticatedEnvironmentHttpRequest({
+            prepared,
+            group: "auth",
+            method: "POST",
+            url: (urls) => urls.revokeClient(),
+            timeoutMs: AUTH_ACCESS_TIMEOUT_MS,
+            request: ({ client, headers }) =>
+              client.revokeClient({ headers, payload: { sessionId } }),
+          }),
+        );
+      }),
+    }),
+    revokeOtherClients: createEnvironmentCommand(runtime, {
+      label: "environment-data:auth:revoke-other-clients",
+      execute: Effect.fn("clientRuntime.state.auth.revokeOtherClients")(function* (_input: null) {
+        const result = yield* withPreparedConnection((prepared) =>
+          executeAuthenticatedEnvironmentHttpRequest({
+            prepared,
+            group: "auth",
+            method: "POST",
+            url: (urls) => urls.revokeOtherClients(),
+            timeoutMs: AUTH_ACCESS_TIMEOUT_MS,
+            request: ({ client, headers }) => client.revokeOtherClients({ headers }),
+          }),
+        );
+        return result.revokedCount;
+      }),
     }),
   };
 }
