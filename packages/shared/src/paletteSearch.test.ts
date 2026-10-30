@@ -86,9 +86,9 @@ describe("scoreThreadSearch", () => {
       thread("Release checklist", {
         opens: { openedAt: NOW - 5 * DAY, score: 1, picks: [{ query: "rel", at: NOW - 5 * DAY }] },
       }),
-      thread("Relay pairing", { activityAt: NOW }),
+      thread("Relabel pairing", { activityAt: NOW }),
     ];
-    expect(rankTitles("rel", threads)).toEqual(["Release checklist", "Relay pairing"]);
+    expect(rankTitles("rel", threads)).toEqual(["Release checklist", "Relabel pairing"]);
     // A pick never lifts a match inside a word above a word match.
     expect(
       rankTitles("auth", [
@@ -99,9 +99,9 @@ describe("scoreThreadSearch", () => {
       ]),
     ).toEqual(["Share auth across worktrees", "Fix oauth redirect"]);
     // Two letters are too little to go on.
-    expect(rankTitles("re", threads)).toEqual(["Relay pairing", "Release checklist"]);
+    expect(rankTitles("re", threads)).toEqual(["Relabel pairing", "Release checklist"]);
     // Once the query leaves the pick behind, the better match wins again.
-    expect(rankTitles("rela", threads)).toEqual(["Relay pairing"]);
+    expect(rankTitles("rela", threads)).toEqual(["Relabel pairing"]);
     // An old pick fades with the thread's last open.
     const stale = [
       thread("Release checklist", {
@@ -111,19 +111,19 @@ describe("scoreThreadSearch", () => {
           picks: [{ query: "rel", at: NOW - 90 * DAY }],
         },
       }),
-      thread("Relay pairing", { activityAt: NOW }),
+      thread("Relabel pairing", { activityAt: NOW }),
     ];
-    expect(rankTitles("rel", stale)).toEqual(["Relay pairing", "Release checklist"]);
+    expect(rankTitles("rel", stale)).toEqual(["Relabel pairing", "Release checklist"]);
     // Opening an old pick some other way does not revive it over a newer pick.
     const reopened = [
       thread("Release checklist", {
         opens: { openedAt: NOW - DAY, score: 2, picks: [{ query: "rel", at: NOW - 30 * DAY }] },
       }),
-      thread("Relay pairing", {
+      thread("Relabel pairing", {
         opens: { openedAt: NOW - DAY, score: 1, picks: [{ query: "rel", at: NOW - DAY }] },
       }),
     ];
-    expect(rankTitles("rel", reopened)).toEqual(["Relay pairing", "Release checklist"]);
+    expect(rankTitles("rel", reopened)).toEqual(["Relabel pairing", "Release checklist"]);
     // The latest pick for a query wins over an earlier one with a better title match.
     const repicked = [
       thread("Deploy", {
@@ -170,15 +170,15 @@ describe("scoreThreadSearch", () => {
   it("ranks a title holding the words above the app's own branch prefix and project name", () => {
     const busy = { activityAt: NOW, opens: { openedAt: NOW, score: 6, picks: [] } };
     expect(
-      rankTitles("t3 connect", [
-        thread("Diagnose Connect provisioning failures", {
+      rankTitles("t3 pairing", [
+        thread("Diagnose pairing link failures", {
           ...busy,
-          branch: "t3/diagnose-connect",
+          branch: "t3/diagnose-pairing",
           projectTitle: "t3code",
         }),
-        thread("T3 Connect Tunnel Lifecycle Review", { projectTitle: "t3code" }),
+        thread("T3 Pairing Lifecycle Review", { projectTitle: "t3code" }),
       ])[0],
-    ).toBe("T3 Connect Tunnel Lifecycle Review");
+    ).toBe("T3 Pairing Lifecycle Review");
     expect(
       rankTitles("t3code", [
         thread("Fix sidebar lag", { ...busy, projectTitle: "t3code", branch: "t3code/sidebar" }),
