@@ -6152,11 +6152,9 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
         ORDER BY thread_id, ordinal
       `;
 
-    // Subagents of subagents, at any depth below the subagents a card lists. A card lists them
-    // with the thread's own, so a lead sees everything running under what it shows. Seeding from
-    // the listed subagents, not every child thread, keeps old subagents of old runs out. A descendant contributes the
-    // subagents of the newest run that holds any, plus any still working in an earlier run.
-    // The newest run overall is no use: each finished subagent starts a notice run with none.
+    // Subagents of the subagents a card lists, at any depth. Seeding from the listed ones keeps
+    // old runs' subagents out. A thread gives the newest run that holds any, plus live ones,
+    // because each finished subagent starts a notice run with none.
     const selectShellDescendantSubagentRows = (
       seeds: ReadonlyArray<{ readonly rootThreadId: string; readonly threadId: string }>,
     ) =>
