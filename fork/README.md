@@ -33,4 +33,13 @@ fork/install.sh [path/to.dmg]     # quit T3 Code (Fork) first; default is the ne
 fork/build.sh                     # build, then install
 ```
 
-Then refresh the background service from a normal Terminal, outside T3: `~/.t3/fork-service/refresh-runtime.sh --check`, then without `--check`.
+Or do it all at once from a normal Terminal, outside T3 (refreshing stops the service and every agent in it):
+
+```sh
+t3-rebuild                        # build fork-main, install it, refresh the service, reopen the app
+fork/deploy.sh                    # install the newest dmg in release/, then refresh the service
+```
+
+`t3-rebuild` is a function in `~/.zshrc`. It builds in its own worktree, `../t3code-build`, detached at `fork-main`, so it never touches the shared checkout. It quits the app if it is running.
+
+`~/.t3/fork-service/refresh-runtime.sh --yes` refreshes without asking. It keeps the previous runtime as `T3 Code Runtime.app.old` until the next refresh replaces it.
