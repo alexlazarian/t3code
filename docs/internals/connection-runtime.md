@@ -37,8 +37,7 @@ attempt; a short one leaves it alone.
 The [registry](../../packages/client-runtime/src/connection/registry.ts) scopes
 connections by environment. An involuntary disconnect retains the registration
 and cached data. Explicit removal closes the scope and clears credentials,
-projections, and platform-owned state such as drafts. Cloud-account changes apply
-to relay registrations; they must not discard directly paired environments.
+projections, and platform-owned state such as drafts.
 
 ## HTTP authorization
 

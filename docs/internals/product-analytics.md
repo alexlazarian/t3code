@@ -20,13 +20,11 @@ with it. Who an install belongs to is a separate fact, sent as
 a rule can change and apply to all history.
 
 [Owner sources](../../apps/server/src/telemetry/Identify.ts), strongest first:
-T3 Connect, then the OpenAI and Claude person ids, then the client device. The
-server reports what it can read itself: the linked Connect account and provider
-logins. A connecting client reports its signed-in Connect account and its device,
+the OpenAI and Claude person ids, then the client device. The
+server reports the provider logins it can read itself. A connecting client reports its device,
 which links every environment opened from one phone, browser, or desktop. Use the
 OpenAI `user_id` claim, not the Codex `account_id` (the ChatGPT workspace, which a
-whole Team shares) or the token `sub` (one per login method). Two Connect accounts are never the same person, whatever
-weaker ids they share.
+whole Team shares) or the token `sub` (one per login method).
 
 Every id is SHA-256 hashed with [one helper](../../packages/shared/src/telemetryId.ts)
 on both sides, so a Connect account hashes the same on the client and the server.
@@ -48,7 +46,7 @@ runs; use `surface` for the connected client.
 ## Interpreting events
 
 Use `client.turn.requested` for active-use reports. There is no connection event,
-because T3 Connect sessions expire hourly and each reconnect would count again.
+because sessions reconnect often and each reconnect would count again.
 A command whose id was already accepted is a retry, so it records nothing again.
 One identity can appear in several client groups during a period; adding those
 groups double-counts users.
@@ -75,9 +73,7 @@ the RPC authorization middleware after the request succeeds; dispatched commands
 are recorded by the dispatch handler, which can tell a retry apart.
 [Feature mapping](../../apps/server/src/telemetry/FeatureUsage.ts) allowlists
 the methods and commands, and takes variants only from closed contract enums,
-so paths, ids, and text never reach analytics. Guests of a shared thread have no
-WebSocket connection, so the guest share service records their joins and messages
-itself, with no `surface`.
+so paths, ids, and text never reach analytics.
 
 Agent tool events report driver kinds, never instance ids: users name
 instances, so an instance id can identify an account or employer.
@@ -108,6 +104,5 @@ send prompts, authentication material, raw provider payloads, user-assigned devi
 names, or conversation identifiers. Client metadata is best effort; invalid values
 must not reject a connection. PostHog person profiles remain disabled.
 
-Dev-runner servers and the CI archive smoke test turn telemetry off, which also
-stops relay tracing, because each would count as a new install. Set
-`T3CODE_TELEMETRY_ENABLED=true` to test analytics or relay tracing from a dev server.
+Dev-runner servers and the CI archive smoke test turn telemetry off, because each would count as a new install. Set
+`T3CODE_TELEMETRY_ENABLED=true` to test analytics from a dev server.

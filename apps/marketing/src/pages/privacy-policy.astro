@@ -20,7 +20,7 @@ const sections = [
   title="Privacy Policy | T3 Code"
   description="How T3 Tools, Inc. handles information when you use T3 Code, app.t3.codes, and t3.codes."
   heading="T3 Code Privacy Policy"
-  lede="This Privacy Policy describes how T3 Tools, Inc. collects, uses, and shares personal information when you use the T3 Code desktop, mobile, and hosted web applications, visit the t3.codes marketing site, or use the optional T3 Connect service."
+  lede="This Privacy Policy describes how T3 Tools, Inc. collects, uses, and shares personal information when you use the T3 Code desktop, mobile, and hosted web applications, or visit the t3.codes marketing site."
   effectiveDate="2026-10-06"
   lastUpdated="2026-10-06"
   sections={sections}
@@ -32,8 +32,7 @@ const sections = [
             This Privacy Policy (the “Policy”) describes how T3 Tools, Inc. (the “Company,” “T3
             Tools,” “we,” or “us”) collects, uses, and shares personal information when you use the T3
             Code desktop and mobile applications, the hosted T3 Code web application located at
-            {" "}<a href="https://app.t3.codes">https://app.t3.codes</a>, or the optional T3 Connect
-            service (together, the “Services”), or visit the T3 Code marketing website located at
+            {" "}<a href="https://app.t3.codes">https://app.t3.codes</a> (together, the “Services”), or visit the T3 Code marketing website located at
             {" "}<a href="https://t3.codes">https://t3.codes</a> (the “Site”). This Policy applies to
             personal information we collect through the Site and the Services, as well as personal
             information you provide to us directly.
@@ -62,25 +61,6 @@ const sections = [
             When you use T3 Code, we may collect the following categories of personal information:
           </p>
           <ul>
-            <li>
-              <strong>Account information.</strong> If you create or sign in to a T3 account, we
-              receive general identifiers and profile information from our authentication provider
-              and the identity provider you select. This may include your name, email address,
-              profile image, user ID, sign-in method, and authentication credentials or tokens.
-            </li>
-            <li>
-              <strong>Environment and device information.</strong> If you enable T3 Connect, we
-              process information needed to connect and secure your environments and devices,
-              including identifiers, labels you assign, public keys, connection endpoints,
-              credential hashes, connection status, app and operating-system versions, and
-              notification preferences.
-            </li>
-            <li>
-              <strong>Agent activity and notifications.</strong> If you enable notifications or Live
-              Activities, we process push tokens and limited activity information needed to provide
-              those features, such as project and thread titles, model name, status, and activity
-              headline.
-            </li>
             <li>
               <strong>Product usage data.</strong> By default, T3 Code sends us anonymous usage
               data, such as which provider and model a turn used, whether it succeeded, and your app
@@ -137,10 +117,6 @@ const sections = [
               attach them to a request you initiate.
             </li>
             <li>
-              <strong>Notifications.</strong> Used only if you enable agent-status notifications or
-              Live Activities.
-            </li>
-            <li>
               <strong>Local network.</strong> Used to discover or connect to T3 Code environments
               accessible from your machine over the network.
             </li>
@@ -155,7 +131,7 @@ const sections = [
             services, we may use personal information for the following purposes:
           </p>
           <ul>
-            <li>To establish and verify your identity and authenticate your account;</li>
+            <li>To establish and verify your identity and authenticate your devices;</li>
             <li>To link and protect devices and environments and deliver optional notifications;</li>
             <li>To process and fulfill requests you make through the Services;</li>
             <li>To provide customer service and respond to support requests and feedback;</li>
@@ -214,29 +190,6 @@ const sections = [
             business. Depending on the features you use, these providers may include:
           </p>
           <ul class="provider-list">
-            <li>
-              <strong>Clerk</strong> <em>(Clerk, Inc.)</em>.<br />
-              We use Clerk to provide account authentication.<br />
-              You can view Clerk's privacy policy here:{" "}<a href="https://clerk.com/legal/privacy"
-                >https://clerk.com/legal/privacy</a
-              >.
-            </li>
-            <li>
-              <strong>Cloudflare</strong> <em>(Cloudflare, Inc.)</em>.<br />
-              We use Cloudflare for networking, T3 Connect infrastructure, and content delivery.<br />
-              You can view Cloudflare's privacy policy here:{" "}<a
-                href="https://www.cloudflare.com/policies/privacy/"
-                >https://www.cloudflare.com/policies/privacy/</a
-              >.
-            </li>
-            <li>
-              <strong>PlanetScale</strong> <em>(PlanetScale, Inc.)</em>.<br />
-              We use PlanetScale to host the database that supports T3 Connect.<br />
-              You can view PlanetScale's privacy policy here:{" "}<a
-                href="https://planetscale.com/legal/privacy"
-                >https://planetscale.com/legal/privacy</a
-              >.
-            </li>
             <li>
               <strong>Vercel</strong> <em>(Vercel Inc.)</em>.<br />
               We use Vercel to host and deploy the T3 Code Site.<br />
@@ -336,10 +289,8 @@ const sections = [
 
           <h3>Account and Connection Choices</h3>
           <p>
-            You may use local or direct connections without signing in to a T3 account. You can
-            disconnect environments, sign out, disable optional notifications and Live Activities,
-            and clear local caches from Settings. You can grant or revoke camera, photo, local-network,
-            and notification permissions in your device settings.
+            You can disconnect environments and clear local caches from Settings. You can grant or
+            revoke camera, photo, and local-network permissions in your device settings.
           </p>
 
           <h3>Product Usage Data</h3>
@@ -360,20 +311,18 @@ const sections = [
 
           <h3>Retention and Deletion</h3>
           <p>
-            We retain account, environment-link, device-registration, notification, and security
-            information while your account or the relevant feature is active and for as long as
+            We retain security information while the relevant feature is active and for as long as
             reasonably necessary to provide the Services, protect them from abuse, comply with law,
             and resolve disputes. Operational diagnostic traces are configured to expire after 30
             days. Some records may remain longer in backups or where retention is required for
             security, fraud prevention, or legal compliance.
           </p>
           <p>
-            To request deletion of your T3 account and associated T3 Connect data, email{" "}<a
+            To request deletion of personal information we hold, email{" "}<a
               href="mailto:privacy@t3.tools">privacy@t3.tools</a
-            >{" "}from the email address associated with your account. We may need to verify your
-            identity. Deleting a T3 account does not delete information held by an environment or
-            coding-agent provider you control; contact those providers or delete that information
-            directly.
+            >. We may need to verify your identity. Deletion does not delete information held by an
+            environment or coding-agent provider you control; contact those providers or delete that
+            information directly.
           </p>
 
           <h3>Your Privacy Rights</h3>
@@ -393,9 +342,9 @@ const sections = [
             T3 Tools is committed to protecting the security of your personal information. We use
             administrative, technical, and organizational safeguards designed to protect personal
             information from unauthorized access, use, or disclosure. These safeguards include
-            encrypted network transport, scoped and proof-bound access tokens for supported
+            encrypted network transport, scoped access tokens for supported
             connection flows, protected credential storage, and redaction of authorization headers
-            from relay diagnostics.
+            from diagnostics.
           </p>
           <p>
             No method of transmission over the Internet or method of electronic storage is completely
