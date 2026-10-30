@@ -18,7 +18,7 @@ export type WorkspaceSearchMode = "resting" | "active" | "expanded";
 
 /** Settings, Chats and pull requests pair a list with a detail column; Usage is one page. */
 export function workspaceUsesColumns(tab: WorkspaceTab, settingsOpen = false) {
-  return settingsOpen || tab === "threads" || tab === "pullRequests";
+  return settingsOpen || tab === "threads" || tab === "overview" || tab === "pullRequests";
 }
 
 export interface WorkspaceTabState {
@@ -45,6 +45,7 @@ export function initialWorkspaceTabsState(): WorkspaceTabsState {
     tabs: {
       threads: emptyTab(),
       pullRequests: emptyTab(),
+      overview: emptyTab(),
       usage: emptyTab(),
       settings: emptyTab(),
     },

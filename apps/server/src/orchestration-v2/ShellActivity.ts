@@ -59,6 +59,8 @@ export type ShellActivityStepRow = {
 export type ShellActivitySubagentRow = {
   readonly run_id: string;
   readonly child_thread_id: string | null;
+  /** The thread that owns this subagent when it is not the one the card is for. */
+  readonly parent_thread_id?: string | null;
   readonly title: string | null;
   readonly status: string;
   readonly progress: string | null;
@@ -121,6 +123,9 @@ function subagentFromRow(row: ShellActivitySubagentRow): OrchestrationV2ShellSub
   const live = status === "pending" || status === "running" || status === "waiting";
   return {
     threadId: row.child_thread_id === null ? null : ThreadId.make(row.child_thread_id),
+    ...(row.parent_thread_id == null
+      ? {}
+      : { parentThreadId: ThreadId.make(row.parent_thread_id) }),
     title: shellActivityProse(row.title) ?? "Subagent",
     status,
     step: live ? shellActivityLine(row.progress) : shellActivityProse(row.result),
@@ -182,16 +187,17 @@ export function shellActivityByRunId(input: {
   return result;
 }
 
-/** A subagent still working in a run other than the one a card reads. */
+/** A subagent a card lists that is not in the run it reads: still working in an earlier run, or below a subagent. */
 export type ShellActivityHeldSubagentRow = ShellActivitySubagentRow & {
   /** The run the card reads: the one this subagent is added to. */
   readonly activity_run_id: string;
 };
 
 /**
- * Adds subagents that are still working in an earlier run to the run a card reads. A later run
- * (a follow-up, or the notice that a subagent finished) would otherwise hide them while the
- * thread is parked on them. Ended subagents stay with their own run.
+ * Adds subagents that are still working in an earlier run, and subagents of subagents, to the
+ * run a card reads. A later run (a follow-up, or the notice that a subagent finished) would
+ * otherwise hide the first while the thread is parked on them. Ended subagents stay with their
+ * own run.
  */
 export function shellActivityWithHeldSubagents(
   activity: ReadonlyMap<RunId, OrchestrationV2ShellActivity>,

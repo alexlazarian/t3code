@@ -8,6 +8,7 @@ import { SIDEBAR_ACTIVE_ROW_CLASS } from "../sidebar/sidebarRowStyles";
 import { StatusLight } from "../StatusLight";
 import {
   overviewStrobeDelay,
+  overviewSubagentTree,
   overviewSubagentState,
   type OverviewLight,
   type OverviewStepLine,
@@ -98,41 +99,17 @@ export function SubagentToggle(props: {
 /** The lead's row and one row per subagent, as an expanded Overview card shows them. */
 export function SubagentRows(props: {
   readonly threadKey: string;
-  readonly light: OverviewLight;
-  readonly step: OverviewStepLine | null;
-  readonly leadWaiting: boolean;
   readonly subagents: ReadonlyArray<OrchestrationV2ShellSubagent>;
   readonly subagentCount: number;
   readonly onOpen: (subagent: OrchestrationV2ShellSubagent) => void;
   readonly className?: string;
-  /** The open thread, lit like the sidebar's active row; the lead matches on `leadThreadId`. */
+  /** The open thread, lit like the sidebar's active row. */
   readonly activeThreadId?: ThreadId | null;
-  readonly leadThreadId?: ThreadId;
 }) {
-  const { threadKey, light, step, leadWaiting, subagents, subagentCount, activeThreadId } = props;
-  const leadActive = activeThreadId != null && activeThreadId === props.leadThreadId;
+  const { threadKey, subagents, subagentCount, activeThreadId } = props;
   return (
     <div className={cn("leading-relaxed", props.className)}>
-      <div
-        className={cn(
-          "mb-px flex min-w-0 items-center gap-1.25 border-b border-border pb-px",
-          leadActive && SIDEBAR_ACTIVE_ROW_CLASS,
-        )}
-        style={{ "--strobe-delay": overviewStrobeDelay(threadKey, 1) } as CSSProperties}
-      >
-        <StatusLight
-          size="small"
-          tone={leadWaiting ? "idle" : light}
-          strobe={light === "working" && !leadWaiting}
-        />
-        <span className="shrink-0 font-semibold">Lead</span>
-        {step ? (
-          <StepText step={step} className="min-w-0 flex-1" />
-        ) : (
-          <span className="min-w-0 flex-1" />
-        )}
-      </div>
-      {subagents.map((subagent, index) => {
+      {overviewSubagentTree(subagents).map(({ subagent, depth }, index) => {
         const state = overviewSubagentState(subagent.status);
         const active = activeThreadId != null && subagent.threadId === activeThreadId;
         return (
@@ -148,7 +125,12 @@ export function SubagentRows(props: {
             onDoubleClick={isolate}
             onKeyDown={isolate}
             data-info={subagent.threadId === null ? undefined : "Open this subagent's thread"}
-            style={{ "--strobe-delay": overviewStrobeDelay(threadKey, index + 2) } as CSSProperties}
+            style={
+              {
+                "--strobe-delay": overviewStrobeDelay(threadKey, index + 2),
+                paddingLeft: depth === 0 ? undefined : `${depth * 10}px`,
+              } as CSSProperties
+            }
             className={cn(
               "flex w-full min-w-0 cursor-pointer items-center gap-1.25 text-left outline-0 outline-ring focus-visible:outline-2 disabled:cursor-default disabled:hover:bg-transparent",
               active ? SIDEBAR_ACTIVE_ROW_CLASS : "hover:bg-accent",

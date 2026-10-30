@@ -1341,9 +1341,6 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
       {subagentsExpanded ? (
         <SubagentRows
           threadKey={threadKey}
-          light={light}
-          step={step}
-          leadWaiting={step?.tone === "dim" && working && runningSubagents > 0}
           subagents={subagents}
           subagentCount={subagentCount}
           onOpen={(subagent) => {
@@ -1352,7 +1349,6 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
           }}
           className="border-b border-sidebar-border py-0.5 pr-2 pl-6.5 text-2xs"
           activeThreadId={props.openThreadId}
-          leadThreadId={thread.id}
         />
       ) : null}
     </li>

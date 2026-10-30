@@ -6120,9 +6120,9 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
         ORDER BY run_id, ordinal
       `;
 
-    // Subagents still working in a run the card does not read. Their lead has usually ended
-    // that run, and a later run (a follow-up, or a subagent-finished notice) became the one
-    // the card shows.
+    // Subagents in a run the card does not read: still working, or in the newest run that
+    // holds any. Their lead has usually ended that run, and a later run (a follow-up, or a
+    // subagent-finished notice) became the one the card shows.
     const selectShellLiveSubagentRows = (threadIds: ReadonlyArray<string>) =>
       sql<ShellActivitySubagentRow & { readonly thread_id: string }>`
         SELECT thread_id, run_id,
@@ -6136,9 +6136,67 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
         FROM orchestration_v2_projection_turn_items
         WHERE thread_id IN ${sql.in(threadIds)}
           AND type = 'subagent'
-          AND status IN ('pending', 'running', 'waiting')
           AND run_id IS NOT NULL
+          AND (
+            status IN ('pending', 'running', 'waiting')
+            OR run_id = (
+              SELECT held.run_id
+              FROM orchestration_v2_projection_turn_items held
+              JOIN orchestration_v2_projection_runs held_run ON held_run.run_id = held.run_id
+              WHERE held.thread_id = orchestration_v2_projection_turn_items.thread_id
+                AND held.type = 'subagent'
+              ORDER BY held_run.ordinal DESC, held_run.run_id DESC
+              LIMIT 1
+            )
+          )
         ORDER BY thread_id, ordinal
+      `;
+
+    // Subagents of the subagents a card lists, at any depth. Seeding from the listed ones keeps
+    // old runs' subagents out. A thread gives the newest run that holds any, plus live ones,
+    // because each finished subagent starts a notice run with none.
+    const selectShellDescendantSubagentRows = (
+      seeds: ReadonlyArray<{ readonly rootThreadId: string; readonly threadId: string }>,
+    ) =>
+      sql<ShellActivitySubagentRow & { readonly root_thread_id: string }>`
+        WITH RECURSIVE family(root_id, thread_id) AS (
+          SELECT json_extract(seed.value, '$.rootThreadId'), json_extract(seed.value, '$.threadId')
+          FROM json_each(${JSON.stringify(seeds)}) AS seed
+          UNION
+          SELECT family.root_id, child.thread_id
+          FROM family
+          JOIN orchestration_v2_projection_threads AS child
+            ON CASE WHEN json_valid(child.payload_json)
+              THEN json_extract(child.payload_json, '$.lineage.parentThreadId')
+              ELSE NULL END = family.thread_id
+          WHERE json_extract(child.payload_json, '$.lineage.relationshipToParent') = 'subagent'
+        )
+        SELECT family.root_id AS root_thread_id, item.run_id,
+          item.thread_id AS parent_thread_id,
+          json_extract(item.payload_json, '$.childThreadId') AS child_thread_id,
+          substr(json_extract(item.payload_json, '$.title'), 1, 400) AS title,
+          item.status,
+          substr(json_extract(item.payload_json, '$.progress'), 1, 2000) AS progress,
+          substr(json_extract(item.payload_json, '$.result'), 1, 2000) AS result,
+          json_extract(item.payload_json, '$.startedAt') AS started_at,
+          json_extract(item.payload_json, '$.completedAt') AS completed_at
+        FROM family
+        JOIN orchestration_v2_projection_turn_items AS item
+          ON item.thread_id = family.thread_id
+        WHERE item.type = 'subagent'
+          AND item.run_id IS NOT NULL
+          AND (
+            item.status IN ('pending', 'running', 'waiting')
+            OR item.run_id = (
+              SELECT held.run_id
+              FROM orchestration_v2_projection_turn_items held
+              JOIN orchestration_v2_projection_runs held_run ON held_run.run_id = held.run_id
+              WHERE held.thread_id = family.thread_id AND held.type = 'subagent'
+              ORDER BY held_run.ordinal DESC, held_run.run_id DESC
+              LIMIT 1
+            )
+          )
+        ORDER BY family.root_id, item.ordinal
       `;
 
     const selectShellActivityFilesRows = (
@@ -6185,6 +6243,28 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
       const activityRunIdByThreadId = new Map(
         rows.map((row) => [row.thread_id, row.activity_run_id] as const),
       );
+      const threadIdByActivityRunId = new Map(
+        rows.flatMap((row) =>
+          row.activity_run_id === null ? [] : [[row.activity_run_id, row.thread_id] as const],
+        ),
+      );
+      // The subagents a card lists seed the nested lookup, so a lead's older subagents from
+      // older runs do not pull their own subagents in.
+      const seeds = [
+        ...subagents.flatMap((row) => {
+          const rootThreadId = threadIdByActivityRunId.get(row.run_id);
+          return rootThreadId === undefined || row.child_thread_id === null
+            ? []
+            : [{ rootThreadId, threadId: row.child_thread_id }];
+        }),
+        ...liveSubagents.flatMap((row) =>
+          row.child_thread_id === null
+            ? []
+            : [{ rootThreadId: row.thread_id, threadId: row.child_thread_id }],
+        ),
+      ];
+      const descendantSubagents =
+        seeds.length === 0 ? [] : yield* selectShellDescendantSubagentRows(seeds);
       const held = liveSubagents.flatMap(
         ({ thread_id, ...row }): ReadonlyArray<ShellActivityHeldSubagentRow> => {
           const activityRunId = activityRunIdByThreadId.get(thread_id) ?? null;
@@ -6193,10 +6273,16 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
             : [{ ...row, activity_run_id: activityRunId }];
         },
       );
-      return shellActivityWithHeldSubagents(
-        shellActivityByRunId({ steps, subagents, files }),
-        held,
+      const nested = descendantSubagents.flatMap(
+        ({ root_thread_id, ...row }): ReadonlyArray<ShellActivityHeldSubagentRow> => {
+          const activityRunId = activityRunIdByThreadId.get(root_thread_id) ?? null;
+          return activityRunId === null ? [] : [{ ...row, activity_run_id: activityRunId }];
+        },
       );
+      return shellActivityWithHeldSubagents(shellActivityByRunId({ steps, subagents, files }), [
+        ...held,
+        ...nested,
+      ]);
     });
 
     const runMapsByThreadId = (input: {
