@@ -28,8 +28,6 @@ import { useNewThreadHandler } from "../../hooks/useHandleNewThread";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 import { useStableCallback } from "../../hooks/useStableCallback";
 import { useThreadActionMenu } from "../../hooks/useThreadActionMenu";
-import { appAtomRegistry } from "../../rpc/atomRegistry";
-import { canShareWithGuestAtom } from "../chat/guestShareAvailability";
 import { updateClientSettings, useClientSettings } from "../../hooks/useSettings";
 import { useSidebarProjectGroups } from "../../hooks/useSidebarProjectGroups";
 import { selectProjectGroupingSettings } from "@t3tools/client-runtime/state/project-grouping";
@@ -347,7 +345,6 @@ export function OverviewView() {
   const threadMenu = useThreadActionMenu({
     threadRef: null,
     projectCwd: null,
-    canShareWithGuest: false,
   });
   // Rename stays out: cards have no in-place title editor.
   const openCardMenu = useStableCallback(
@@ -358,7 +355,6 @@ export function OverviewView() {
         target: {
           threadRef,
           projectCwd: null,
-          canShareWithGuest: appAtomRegistry.get(canShareWithGuestAtom(threadRef.environmentId)),
         },
         extra: [
           {

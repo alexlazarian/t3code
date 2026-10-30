@@ -50,7 +50,6 @@ import {
   SNAP_SHOT_ATTACHMENT_FRAME_CLASS,
   SnapShotAttachmentDetails,
 } from "./SnapShotAttachmentDetails";
-import { guestBubbleClassName } from "./guestMessageStyle";
 import { MessageCopyButton } from "./MessageCopyButton";
 import { promptLinkFor } from "../promptLinks/copyPromptLink";
 import { PierreEntryIcon } from "./PierreEntryIcon";
@@ -349,9 +348,7 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
       : null,
   );
   const senderLabel = senderShell?.title.trim() || "Agent";
-  const resolvedContext = resolveUserMessageContext(
-    userMessage.attribution === "guest" ? { ...row.message, text: userMessage.text } : row.message,
-  );
+  const resolvedContext = resolveUserMessageContext(row.message);
   const previewImages = userImages.filter((image) => image.name.startsWith("preview-annotation-"));
   const revertTurnCount = row.revertTurnCount;
   const chippedAttachmentIds = new Set(
@@ -529,7 +526,7 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
         className={cn(
           "relative min-w-0 border border-border text-message-foreground",
           BUBBLE_CHIP_CLASS_NAME,
-          userMessage.attribution === "guest" ? guestBubbleClassName(false) : "bg-message",
+          "bg-message",
           folded
             ? "max-w-[80%]"
             : "ms-8 self-stretch border-s-3 border-s-accent px-2.5 py-1.5 sm:ms-20",
@@ -540,11 +537,7 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
         {!folded ? <div className="float-end -my-1 ms-2 select-none">{messageActions}</div> : null}
         {/* Outside the fold so a collapsed message still has a heading to navigate to. */}
         <MessageAuthorHeading visible={!folded}>
-          {folded
-            ? senderLabel
-            : userMessage.guestName === undefined
-              ? "You"
-              : `${userMessage.guestName} (guest)`}
+          {folded ? senderLabel : "You"}
         </MessageAuthorHeading>
         {folded ? (
           <FoldedMessageHeader

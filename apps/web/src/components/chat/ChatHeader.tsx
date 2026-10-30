@@ -21,8 +21,6 @@ import { Badge } from "../ui/badge";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { useThreadActionMenu } from "~/hooks/useThreadActionMenu";
 import { readLocalApi } from "~/localApi";
-import { canShareWithGuestAtom } from "./guestShareAvailability";
-import { useAtomValue } from "@effect/atom-react";
 import { useEnvironmentScope } from "../../state/session";
 import { ProjectFavicon } from "../ProjectFavicon";
 import { StatusLight, type StatusLightTone } from "../StatusLight";
@@ -91,7 +89,6 @@ export const ChatHeader = memo(function ChatHeader({
     activeThreadEnvironmentId,
     AuthOrchestrationOperateScope,
   );
-  const canShareWithGuest = useAtomValue(canShareWithGuestAtom(activeThreadEnvironmentId));
   const { renamingTitle, setRenamingTitle, startRename, commitRename, cancelRename } = rename;
   const isRenamingTitle = renamingTitle !== null;
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- measures the breadcrumb list DOM via ResizeObserver, a frame and font loads to collapse the parent title
@@ -138,7 +135,6 @@ export const ChatHeader = memo(function ChatHeader({
     threadRef: isServerThread ? activeThreadRef : null,
     projectCwd: activeProjectCwd,
     onStartRename: startRename,
-    canShareWithGuest,
   });
   // A drag region swallows double-clicks (macOS zooms the window), so the title opts out.
   const canRenameTitle = isServerThread && canOperateThread;

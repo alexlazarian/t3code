@@ -1,6 +1,5 @@
 import { scopeProjectRef } from "@t3tools/client-runtime/environment";
 import { requestCustomSnooze } from "../components/CustomSnoozeDialog";
-import { openGuestShareDialog } from "../components/chat/guestShareDialogState";
 import {
   type AtomCommandResult,
   isAtomCommandInterrupted,
@@ -69,7 +68,6 @@ export interface ThreadMenuTarget {
   readonly threadRef: ScopedThreadRef | null;
   readonly projectCwd: string | null;
   readonly onStartRename?: () => void;
-  readonly canShareWithGuest: boolean;
 }
 
 export interface ThreadMenuOptions {
@@ -260,9 +258,6 @@ export function useThreadActionMenu(input: ThreadMenuTarget) {
       case "mark-unread":
         markThreadUnread(threadRef);
         return;
-      case "share-guest":
-        openGuestShareDialog(threadRef);
-        return;
       case "copy-path": {
         const workspacePath =
           thread.worktreePath ??
@@ -385,7 +380,6 @@ export function useThreadActionMenu(input: ThreadMenuTarget) {
           readState: readThreadReadState(threadRef),
           supports,
           snoozePresets,
-          canShareWithGuest: target.canShareWithGuest,
         },
         omit,
       );

@@ -1,16 +1,8 @@
-import { type ConnectionCatalogEntry, hasRelayRoute } from "@t3tools/client-runtime/connection";
 import type { EnvironmentId } from "@t3tools/contracts";
 
 interface OnboardingEnvironment {
   readonly environmentId: EnvironmentId;
   readonly connection: { readonly phase: string };
-  readonly entry: Pick<ConnectionCatalogEntry, "target" | "alternateRoutes">;
-}
-
-export function isOnboardingRelayEnvironment(
-  environment: Pick<OnboardingEnvironment, "entry">,
-): boolean {
-  return hasRelayRoute(environment.entry);
 }
 
 export function resolveOnboardingTargetEnvironment<TEnvironment extends OnboardingEnvironment>({
@@ -19,7 +11,7 @@ export function resolveOnboardingTargetEnvironment<TEnvironment extends Onboardi
   primaryEnvironment,
   pairedEnvironmentId,
 }: {
-  readonly mode: "local" | "connect" | "direct";
+  readonly mode: "local" | "direct";
   readonly environments: ReadonlyArray<TEnvironment>;
   readonly primaryEnvironment: TEnvironment | null;
   readonly pairedEnvironmentId: EnvironmentId | null;
@@ -30,21 +22,7 @@ export function resolveOnboardingTargetEnvironment<TEnvironment extends Onboardi
     );
     return pairedEnvironment?.connection.phase === "connected" ? pairedEnvironment : null;
   }
-
-  const connectedRelayEnvironments = environments.filter(
-    (environment) =>
-      environment.connection.phase === "connected" && isOnboardingRelayEnvironment(environment),
-  );
-
-  if (mode === "connect" && connectedRelayEnvironments.length > 0) {
-    return connectedRelayEnvironments[connectedRelayEnvironments.length - 1] ?? null;
-  }
-
-  if (primaryEnvironment?.connection.phase === "connected") {
-    return primaryEnvironment;
-  }
-
-  return mode === "local" ? null : (connectedRelayEnvironments[0] ?? null);
+  return primaryEnvironment?.connection.phase === "connected" ? primaryEnvironment : null;
 }
 
 /** Waits only for first connection attempts; offline, failing, or unsupported computers cannot block setup. */

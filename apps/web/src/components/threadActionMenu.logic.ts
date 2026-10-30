@@ -19,7 +19,6 @@ export type ThreadActionMenuId =
   | "regenerate-title"
   | "mark-read"
   | "mark-unread"
-  | "share-guest"
   | "copy"
   | "copy-path"
   | "copy-branch"
@@ -91,8 +90,6 @@ export interface ThreadActionMenuState {
     readonly titleRegeneration: boolean;
   };
   readonly snoozePresets: ReadonlyArray<SnoozePreset>;
-  /** Guest links need their own grant, so the caller checks it instead of `canOperate`. */
-  readonly canShareWithGuest?: boolean;
 }
 
 /** Local navigation, read markers, and copying remain available to read-only clients. */
@@ -102,7 +99,6 @@ export function threadActionRequiresOperate(action: ThreadActionMenuId): boolean
     "project-settings",
     "mark-read",
     "mark-unread",
-    "share-guest",
     "copy",
     "copy-path",
     "copy-branch",
@@ -178,9 +174,6 @@ export function buildThreadActionMenuItems(
       : state.readState === "read"
         ? [{ id: "mark-unread" as const, label: "Mark as unread", icon: "mail" }]
         : []),
-    ...(state.canShareWithGuest
-      ? [{ id: "share-guest" as const, label: "Share with guest", icon: "user-plus" }]
-      : []),
     ...(state.projectFilter
       ? [
           {
@@ -280,7 +273,7 @@ function omitMenuItems<T extends string>(
 
 export type ThreadStripActionId = Extract<
   ThreadActionMenuId,
-  "settle" | "unsettle" | "snooze" | "unsnooze" | "pin" | "unpin" | "rename" | "share-guest"
+  "settle" | "unsettle" | "snooze" | "unsnooze" | "pin" | "unpin" | "rename"
 >;
 
 /** The strip's buttons, in both directions, so its More menu lists only what the strip lacks. */
@@ -293,7 +286,6 @@ export const THREAD_STRIP_ACTION_IDS: ReadonlySet<ThreadActionMenuId> =
     "pin",
     "unpin",
     "rename",
-    "share-guest",
   ]);
 
 export interface ThreadStripAction {
@@ -334,9 +326,6 @@ export function buildThreadActionStrip(
         ]
       : []),
     { id: "rename", label: "Rename", group: "edit" },
-    ...(state.canShareWithGuest
-      ? [{ id: "share-guest" as const, label: "Share", group: "edit" as const }]
-      : []),
   ];
   return entries.map((entry) => ({
     ...entry,

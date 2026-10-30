@@ -577,22 +577,10 @@ describe("overview drafts", () => {
 describe("overviewLight", () => {
   it("maps each status to its light, keeping Done apart from Woke and unlabeled", () => {
     const lights = (
-      [
-        "working",
-        "approval",
-        "input",
-        "request",
-        "plan",
-        "failed",
-        "waiting",
-        "done",
-        "woke",
-        null,
-      ] as const
+      ["working", "approval", "input", "plan", "failed", "waiting", "done", "woke", null] as const
     ).map(overviewLight);
     expect(lights).toEqual([
       "working",
-      "needs-you",
       "needs-you",
       "needs-you",
       "needs-you",

@@ -2,8 +2,6 @@ import Constants from "expo-constants";
 import { type ReleaseChannel, releaseResourceAttributes } from "@t3tools/shared/releaseResource";
 import * as RelayTracing from "@t3tools/shared/relayTracing";
 
-import { hasTracingPublicConfig, resolveCloudPublicConfig } from "../cloud/publicConfig";
-
 export interface TracingConfig {
   readonly tracesUrl: string;
   readonly tracesDataset: string;
@@ -22,13 +20,31 @@ const RELEASE_CHANNEL_BY_VARIANT: Readonly<Record<string, ReleaseChannel | undef
   production: "stable",
 };
 
-export function resolveTracingConfig(): TracingConfig | null {
-  const config = resolveCloudPublicConfig();
-  if (!hasTracingPublicConfig(config)) {
+function trimNonEmpty(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function normalizeSecureUrl(value: unknown): string | null {
+  const raw = trimNonEmpty(value);
+  if (raw === null) return null;
+  try {
+    const url = new URL(raw);
+    return url.protocol === "https:" ? url.toString() : null;
+  } catch {
     return null;
   }
-  const { tracesUrl, tracesDataset, tracesToken } = config.observability;
-  return { tracesUrl, tracesDataset, tracesToken };
+}
+
+function resolveTracingConfig(
+  observability: Readonly<Record<string, unknown>> | undefined = Constants.expoConfig?.extra
+    ?.observability,
+): TracingConfig | null {
+  const tracesUrl = normalizeSecureUrl(observability?.tracesUrl);
+  const tracesDataset = trimNonEmpty(observability?.tracesDataset);
+  const tracesToken = trimNonEmpty(observability?.tracesToken);
+  return tracesUrl && tracesDataset && tracesToken
+    ? { tracesUrl, tracesDataset, tracesToken }
+    : null;
 }
 
 export function layerFromConfig(config: TracingConfig | null, resource: TracingResource) {

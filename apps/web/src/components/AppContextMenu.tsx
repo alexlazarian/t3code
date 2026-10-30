@@ -20,7 +20,6 @@ import {
   SettingsIcon,
   TimerIcon,
   Trash2Icon,
-  UserPlusIcon,
   type LucideIcon,
 } from "lucide-react";
 import { Fragment, useEffect } from "react";
@@ -62,7 +61,6 @@ const ICONS: Record<string, LucideIcon> = {
   settings: SettingsIcon,
   timer: TimerIcon,
   trash: Trash2Icon,
-  "user-plus": UserPlusIcon,
 };
 
 type Request = {

@@ -17,10 +17,10 @@ const quiet = {
 describe("resolveSidebarStatusLabel", () => {
   it("uses the sidebar's words for each live status", () => {
     expect(
-      (["working", "waiting", "approval", "input", "request", "limited", "failed"] as const).map(
+      (["working", "waiting", "approval", "input", "limited", "failed"] as const).map(
         (status) => resolveSidebarStatusLabel({ ...quiet, status })?.label,
       ),
-    ).toEqual(["Working", "Waiting", "Approval", "Input", "Request", "Limited", "Failed"]);
+    ).toEqual(["Working", "Waiting", "Approval", "Input", "Limited", "Failed"]);
   });
 
   it("calls a working thread with an active goal Goal", () => {
@@ -84,12 +84,11 @@ describe("resolveSidebarStatusLabel", () => {
 
   it("colors labels with the shared status inks", () => {
     expect(
-      (["working", "approval", "input", "request", "limited", "failed", "waiting"] as const).map(
+      (["working", "approval", "input", "limited", "failed", "waiting"] as const).map(
         (status) => resolveSidebarStatusLabel({ ...quiet, status })?.className,
       ),
     ).toEqual([
       "text-status-working",
-      "text-status-needs-you",
       "text-status-needs-you",
       "text-status-needs-you",
       "text-status-failed",

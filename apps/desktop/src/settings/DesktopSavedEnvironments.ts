@@ -158,7 +158,6 @@ function toPersistedSavedEnvironmentRecord(
   return {
     ...nextRecord,
     ...(record.desktopSsh ? { desktopSsh: record.desktopSsh } : {}),
-    ...(record.relayManaged ? { relayManaged: record.relayManaged } : {}),
   };
 }
 
@@ -231,7 +230,9 @@ export const make = Effect.gen(function* () {
   return DesktopSavedEnvironments.of({
     getRegistry: readRegistryDocument(fileSystem, environment.savedEnvironmentRegistryPath).pipe(
       Effect.map((document) =>
-        document.records.map((record) => toPersistedSavedEnvironmentRecord(record)),
+        document.records
+          .filter((record) => record.relayManaged === undefined)
+          .map((record) => toPersistedSavedEnvironmentRecord(record)),
       ),
       Effect.withSpan("desktop.savedEnvironments.getRegistry"),
     ),

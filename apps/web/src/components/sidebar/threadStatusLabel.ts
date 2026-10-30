@@ -3,16 +3,7 @@ import type { SidebarThreadStatus } from "../Sidebar.logic";
 
 export type SidebarStatusLabel = {
   readonly label: string;
-  readonly icon:
-    | "working"
-    | "waiting"
-    | "approval"
-    | "input"
-    | "request"
-    | "failed"
-    | "plan"
-    | "woke"
-    | "done";
+  readonly icon: "working" | "waiting" | "approval" | "input" | "failed" | "plan" | "woke" | "done";
   readonly className: string;
 };
 
@@ -60,8 +51,6 @@ export function resolveSidebarStatusLabel(input: {
       return { label: "Approval", icon: "approval", className: "text-status-needs-you" };
     case "input":
       return { label: "Input", icon: "input", className: "text-status-needs-you" };
-    case "request":
-      return { label: "Request", icon: "request", className: "text-status-needs-you" };
     case "limited":
       return { label: "Limited", icon: "failed", className: "text-status-failed" };
     case "failed":

@@ -189,11 +189,11 @@ describe("DesktopPreReadyPlatform", () => {
   });
 
   it.effect(
-    "acquires a synchronous pre-ready layer before an asynchronous Clerk-shaped layer",
+    "acquires a synchronous pre-ready layer before an asynchronous app-links-shaped layer",
     () =>
       Effect.gen(function* () {
-        class ClerkShaped extends Context.Service<ClerkShaped, { readonly ready: true }>()(
-          "@t3tools/desktop/app/DesktopPreReadyPlatform.test/ClerkShaped",
+        class AppLinksShaped extends Context.Service<AppLinksShaped, { readonly ready: true }>()(
+          "@t3tools/desktop/app/DesktopPreReadyPlatform.test/AppLinksShaped",
         ) {}
 
         const events: Array<string> = [];
@@ -205,34 +205,34 @@ describe("DesktopPreReadyPlatform", () => {
           Layer.provide(Layer.succeed(HostProcess.Platform, "darwin")),
         );
 
-        const layerClerkShaped = Layer.effect(
-          ClerkShaped,
+        const layerAppLinksShaped = Layer.effect(
+          AppLinksShaped,
           Effect.promise(() => Promise.resolve()).pipe(
             Effect.map(() => {
-              events.push("clerk");
+              events.push("app-links");
               return { ready: true as const };
             }),
           ),
         );
 
-        const layerRuntime = layerClerkShaped.pipe(
-          Layer.flatMap((clerkContext) => Layer.succeedContext(clerkContext)),
+        const layerRuntime = layerAppLinksShaped.pipe(
+          Layer.flatMap((appLinksContext) => Layer.succeedContext(appLinksContext)),
           Layer.provideMerge(layerPreReady),
         );
 
         const result = yield* Effect.all({
-          clerk: ClerkShaped,
+          appLinks: AppLinksShaped,
           preReady: DesktopPreReadyPlatform.DesktopPreReadyElectronOptions,
         }).pipe(Effect.provide(layerRuntime));
 
         assert.deepEqual(result, {
-          clerk: { ready: true },
+          appLinks: { ready: true },
           preReady: {
             linux: null,
             linuxPasswordStoreCommandLine: null,
           },
         });
-        assert.deepEqual(events, ["pre-ready", "clerk"]);
+        assert.deepEqual(events, ["pre-ready", "app-links"]);
         assert.equal(registerSchemesMock.mock.calls.length, 1);
         assert.equal(appendSwitchMock.mock.calls.length, 0);
         assert.equal(setDesktopNameMock.mock.calls.length, 0);

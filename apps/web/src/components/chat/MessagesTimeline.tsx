@@ -249,8 +249,6 @@ interface MessagesTimelineProps {
   onOpenToolDiff?: (target: ToolCallDiffTarget) => void;
   onOpenTurnDiff?: (runId: RunId, filePath?: string) => void;
   onOpenThread: (threadId: OrchestrationV2TurnItem["threadId"]) => void;
-  renderHtmlRender?: TimelineRowSharedState["renderHtmlRender"];
-  turnItemSource?: TimelineRowSharedState["turnItemSource"];
   /** The thread this one is a subagent of; `open` is absent when it cannot be opened from here. */
   parentThreadLink?: {
     readonly title: string;
@@ -357,8 +355,6 @@ const ConversationTimeline = memo(function ConversationTimeline({
   onOpenToolDiff,
   onOpenTurnDiff,
   onOpenThread,
-  renderHtmlRender,
-  turnItemSource,
   parentThreadLink = null,
   workflowOpening = null,
   onForkFromRun,
@@ -1029,8 +1025,6 @@ const ConversationTimeline = memo(function ConversationTimeline({
     onOpenToolDiff,
     onOpenTurnDiff,
     onOpenThread,
-    renderHtmlRender,
-    turnItemSource,
     workflowOpening,
     onForkFromRun,
     onToggleTurnFold,

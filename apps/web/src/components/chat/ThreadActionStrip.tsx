@@ -10,7 +10,6 @@ import {
   PencilIcon,
   PinIcon,
   PinOffIcon,
-  UserPlusIcon,
   type LucideIcon,
 } from "lucide-react";
 import { memo, useState, type MouseEvent as ReactMouseEvent } from "react";
@@ -30,8 +29,6 @@ import {
 import { Button } from "../ui/button";
 import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuShortcut, MenuTrigger } from "../ui/menu";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
-import { GuestShareIndicator } from "./GuestShareControls";
-import { canShareWithGuestAtom } from "./guestShareAvailability";
 
 const ICONS: Record<ThreadStripActionId, LucideIcon> = {
   settle: CircleCheckIcon,
@@ -41,7 +38,6 @@ const ICONS: Record<ThreadStripActionId, LucideIcon> = {
   pin: PinIcon,
   unpin: PinOffIcon,
   rename: PencilIcon,
-  "share-guest": UserPlusIcon,
 };
 
 function StripDivider() {
@@ -56,7 +52,6 @@ export const ThreadActionStrip = memo(function ThreadActionStrip(props: {
 }) {
   const { threadRef, threadShell } = props;
   const canOperate = useEnvironmentScope(threadRef.environmentId, AuthOrchestrationOperateScope);
-  const canShareWithGuest = useAtomValue(canShareWithGuestAtom(threadRef.environmentId));
   const serverConfig = useAtomValue(environmentServerConfigsAtom).get(threadRef.environmentId);
   const now = new Date(
     useNowAfter(Date.parse(threadShell.snoozedUntil ?? "") || null),
@@ -65,7 +60,6 @@ export const ThreadActionStrip = memo(function ThreadActionStrip(props: {
     threadRef,
     projectCwd: props.projectCwd,
     onStartRename: props.onStartRename,
-    canShareWithGuest,
   });
   const [snoozePresets, setSnoozePresets] = useState<ReadonlyArray<SnoozePreset> | null>(null);
   const configLoaded = serverConfig !== undefined;
@@ -88,7 +82,6 @@ export const ThreadActionStrip = memo(function ThreadActionStrip(props: {
       titleRegeneration: false,
     },
     snoozePresets: [],
-    canShareWithGuest,
   });
   const openMoreMenu = (event: ReactMouseEvent<HTMLButtonElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -166,9 +159,6 @@ export const ThreadActionStrip = memo(function ThreadActionStrip(props: {
         <EllipsisIcon aria-hidden />
         More
       </Button>
-      <div className="ml-auto flex min-w-0 items-center">
-        <GuestShareIndicator threadRef={threadRef} />
-      </div>
     </div>
   );
 });

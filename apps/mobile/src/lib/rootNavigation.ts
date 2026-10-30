@@ -6,8 +6,8 @@ import {
 
 /**
  * The app's single navigation container. Work that outlives a screen (a draft
- * route's branch checkout, notification taps, quick actions, Connect
- * onboarding) navigates through it instead of mounting hooks in the navigator.
+ * route's branch checkout, quick actions) navigates through it instead of
+ * mounting hooks in the navigator.
  */
 export const rootNavigationRef = createNavigationContainerRef<ReactNavigation.RootParamList>();
 

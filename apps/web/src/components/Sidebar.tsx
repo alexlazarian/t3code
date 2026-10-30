@@ -136,10 +136,7 @@ import { useOlderSettledShelf, useOlderSettledShelfGrowth } from "../state/older
 import { useThreadSearch } from "../state/queries";
 import { useOrchestrationCommand } from "../state/use-orchestration-command";
 import { readEnvironmentScope, useEnvironmentScope } from "../state/session";
-import { appAtomRegistry } from "../rpc/atomRegistry";
 import { showAppContextMenu } from "./AppContextMenu";
-import { canShareWithGuestAtom } from "./chat/guestShareAvailability";
-import { openGuestShareDialog } from "./chat/guestShareDialogState";
 import {
   buildThreadRouteParams,
   resolveActiveThreadRouteRef,
@@ -2421,9 +2418,6 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
               isRegeneratingTitle,
               isRunning: !threadRuntimeCanArchive(thread.runtime),
               readState: readThreadReadState(threadRef),
-              canShareWithGuest: appAtomRegistry.get(
-                canShareWithGuestAtom(threadRef.environmentId),
-              ),
               supports: {
                 settlement: configLoaded,
                 autoSettleOptOut: supportsAutoSettleOptOut,
@@ -2524,9 +2518,6 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
           }
           case "rename":
             startThreadRename(threadRef, thread.title);
-            return;
-          case "share-guest":
-            openGuestShareDialog(threadRef);
             return;
           case "regenerate-title": {
             if (isRegeneratingTitle) return;

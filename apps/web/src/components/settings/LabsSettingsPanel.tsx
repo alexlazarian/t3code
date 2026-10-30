@@ -1,9 +1,5 @@
-import { useAuth } from "@clerk/react";
 import { Link } from "@tanstack/react-router";
 
-import { hasCloudPublicConfig } from "~/cloud/publicConfig";
-import { useT3ConnectAuthPrompt } from "../clerk/useT3ConnectAuthPrompt";
-import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
 import { ScopedSwitch } from "./ScopedSwitch";
 import { SettingsPageContainer, SettingsRow, SettingsSection } from "./settingsLayout";
@@ -18,8 +14,6 @@ export function LabsSettingsPanel() {
       <SettingsSection id="beta" title="Beta">
         <BoringSidebarRow />
         <BoringSidebarMultilineRow />
-        {/* Clerk is only mounted when this build has T3 Connect. */}
-        {hasCloudPublicConfig() ? <GuestLinksRowWithSignIn /> : <GuestLinksRow />}
         <LinkedEnvironmentsRow />
         <SimlockHostsRow />
       </SettingsSection>
@@ -63,55 +57,6 @@ function BoringSidebarMultilineRow() {
             updateSettings({ boringSidebarMultilineRows: Boolean(checked) })
           }
           aria-label="Two-line folder rows"
-        />
-      }
-    />
-  );
-}
-
-/** Signed out of T3 Connect, the row offers to sign in instead of its switch. */
-function GuestLinksRowWithSignIn() {
-  const { isSignedIn } = useAuth();
-  const { openAuthPrompt } = useT3ConnectAuthPrompt();
-  // `isSignedIn` is undefined until Clerk loads.
-  if (isSignedIn !== false) return <GuestLinksRow />;
-  return (
-    <SettingsRow
-      {...searchableSetting("guest-links")}
-      description="Let a guest watch a thread live in their browser and send messages you approve. Sign in to T3 Connect to use guest links."
-      control={
-        <Button size="sm" variant="outline" onClick={openAuthPrompt}>
-          Sign in
-        </Button>
-      }
-    />
-  );
-}
-
-function GuestLinksRow() {
-  const settings = useScopedSettings();
-  const updateSettings = useUpdateScopedSettings();
-  return (
-    <SettingsRow
-      serverScoped
-      {...searchableSetting("guest-links")}
-      settingKeys={["guestSharingEnabled"]}
-      description={
-        <>
-          Let a guest watch a thread live in their browser and send messages you approve. Needs T3
-          Connect: sign in and link this machine in{" "}
-          <Link to="/settings/access" className="underline underline-offset-2">
-            Sharing & access
-          </Link>
-          . When off, guest links stop working.
-        </>
-      }
-      control={
-        <ScopedSwitch
-          settingKeys={["guestSharingEnabled"]}
-          checked={settings.guestSharingEnabled}
-          onCheckedChange={(checked) => updateSettings({ guestSharingEnabled: Boolean(checked) })}
-          aria-label="Guest links"
         />
       }
     />

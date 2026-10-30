@@ -92,7 +92,6 @@ describe("buildThreadActionMenuItems", () => {
           {
             ...baseState,
             branch,
-            canShareWithGuest: true,
             isPinned: reversed,
             isSettled: reversed,
             isSnoozed: reversed,
@@ -137,18 +136,16 @@ describe("buildThreadActionStrip", () => {
     expect(action).toMatchObject({ label, pressed: true, disabled: false });
   });
 
-  it("disables lifecycle and rename without permission but keeps Share", () => {
+  it("disables lifecycle and rename without permission", () => {
     const strip = buildThreadActionStrip({
       ...baseState,
       canOperate: false,
-      canShareWithGuest: true,
     });
     expect(strip.map((item) => [item.id, item.disabled])).toEqual([
       ["settle", true],
       ["snooze", true],
       ["pin", true],
       ["rename", true],
-      ["share-guest", false],
     ]);
   });
 
