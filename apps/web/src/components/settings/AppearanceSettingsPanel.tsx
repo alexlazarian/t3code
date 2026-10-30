@@ -33,6 +33,7 @@ import { AdvancedSettings } from "./AdvancedSettings";
 import { PanelAnimationsPreview } from "./PanelAnimationsPreview";
 import { useReadingPreview } from "./ReadingPreview";
 import { TypographySection } from "./TypographySettings";
+import { ThreadDetailsItemsRow } from "./ThreadDetailsItemsRow";
 
 function RangeControl(props: {
   readonly id: string;
@@ -285,6 +286,7 @@ export function AppearanceSettingsPanel() {
             </div>
           }
         />
+        <ThreadDetailsItemsRow />
         <SettingsRow
           {...searchableSetting("effort-display")}
           description="Show reasoning effort in the composer as its name, such as High, or as bars."

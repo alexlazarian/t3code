@@ -49,6 +49,7 @@ export const ThreadActionStrip = memo(function ThreadActionStrip(props: {
   readonly threadShell: EnvironmentThreadShell;
   readonly projectCwd: string | null;
   readonly onStartRename: () => void;
+  readonly onFind?: ((threadRef: ScopedThreadRef) => void) | undefined;
 }) {
   const { threadRef, threadShell } = props;
   const canOperate = useEnvironmentScope(threadRef.environmentId, AuthOrchestrationOperateScope);
@@ -60,6 +61,7 @@ export const ThreadActionStrip = memo(function ThreadActionStrip(props: {
     threadRef,
     projectCwd: props.projectCwd,
     onStartRename: props.onStartRename,
+    onFind: props.onFind,
   });
   const [snoozePresets, setSnoozePresets] = useState<ReadonlyArray<SnoozePreset> | null>(null);
   const configLoaded = serverConfig !== undefined;

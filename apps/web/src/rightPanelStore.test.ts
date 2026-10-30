@@ -1080,6 +1080,8 @@ describe("rightPanelStore", () => {
 
   it("tracks split panes and the active pane within a terminal surface", () => {
     useRightPanelStore.getState().openTerminal(refA, "term-1");
+    useRightPanelStore.getState().openTerminal(refA, "term-3");
+    useRightPanelStore.getState().activateSurface(refA, "terminal:term-1");
     useRightPanelStore.getState().splitTerminal(refA, "terminal:term-1", "term-2");
 
     expect(selectActiveRightPanelSurface(useRightPanelStore.getState().byThreadKey, refA)).toEqual({

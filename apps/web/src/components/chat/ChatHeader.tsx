@@ -2,6 +2,7 @@ import {
   AuthOrchestrationOperateScope,
   type EnvironmentId,
   type OrchestrationV2ExecutionNode,
+  type ScopedThreadRef,
   type ThreadId,
 } from "@t3tools/contracts";
 import { scopeThreadRef } from "@t3tools/client-runtime/environment";
@@ -53,6 +54,7 @@ interface ChatHeaderProps {
   onOpenThread: (threadId: ThreadId) => void;
   onNewThreadInProject: () => void;
   onOpenProjectSettings?: (() => void) | undefined;
+  onFindInThread?: ((threadRef: ScopedThreadRef) => void) | undefined;
 }
 
 const TINTED_TONES: ReadonlySet<StatusLightTone> = new Set([
@@ -76,6 +78,7 @@ export const ChatHeader = memo(function ChatHeader({
   onOpenThread,
   onNewThreadInProject,
   onOpenProjectSettings,
+  onFindInThread,
   ...tools
 }: ChatHeaderProps & Omit<ThreadHeaderToolsProps, "isServerThread">) {
   const status = useThreadHeaderStatus(threadShell, providerSubagentStatus);
@@ -135,6 +138,7 @@ export const ChatHeader = memo(function ChatHeader({
     threadRef: isServerThread ? activeThreadRef : null,
     projectCwd: activeProjectCwd,
     onStartRename: startRename,
+    onFind: onFindInThread,
   });
   // A drag region swallows double-clicks (macOS zooms the window), so the title opts out.
   const canRenameTitle = isServerThread && canOperateThread;

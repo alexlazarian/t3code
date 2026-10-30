@@ -114,7 +114,7 @@ function SidebarPanelTabs() {
 function SidebarBrand() {
   return (
     <Link
-      aria-label="Go to threads"
+      aria-label="T3 Code home"
       className="relative z-10 ml-3 hidden h-7 w-fit min-w-0 shrink-0 items-center overflow-hidden rounded-md text-foreground outline-hidden ring-ring focus-visible:ring-2 focus-visible:ring-inset md:flex"
       to="/"
     >

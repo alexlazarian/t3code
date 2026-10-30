@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Install the newest built dmg as /Applications/T3 Code (Fork).app. Quit the app first.
+# Install a built dmg (default: the newest in release/) as /Applications/T3 Code (Fork).app. Quit the app first.
+#   fork/install.sh [path/to.dmg]
 set -euo pipefail
+dmg="${1:+$(cd "$(dirname "$1")" && pwd)/$(basename "$1")}"
 cd "$(git rev-parse --show-toplevel)"
 
 if pgrep -f 'T3 Code \(Fork\)\.app/Contents/MacOS' >/dev/null; then
@@ -8,7 +10,8 @@ if pgrep -f 'T3 Code \(Fork\)\.app/Contents/MacOS' >/dev/null; then
   exit 1
 fi
 
-dmg="$(ls -t release/*-arm64.dmg | head -1)"
+dmg="${dmg:-$(ls -t release/*-arm64.dmg | head -1)}"
+[ -f "$dmg" ] || { echo "No dmg found at ${dmg:-release/}." >&2; exit 1; }
 mount="$(hdiutil attach -nobrowse -readonly "$dmg" | tail -1 | cut -f3)"
 rm -rf "/Applications/T3 Code (Fork).app"
 cp -R "$mount/T3 Code (Fork).app" /Applications/

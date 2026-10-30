@@ -51,7 +51,11 @@ import { threadRuntimeCanArchive } from "@t3tools/client-runtime/state/models";
 import { useCopyToClipboard } from "./useCopyToClipboard";
 import { useNewThreadHandler } from "./useHandleNewThread";
 import { useClientSettings } from "./useSettings";
-import { readThreadReadState, useThreadActions } from "./useThreadActions";
+import {
+  canTurnThreadIntoProject,
+  readThreadReadState,
+  useThreadActions,
+} from "./useThreadActions";
 
 function failureToast(title: string, error: unknown) {
   toastManager.add(
@@ -68,6 +72,8 @@ export interface ThreadMenuTarget {
   readonly threadRef: ScopedThreadRef | null;
   readonly projectCwd: string | null;
   readonly onStartRename?: () => void;
+  /** Without it the menu leaves Find in thread out. */
+  readonly onFind?: ((threadRef: ScopedThreadRef) => void) | undefined;
 }
 
 export interface ThreadMenuOptions {
@@ -108,6 +114,7 @@ export function useThreadActionMenu(input: ThreadMenuTarget) {
     deleteThread,
     markThreadUnread,
     markThreadsRead,
+    turnThreadIntoProject,
   } = useThreadActions();
   const updateThreadMetadata = useOrchestrationCommand(threadEnvironment.updateMetadata, {
     reportFailure: false,
@@ -148,7 +155,7 @@ export function useThreadActionMenu(input: ThreadMenuTarget) {
     shownSnoozePresets?: ReadonlyArray<SnoozePreset>,
     target: ThreadMenuTarget = input,
   ): Promise<void> => {
-    const { threadRef, projectCwd, onStartRename } = target;
+    const { threadRef, projectCwd, onStartRename, onFind } = target;
     if (threadRef === null) return;
     if (
       threadActionRequiresOperate(action) &&
@@ -189,6 +196,9 @@ export function useThreadActionMenu(input: ThreadMenuTarget) {
       }
     };
     switch (action) {
+      case "find":
+        onFind?.(threadRef);
+        return;
       case "project-settings": {
         const project = projects.find(
           (candidate) =>
@@ -258,6 +268,19 @@ export function useThreadActionMenu(input: ThreadMenuTarget) {
       case "mark-unread":
         markThreadUnread(threadRef);
         return;
+      case "turn-into-project": {
+        const result = await turnThreadIntoProject(threadRef);
+        if (result._tag === "Success") {
+          toastManager.add({
+            type: "success",
+            title: "Project created",
+            description: thread.title,
+          });
+        } else if (!isAtomCommandInterrupted(result)) {
+          failureToast("Could not turn thread into a project", squashAtomCommandFailure(result));
+        }
+        return;
+      }
       case "copy-path": {
         const workspacePath =
           thread.worktreePath ??
@@ -368,6 +391,7 @@ export function useThreadActionMenu(input: ThreadMenuTarget) {
       const threadItems = buildThreadActionMenuItems(
         {
           canOperate: readEnvironmentScope(threadRef.environmentId, AuthOrchestrationOperateScope),
+          canFind: target.onFind !== undefined,
           branch: thread.branch ?? null,
           projectFilter: null,
           isPinned: thread.pinnedAt != null,
@@ -380,6 +404,7 @@ export function useThreadActionMenu(input: ThreadMenuTarget) {
           readState: readThreadReadState(threadRef),
           supports,
           snoozePresets,
+          canTurnIntoProject: canTurnThreadIntoProject(threadRef),
         },
         omit,
       );

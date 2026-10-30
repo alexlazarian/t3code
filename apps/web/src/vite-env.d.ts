@@ -7,6 +7,7 @@ interface ImportMetaEnv {
   readonly VITE_WS_URL: string;
   readonly VITE_RELEASE_CHANNEL: string;
   readonly T3CODE_DESKTOP_UPDATE_REPOSITORY: string;
+  readonly T3CODE_FEATURE_SECRETS: string;
   readonly APP_VERSION: string;
 }
 

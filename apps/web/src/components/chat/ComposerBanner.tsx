@@ -18,19 +18,28 @@ const variantBar: Record<ComposerBannerVariant, string> = {
   warning: "before:border-l-3 before:border-l-warning",
 };
 
+/**
+ * An attached surface tucks its bottom under the card below it. A detached one is a whole card
+ * of its own, for a notice that sits apart from the composer.
+ */
 function Surface({
   variant = "default",
+  detached = false,
   className,
   ...props
 }: ComponentProps<"div"> & {
   variant?: ComposerBannerVariant;
+  detached?: boolean;
 }) {
   return (
     <div
-      data-composer-banner-surface="attached"
+      data-composer-banner-surface={detached ? "detached" : "attached"}
       data-variant={variant}
       className={cn(
-        "relative isolate border-0 bg-transparent shadow-none [--chat-composer-attachment-overlap:calc(1rem+1px)]",
+        "relative isolate border-0 bg-transparent shadow-none",
+        detached
+          ? "[--chat-composer-attachment-overlap:0px]"
+          : "[--chat-composer-attachment-overlap:calc(1rem+1px)]",
         "before:pointer-events-none before:absolute before:inset-0 before:-z-1 before:border before:border-border before:bg-card",
         variantBar[variant],
         className,
@@ -86,9 +95,8 @@ function Root({
   variant = "default",
   width = "fill",
   ...props
-}: ComponentProps<"div"> & {
+}: ComponentProps<typeof Surface> & {
   density?: "default" | "comfortable" | "spacious";
-  variant?: ComposerBannerVariant;
   width?: "fill" | "content";
 }) {
   return (

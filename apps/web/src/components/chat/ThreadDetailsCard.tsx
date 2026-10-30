@@ -1,4 +1,10 @@
-import { useLayoutEffect, useState, type ReactNode, type RefObject } from "react";
+import {
+  useLayoutEffect,
+  useState,
+  type MouseEventHandler,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import type { ScopedThreadRef } from "@t3tools/contracts";
 import { ScrollArea } from "../ui/scroll-area";
 import { Popover, PopoverPopup, PopoverCreateHandle } from "../ui/popover";
@@ -12,11 +18,16 @@ export function ThreadDetailsCard({
   threadRef,
   anchor,
   handle,
+  contentKey,
+  onContextMenu,
   children,
 }: {
   threadRef: ScopedThreadRef;
   anchor: RefObject<Element | null>;
   handle: ReturnType<typeof PopoverCreateHandle>;
+  /** Changes when the set of rendered items changes, so cached heights are measured again. */
+  contentKey: string;
+  onContextMenu?: MouseEventHandler<HTMLDivElement>;
   children: (density: "full" | "compact" | "essential") => ReactNode;
 }) {
   const detailsArea = workspaceAreaProps("details", 3, "Thread details");
@@ -25,7 +36,7 @@ export function ThreadDetailsCard({
   const open = useRightPanelStore((state) =>
     selectThreadPanelOpen(state.threadPanelOpenByThreadKey, threadRef),
   );
-  const measurementKey = `${threadRef.environmentId}:${threadRef.threadId}`;
+  const measurementKey = `${threadRef.environmentId}:${threadRef.threadId}:${contentKey}`;
   const [measurements, setMeasurements] = useState({
     key: measurementKey,
     heights: { full: 0, compact: 0 },
@@ -106,6 +117,7 @@ export function ThreadDetailsCard({
       >
         <div
           className="dropdown-glass isolate contain-paint grid max-h-[min(calc(100dvh-6.5rem),calc(var(--available-height,100dvh)-1rem))] grid-rows-[minmax(0,1fr)] overflow-hidden rounded-2xl"
+          onContextMenu={onContextMenu}
           data-thread-details-card
         >
           <ScrollArea scrollFade className="min-h-0">
