@@ -159,13 +159,25 @@ step() {
   printf '%-10s ' "$name"
   if "$@" >"$logs/$name.log" 2>&1; then echo ok; else echo "FAILED  $logs/$name.log"; failed+=("$name"); fi
 }
+# One package at a time: `vp run -r test` stops at the first failing package.
+test_all() {
+  local rc=0 dir
+  for dir in $(git ls-files 'apps/*/package.json' 'packages/*/package.json' 'infra/*/package.json' \
+    evals/package.json scripts/package.json oxlint-plugin-t3code/package.json | xargs -n1 dirname); do
+    grep -q '"test":' "$dir/package.json" || continue
+    echo "=== $dir"
+    vp run --filter "./$dir" test || { rc=1; echo "=== FAILED $dir"; }
+  done
+  return $rc
+}
 echo "Checking $sync at $(git rev-parse --short HEAD)"
 step install vp i
 step fmt vp run fmt:check
 step lint vp run lint
 step knip vp run knip:check
 step typecheck vp run typecheck
-step test vp run -r --log grouped test
+step test test_all
+grep '^=== FAILED' "$logs/test.log" | sed 's/^=== FAILED/           failed:/' || true
 step build fork/build.sh --build-only
 echo "$head" >"$logs/checked"
 
