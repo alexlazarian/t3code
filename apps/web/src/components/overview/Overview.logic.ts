@@ -617,6 +617,51 @@ export function overviewWaitStrip(
   }
 }
 
+export interface OverviewSubagentRow {
+  readonly subagent: OrchestrationV2ShellSubagent;
+  readonly depth: number;
+}
+
+/**
+ * Orders subagents as a tree, each one right under the subagent whose thread it runs under.
+ * A subagent whose parent is not in the list (cut by the server's cap) sits one level in.
+ */
+export function overviewSubagentTree(
+  subagents: ReadonlyArray<OrchestrationV2ShellSubagent>,
+): ReadonlyArray<OverviewSubagentRow> {
+  const listed = new Set(
+    subagents.flatMap((subagent) => (subagent.threadId === null ? [] : [subagent.threadId])),
+  );
+  const childrenOf = new Map<string, OrchestrationV2ShellSubagent[]>();
+  const roots: OrchestrationV2ShellSubagent[] = [];
+  for (const subagent of subagents) {
+    const parent = subagent.parentThreadId;
+    if (parent === undefined) {
+      roots.push(subagent);
+    } else if (listed.has(parent)) {
+      childrenOf.set(parent, [...(childrenOf.get(parent) ?? []), subagent]);
+    } else {
+      roots.push(subagent);
+    }
+  }
+  const rows: OverviewSubagentRow[] = [];
+  const visited = new Set<OrchestrationV2ShellSubagent>();
+  const visit = (subagent: OrchestrationV2ShellSubagent, depth: number) => {
+    if (visited.has(subagent)) return;
+    visited.add(subagent);
+    rows.push({ subagent, depth });
+    for (const child of subagent.threadId === null
+      ? []
+      : (childrenOf.get(subagent.threadId) ?? [])) {
+      visit(child, depth + 1);
+    }
+  };
+  for (const root of roots) {
+    visit(root, root.parentThreadId === undefined ? 0 : 1);
+  }
+  return rows;
+}
+
 export function overviewRunningSubagents(activity: OrchestrationV2ShellActivity | null): number {
   return (
     activity?.subagents.filter((subagent) => overviewSubagentState(subagent.status) === "running")

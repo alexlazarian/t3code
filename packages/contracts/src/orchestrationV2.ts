@@ -2067,6 +2067,8 @@ export type OrchestrationV2ShellStep = typeof OrchestrationV2ShellStep.Type;
 
 export const OrchestrationV2ShellSubagent = Schema.Struct({
   threadId: Schema.NullOr(ThreadId),
+  /** The subagent thread this one runs under. Absent for a direct subagent of the thread. */
+  parentThreadId: Schema.optional(ThreadId),
   title: Schema.String,
   status: OrchestrationV2Subagent.fields.status,
   /** Progress while it runs, then its result or error, cut to one short line. */
@@ -2088,7 +2090,7 @@ export const OrchestrationV2ShellActivity = Schema.Struct({
       deletions: Schema.optional(NonNegativeInt),
     }),
   ),
-  /** The newest direct subagents, capped; `subagentCount` counts them all. */
+  /** The newest subagents, direct and nested, capped; `subagentCount` counts them all. */
   subagents: Schema.Array(OrchestrationV2ShellSubagent),
   subagentCount: NonNegativeInt,
 });

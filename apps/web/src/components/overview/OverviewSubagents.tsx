@@ -8,6 +8,7 @@ import { SIDEBAR_ACTIVE_ROW_CLASS } from "../sidebar/sidebarRowStyles";
 import { StatusLight } from "../StatusLight";
 import {
   overviewStrobeDelay,
+  overviewSubagentTree,
   overviewSubagentState,
   type OverviewLight,
   type OverviewStepLine,
@@ -108,7 +109,7 @@ export function SubagentRows(props: {
   const { threadKey, subagents, subagentCount, activeThreadId } = props;
   return (
     <div className={cn("leading-relaxed", props.className)}>
-      {subagents.map((subagent, index) => {
+      {overviewSubagentTree(subagents).map(({ subagent, depth }, index) => {
         const state = overviewSubagentState(subagent.status);
         const active = activeThreadId != null && subagent.threadId === activeThreadId;
         return (
@@ -124,7 +125,12 @@ export function SubagentRows(props: {
             onDoubleClick={isolate}
             onKeyDown={isolate}
             data-info={subagent.threadId === null ? undefined : "Open this subagent's thread"}
-            style={{ "--strobe-delay": overviewStrobeDelay(threadKey, index + 2) } as CSSProperties}
+            style={
+              {
+                "--strobe-delay": overviewStrobeDelay(threadKey, index + 2),
+                paddingLeft: depth === 0 ? undefined : `${depth * 10}px`,
+              } as CSSProperties
+            }
             className={cn(
               "flex w-full min-w-0 cursor-pointer items-center gap-1.25 text-left outline-0 outline-ring focus-visible:outline-2 disabled:cursor-default disabled:hover:bg-transparent",
               active ? SIDEBAR_ACTIVE_ROW_CLASS : "hover:bg-accent",

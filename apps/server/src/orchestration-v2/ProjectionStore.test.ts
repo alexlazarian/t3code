@@ -648,6 +648,15 @@ it.effect("SQL shells list subagents of subagents at any depth", () =>
       "Nested",
     ]);
     assert.equal(all?.subagentCount, 3);
+    // A nested subagent names the thread it runs under; a direct one has no parent.
+    const parents = Object.fromEntries(
+      (all?.subagents ?? []).map(({ title, parentThreadId }) => [title, parentThreadId ?? null]),
+    );
+    assert.deepEqual(parents, {
+      Direct: null,
+      Nested: child.childId,
+      Deep: grandchild.childId,
+    });
   }).pipe(Effect.provide(layerTest)),
 );
 

@@ -59,6 +59,8 @@ export type ShellActivityStepRow = {
 export type ShellActivitySubagentRow = {
   readonly run_id: string;
   readonly child_thread_id: string | null;
+  /** The thread that owns this subagent when it is not the one the card is for. */
+  readonly parent_thread_id?: string | null;
   readonly title: string | null;
   readonly status: string;
   readonly progress: string | null;
@@ -121,6 +123,9 @@ function subagentFromRow(row: ShellActivitySubagentRow): OrchestrationV2ShellSub
   const live = status === "pending" || status === "running" || status === "waiting";
   return {
     threadId: row.child_thread_id === null ? null : ThreadId.make(row.child_thread_id),
+    ...(row.parent_thread_id == null
+      ? {}
+      : { parentThreadId: ThreadId.make(row.parent_thread_id) }),
     title: shellActivityProse(row.title) ?? "Subagent",
     status,
     step: live ? shellActivityLine(row.progress) : shellActivityProse(row.result),

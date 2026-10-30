@@ -6160,6 +6160,7 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
           WHERE json_extract(child.payload_json, '$.lineage.relationshipToParent') = 'subagent'
         )
         SELECT family.root_id AS root_thread_id, item.run_id,
+          item.thread_id AS parent_thread_id,
           json_extract(item.payload_json, '$.childThreadId') AS child_thread_id,
           substr(json_extract(item.payload_json, '$.title'), 1, 400) AS title,
           item.status,
