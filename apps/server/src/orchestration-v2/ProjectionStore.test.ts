@@ -657,6 +657,35 @@ it.effect("SQL shells list subagents of subagents at any depth", () =>
       Nested: child.childId,
       Deep: grandchild.childId,
     });
+
+    // Each finished subagent starts a notice run with no subagents on its parent. Those runs
+    // are the newest, but the subagents that ended still show with the run that held them.
+    for (const [name, threadId] of [
+      ["root", rootId],
+      ["child", child.childId],
+      ["grandchild", grandchild.childId],
+    ] as const) {
+      yield* store.apply({
+        id: EventId.make(`event:nested-subagents:${name}:notice`),
+        type: "run.created",
+        threadId,
+        occurredAt: at,
+        payload: {
+          ...initial.runs[0]!,
+          id: RunId.make(`run:nested-subagents:${name}:notice`),
+          threadId,
+          ordinal: 9,
+          status: "completed" as const,
+          completedAt: at,
+        },
+      });
+    }
+    const afterNotices = yield* activity;
+    assert.deepEqual(afterNotices?.subagents.map(({ title }) => title).toSorted(), [
+      "Deep",
+      "Direct",
+      "Nested",
+    ]);
   }).pipe(Effect.provide(layerTest)),
 );
 

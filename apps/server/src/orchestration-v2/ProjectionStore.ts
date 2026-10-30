@@ -6120,9 +6120,9 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
         ORDER BY run_id, ordinal
       `;
 
-    // Subagents still working in a run the card does not read. Their lead has usually ended
-    // that run, and a later run (a follow-up, or a subagent-finished notice) became the one
-    // the card shows.
+    // Subagents in a run the card does not read: still working, or in the newest run that
+    // holds any. Their lead has usually ended that run, and a later run (a follow-up, or a
+    // subagent-finished notice) became the one the card shows.
     const selectShellLiveSubagentRows = (threadIds: ReadonlyArray<string>) =>
       sql<ShellActivitySubagentRow & { readonly thread_id: string }>`
         SELECT thread_id, run_id,
@@ -6136,14 +6136,26 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
         FROM orchestration_v2_projection_turn_items
         WHERE thread_id IN ${sql.in(threadIds)}
           AND type = 'subagent'
-          AND status IN ('pending', 'running', 'waiting')
           AND run_id IS NOT NULL
+          AND (
+            status IN ('pending', 'running', 'waiting')
+            OR run_id = (
+              SELECT held.run_id
+              FROM orchestration_v2_projection_turn_items held
+              JOIN orchestration_v2_projection_runs held_run ON held_run.run_id = held.run_id
+              WHERE held.thread_id = orchestration_v2_projection_turn_items.thread_id
+                AND held.type = 'subagent'
+              ORDER BY held_run.ordinal DESC, held_run.run_id DESC
+              LIMIT 1
+            )
+          )
         ORDER BY thread_id, ordinal
       `;
 
     // Subagents of subagents, at any depth below each thread. A card lists them with the
     // thread's own, so a lead sees everything running under it. A descendant contributes the
-    // subagents of the run it is working in, plus any still working in an earlier run.
+    // subagents of the newest run that holds any, plus any still working in an earlier run.
+    // The newest run overall is no use: each finished subagent starts a notice run with none.
     const selectShellDescendantSubagentRows = (threadIds: ReadonlyArray<string>) =>
       sql<ShellActivitySubagentRow & { readonly root_thread_id: string }>`
         WITH RECURSIVE family(root_id, thread_id) AS (
@@ -6177,16 +6189,11 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
           AND (
             item.status IN ('pending', 'running', 'waiting')
             OR item.run_id = (
-              SELECT r.run_id
-              FROM orchestration_v2_projection_runs r
-              WHERE r.thread_id = family.thread_id
-                AND r.status <> 'queued'
-                AND NOT (
-                  r.status = 'cancelled' AND json_extract(r.payload_json, '$.startedAt') IS NULL
-                )
-                AND NOT ${isSilentShellRun("r")}
-              ORDER BY r.status IN ('preparing', 'starting', 'running', 'waiting') DESC,
-                r.ordinal DESC, r.run_id DESC
+              SELECT held.run_id
+              FROM orchestration_v2_projection_turn_items held
+              JOIN orchestration_v2_projection_runs held_run ON held_run.run_id = held.run_id
+              WHERE held.thread_id = family.thread_id AND held.type = 'subagent'
+              ORDER BY held_run.ordinal DESC, held_run.run_id DESC
               LIMIT 1
             )
           )
