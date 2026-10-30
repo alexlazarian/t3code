@@ -127,15 +127,13 @@ tailscale serve --https=443 off
 If that port is already in use, choose another with
 `--tailscale-serve-port`. See `t3 pair --help` for other pairing options.
 
-### Hosted web app
+### Pair a browser
 
-[app.t3.codes](https://app.t3.codes) needs an HTTPS endpoint. It connects directly
-to your server; a hosted pairing link does not make an unreachable backend
-reachable or convert HTTP to HTTPS.
-
-For a plain HTTP LAN endpoint, use the direct pairing URL in a browser that can
-open it, or pair from the desktop app. On mobile, an IP address entered without a
-scheme uses HTTP, so include `https://` when your server uses HTTPS.
+Every server serves the web app itself. A pairing link has the form
+`<address>/pair#token=…` on the server's own address, so opening it in a browser
+on another device connects that browser to the server. On mobile, an IP address
+entered without a scheme uses HTTP, so include `https://` when your server uses
+HTTPS.
 
 ## Desktop-managed SSH
 

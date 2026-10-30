@@ -71,7 +71,6 @@ function browserDeviceType(identity: BrowserIdentity): AuthClientMetadataDeviceT
 
 export function clientPresentationMetadata(input: {
   readonly appVersion: string;
-  readonly hosted: boolean;
   readonly identity: BrowserIdentity;
   readonly desktopBridge: Pick<DesktopBridge, "getClientPlatform"> | undefined;
 }): AuthClientPresentationMetadata {
@@ -88,7 +87,6 @@ export function clientPresentationMetadata(input: {
     label: "T3 Code Web",
     deviceType: browserDeviceType(input.identity),
     os: browserClientOs(input.identity),
-    webDeployment: input.hosted ? "hosted" : "server",
     browser: browserFamily(input.identity.userAgent),
     ...(input.appVersion === "0.0.0" ? {} : { appVersion: input.appVersion }),
   };

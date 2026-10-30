@@ -71,8 +71,8 @@ different code depending on it:
 
 - How is T3 Code running on this machine: \`npx t3 serve\` in a terminal, the
   background service, or the desktop app?
-- Which surface is the user connecting from: the website (app.t3.codes), the
-  desktop app against a local server, the desktop app against a remote server,
+- Which surface is the user connecting from: a browser on the server's address,
+  the desktop app against a local server, the desktop app against a remote server,
   or the mobile app?
 
 Then work from evidence, not assumption. In rough order of value:

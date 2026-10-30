@@ -138,18 +138,17 @@ its agents can already do anything that user can, so the fence would only stop
 T3's own tools. Its work still carries `linkOrigin`, so clients show where it
 came from. A stamp without the access, from before it was recorded, is fenced.
 
-## Hosted web is a client
+## The web app is a client
 
-The hosted web app stores its connection catalog in the browser and connects
-directly to each environment. It does not proxy traffic or hold server-side
-pairing state. Hosting the UI over HTTPS therefore cannot make a plain HTTP LAN
-backend accessible from that browser context.
+Each server serves the web app itself. The web app stores its connection catalog
+in the browser and connects directly to each environment; it does not proxy
+traffic or hold server-side pairing state.
 
-A [hosted pairing URL](../../apps/web/src/hostedPairing.ts) identifies the backend
-in its query and carries the pairing secret in its fragment. Fragments stay out
-of requests to the hosted origin. The browser exchanges the secret with the
-environment and strips it from its history. Moving the token into a query
-parameter would disclose it to the wrong origin.
+A [pairing URL](../../apps/web/src/components/settings/pairingUrls.ts) is the
+environment's own `/pair` route with the pairing secret in its fragment.
+Fragments stay out of HTTP requests and server logs. The browser exchanges the
+secret with the environment and strips it from its history. Moving the token
+into a query parameter would send it with the page request.
 
 ## Access and process ownership are different
 

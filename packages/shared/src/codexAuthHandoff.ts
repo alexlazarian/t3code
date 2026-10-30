@@ -115,7 +115,7 @@ export function readCodexAuthHandoff(value: string, development: boolean) {
   }
 }
 
-/** Codes travel in a fragment, never in hosted web requests or a token store on the helper. */
+/** Codes travel in a fragment, never in web requests or a token store on the helper. */
 export function codexAuthDeliveryUrl(input: CodexAuthHandoff, callbackUrl: string) {
   const request = codexAuthorizationRequest(input.authorizationUrl);
   codexCallbackUrl(callbackUrl, request.redirectUri, request.state);

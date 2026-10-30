@@ -284,9 +284,6 @@ export const ClientOs = Schema.Literals([
 ]);
 export type ClientOs = typeof ClientOs.Type;
 
-export const ClientWebDeployment = Schema.Literals(["hosted", "server"]);
-export type ClientWebDeployment = typeof ClientWebDeployment.Type;
-
 export const ProviderItemId = makeEntityId("ProviderItemId");
 export type ProviderItemId = typeof ProviderItemId.Type;
 export const ProviderSessionId = makeEntityId("ProviderSessionId");

@@ -13,7 +13,10 @@ const decodeEnvironmentId = Schema.decodeOption(EnvironmentId);
 export const Route = createFileRoute("/welcome")({
   beforeLoad: ({ context }) => {
     const { authGateState } = context;
-    if (authGateState.status !== "authenticated" && authGateState.status !== "hosted-static") {
+    if (
+      authGateState.status !== "authenticated" &&
+      authGateState.status !== "local-environment-off"
+    ) {
       throw redirect({ to: "/pair", replace: true });
     }
   },

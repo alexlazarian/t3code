@@ -33,7 +33,7 @@ export const BRAND_ASSET_PATHS = {
 
 export type WebAssetBrand = "development" | "nightly" | "production";
 
-export const WEB_ASSET_CHANNELS = ["latest", "nightly"] as const;
+const WEB_ASSET_CHANNELS = ["latest", "nightly"] as const;
 
 export type WebAssetChannel = (typeof WEB_ASSET_CHANNELS)[number];
 

@@ -1,12 +1,7 @@
 import * as Schema from "effect/Schema";
 import * as HttpApiSchema from "effect/http-api/HttpApiSchema";
 
-import {
-  AuthSessionId,
-  ForwardCompatibleArray,
-  ClientWebDeployment,
-  TrimmedNonEmptyString,
-} from "./baseSchemas.ts";
+import { AuthSessionId, ForwardCompatibleArray, TrimmedNonEmptyString } from "./baseSchemas.ts";
 
 export const ServerAuthPolicy = Schema.Literals([
   "desktop-managed-local",
@@ -199,7 +194,6 @@ export const AuthClientPresentationMetadata = Schema.Struct({
   label: Schema.optionalKey(TrimmedNonEmptyString),
   deviceType: Schema.optionalKey(AuthClientMetadataDeviceType),
   os: Schema.optionalKey(TrimmedNonEmptyString),
-  webDeployment: Schema.optionalKey(ClientWebDeployment),
   browser: Schema.optionalKey(TrimmedNonEmptyString),
   appVersion: Schema.optionalKey(TrimmedNonEmptyString),
 });

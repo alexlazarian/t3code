@@ -1,5 +1,3 @@
-import { DEFAULT_HOSTED_APP_URL } from "./hostedApp.ts";
-
 export const PROMPT_LINK_MAX_PROMPT_LENGTH = 8_000;
 
 export interface PromptLinkRepository {
@@ -164,47 +162,32 @@ export function withoutPromptLinkParams(search: string): string {
   return rest ? `?${rest}` : "";
 }
 
+/** An app link, so whoever receives it opens it in their own desktop or mobile app. */
 export function buildNewThreadLink(input: {
   readonly prompt: string;
   readonly repository?: PromptLinkRepository | null;
   readonly provider?: string | null;
   readonly model?: string | null;
-  readonly origin?: string;
 }): string {
-  const url = new URL("/new", input.origin ?? DEFAULT_HOSTED_APP_URL);
-  url.searchParams.set("prompt", input.prompt);
+  const params = new URLSearchParams([["prompt", input.prompt]]);
   if (input.repository) {
-    url.searchParams.set("repo", `${input.repository.owner}/${input.repository.name}`);
+    params.set("repo", `${input.repository.owner}/${input.repository.name}`);
   }
-  if (input.provider) url.searchParams.set("provider", input.provider);
-  if (input.provider && input.model) url.searchParams.set("model", input.model);
-  return url.toString();
+  if (input.provider) params.set("provider", input.provider);
+  if (input.provider && input.model) params.set("model", input.model);
+  return `t3code://new?${params}`;
 }
 
 const APP_SCHEME = /^t3code(?:-[a-z]+)?:$/;
 const THREAD_PATH = /^\/([^/]+)\/([^/]+)\/?$/;
 
-export function promptLinkAppPath(
-  value: string,
-  hostedAppUrl: string = DEFAULT_HOSTED_APP_URL,
-): string | null {
+export function promptLinkAppPath(value: string): string | null {
   if (!URL.canParse(value)) return null;
   const url = new URL(value);
-  if (APP_SCHEME.test(url.protocol)) {
-    if (url.host === "new" && (url.pathname === "" || url.pathname === "/")) {
-      return `/new${url.search}`;
-    }
-    const thread = url.host === "threads" ? THREAD_PATH.exec(url.pathname) : null;
-    return thread ? `/${thread[1]}/${thread[2]}${url.search}` : null;
+  if (!APP_SCHEME.test(url.protocol)) return null;
+  if (url.host === "new" && (url.pathname === "" || url.pathname === "/")) {
+    return `/new${url.search}`;
   }
-  if (!URL.canParse(hostedAppUrl) || url.origin !== new URL(hostedAppUrl).origin) return null;
-  if (url.pathname === "/new") return `/new${url.search}`;
-  const thread = url.searchParams.has("prompt") ? THREAD_PATH.exec(url.pathname) : null;
+  const thread = url.host === "threads" ? THREAD_PATH.exec(url.pathname) : null;
   return thread ? `/${thread[1]}/${thread[2]}${url.search}` : null;
-}
-
-export function promptLinkDeepLink(appPath: string, scheme = "t3code"): string {
-  const url = new URL(appPath, "https://app.invalid");
-  const host = url.pathname === "/new" ? "new" : `threads${url.pathname}`;
-  return `${scheme}://${host}${url.search}`;
 }

@@ -19,7 +19,7 @@ import * as Cause from "effect/Cause";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { cn } from "../../lib/utils";
 import { formatElapsedDurationLabel, formatExpiresInLabel } from "../../timestampFormat";
-import { resolveDesktopPairingUrl, resolveHostedPairingUrl } from "./pairingUrls";
+import { resolvePairingUrl } from "./pairingUrls";
 import {
   canRevokeOtherClients,
   isQrShareableEndpoint,
@@ -62,9 +62,7 @@ import {
   selectPairingEndpoint,
   isTailscaleHttpsEndpoint,
   endpointDefaultPreferenceKey,
-  resolveAdvertisedEndpointPairingUrl,
   resolveCurrentOriginPairingUrl,
-  isHostedAppPairingUrl,
   endpointShareHint,
 } from "./ConnectionsSettings.logic";
 
@@ -148,15 +146,9 @@ const PairingLinkListRow = memo(function PairingLinkListRow({
   const qrPanelId = useId();
 
   const currentOriginPairingUrl = credential ? resolveCurrentOriginPairingUrl(credential) : null;
-  const hostedPairingUrl =
-    credential && endpointUrl != null && endpointUrl !== ""
-      ? resolveHostedPairingUrl(endpointUrl, credential)
-      : null;
   const endpointPairingUrl = (() => {
     const endpoint = selectPairingEndpoint(endpoints, defaultEndpointKey);
-    return endpoint && credential
-      ? resolveAdvertisedEndpointPairingUrl(endpoint, credential)
-      : null;
+    return endpoint && credential ? resolvePairingUrl(endpoint.httpBaseUrl, credential) : null;
   })();
   const endpointCopyOptions = (() => {
     const options: Array<{
@@ -172,13 +164,13 @@ const PairingLinkListRow = memo(function PairingLinkListRow({
       if (endpoint.status === "unavailable") {
         continue;
       }
-      const url = resolveAdvertisedEndpointPairingUrl(endpoint, credential);
+      const url = resolvePairingUrl(endpoint.httpBaseUrl, credential);
       options.push({
         id: endpoint.id,
         preferenceKey: endpointDefaultPreferenceKey(endpoint),
         label: endpoint.label,
         url,
-        detail: endpointShareHint(endpoint, url),
+        detail: endpointShareHint(endpoint),
         qrShareable: isQrShareableEndpoint(endpoint),
       });
     }
@@ -187,14 +179,13 @@ const PairingLinkListRow = memo(function PairingLinkListRow({
   const shareablePairingUrl =
     endpointPairingUrl ??
     (credential && endpointUrl != null && endpointUrl !== ""
-      ? (hostedPairingUrl ?? resolveDesktopPairingUrl(endpointUrl, credential))
+      ? resolvePairingUrl(endpointUrl, credential)
       : isLoopbackHostname(window.location.hostname)
         ? null
         : currentOriginPairingUrl);
   const [failedCopyValue, setFailedCopyValue] = useState<string | null>(null);
   const revealValue = failedCopyValue ?? shareablePairingUrl ?? credential ?? "";
   const isRevealValueUrl = revealValue !== credential;
-  const isRevealValueHostedAppPairingUrl = isRevealValueUrl && isHostedAppPairingUrl(revealValue);
   const isRevealValueQrShareable =
     endpointCopyOptions.find((option) => option.url === revealValue)?.qrShareable ?? true;
   const canCopyToClipboard =
@@ -204,23 +195,16 @@ const PairingLinkListRow = memo(function PairingLinkListRow({
 
   const { copyToClipboard } = useCopyToClipboard<{
     value: string;
-    kind: "code" | "hosted-link" | "link";
+    kind: "code" | "link";
   }>({
     onCopy: ({ kind }) => {
       toastManager.add({
         type: "success",
-        title:
-          kind === "hosted-link"
-            ? "Hosted app link copied"
-            : kind === "link"
-              ? "Pairing URL copied"
-              : "Pairing code copied",
+        title: kind === "link" ? "Pairing URL copied" : "Pairing code copied",
         description:
-          kind === "hosted-link"
-            ? "Open it in the browser on the device you want to connect."
-            : kind === "link"
-              ? "Open it in the client you want to pair to this environment."
-              : "Paste it into another client to finish pairing.",
+          kind === "link"
+            ? "Open it in the client you want to pair to this environment."
+            : "Paste it into another client to finish pairing.",
       });
     },
     onError: (error, { value, kind }) => {
@@ -232,11 +216,9 @@ const PairingLinkListRow = memo(function PairingLinkListRow({
         stackedThreadToast({
           type: "error",
           title: canCopyToClipboard
-            ? kind === "hosted-link"
-              ? "Could not copy hosted app link"
-              : kind === "link"
-                ? "Could not copy pairing URL"
-                : "Could not copy pairing code"
+            ? kind === "link"
+              ? "Could not copy pairing URL"
+              : "Could not copy pairing code"
             : "Clipboard copy unavailable",
           description: canCopyToClipboard ? error.message : "Showing the full value instead.",
         }),
@@ -244,12 +226,9 @@ const PairingLinkListRow = memo(function PairingLinkListRow({
     },
   });
 
-  const copyPairingValue = (value: string, kind: "code" | "hosted-link" | "link") => {
+  const copyPairingValue = (value: string, kind: "code" | "link") => {
     copyToClipboard(value, { value, kind });
   };
-
-  const copyKindForUrl = (url: string): "hosted-link" | "link" =>
-    isHostedAppPairingUrl(url) ? "hosted-link" : "link";
 
   const handleCopyCode = () => {
     if (credential) copyPairingValue(credential, "code");
@@ -334,18 +313,10 @@ const PairingLinkListRow = memo(function PairingLinkListRow({
             )}
             <DialogPopup size="sm">
               <DialogHeader>
-                <DialogTitle>
-                  {isRevealValueUrl
-                    ? isRevealValueHostedAppPairingUrl
-                      ? "Hosted app pairing link"
-                      : "Pairing link"
-                    : "Pairing code"}
-                </DialogTitle>
+                <DialogTitle>{isRevealValueUrl ? "Pairing link" : "Pairing code"}</DialogTitle>
                 <DialogDescription>
                   {isRevealValueUrl
-                    ? isRevealValueHostedAppPairingUrl
-                      ? "Can't copy to the clipboard here. Open this hosted app link on the device you want to connect, or copy it by hand."
-                      : "Can't copy to the clipboard here. Open this pairing URL on the device you want to connect, or copy it by hand."
+                    ? "Can't copy to the clipboard here. Open this pairing URL on the device you want to connect, or copy it by hand."
                     : "Can't copy to the clipboard here. Copy this code into another client by hand."}
                 </DialogDescription>
               </DialogHeader>
@@ -450,7 +421,7 @@ const PairingLinkListRow = memo(function PairingLinkListRow({
                 size="xs"
                 variant="outline"
                 className="shrink-0"
-                onClick={() => copyPairingValue(qrPairingUrl, copyKindForUrl(qrPairingUrl))}
+                onClick={() => copyPairingValue(qrPairingUrl, "link")}
               >
                 Copy link
               </Button>

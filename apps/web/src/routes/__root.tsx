@@ -47,8 +47,6 @@ import {
 import { useUiStateStore } from "../uiStateStore";
 import { configureClientTracing } from "../observability/clientTracing";
 import { resolveInitialServerAuthGateState } from "../environments/primary";
-import { hasHostedPairingRequest, isHostedStaticApp } from "../hostedPairing";
-import { useHostedPromptLinkLanding } from "../components/promptLinks/HostedPromptLinkLanding";
 import { isLocalEnvironmentDisabled } from "../localEnvironment";
 import { useAtomValue } from "@effect/atom-react";
 import { primaryServerConfigAtom, primaryServerWelcomeAtom } from "../state/server";
@@ -59,18 +57,10 @@ import { shouldResumeSnapShotSetupOnStartup } from "../lib/snapShotSetupResume";
 
 export const Route = createRootRoute({
   beforeLoad: async ({ location }) => {
-    if (location.pathname === "/pair" && hasHostedPairingRequest(new URL(window.location.href))) {
+    if (isLocalEnvironmentDisabled()) {
       return {
         authGateState: {
-          status: "hosted-pairing",
-        } as const,
-      };
-    }
-
-    if (isLocalEnvironmentDisabled() || isHostedStaticApp(new URL(window.location.href))) {
-      return {
-        authGateState: {
-          status: "hosted-static",
+          status: "local-environment-off",
         } as const,
       };
     }
@@ -136,17 +126,9 @@ function RootRouteBranch() {
   // Once true, stays true: a visit to /welcome means the bootstrap already chose a route.
   const [returningFromWelcome, setReturningFromWelcome] = useState(pathname === "/welcome");
   if (pathname === "/welcome" && !returningFromWelcome) setReturningFromWelcome(true);
-  const hostedPromptLinkLanding = useHostedPromptLinkLanding(
-    authGateState.status === "hosted-static",
-  );
 
   if (pathname === "/pair" || pathname === "/connect-agent") {
     return <Outlet />;
-  }
-
-  // Handle links before onboarding redirects lose them.
-  if (hostedPromptLinkLanding !== null) {
-    return hostedPromptLinkLanding;
   }
 
   if (pathname === "/welcome") {
@@ -163,7 +145,10 @@ function RootRouteBranch() {
     );
   }
 
-  if (authGateState.status !== "authenticated" && authGateState.status !== "hosted-static") {
+  if (
+    authGateState.status !== "authenticated" &&
+    authGateState.status !== "local-environment-off"
+  ) {
     return <Outlet />;
   }
 
@@ -180,7 +165,7 @@ function RootRouteBranch() {
       <ChatGptWelcomeCoordinator />
       <FirstRunGate
         enabled={primaryEnvironmentAuthenticated}
-        hostedStatic={authGateState.status === "hosted-static"}
+        localEnvironmentOff={authGateState.status === "local-environment-off"}
       >
         {primaryEnvironmentAuthenticated ? <DesktopAppActivationCoordinator /> : null}
         {primaryEnvironmentAuthenticated || localEnvironmentDisabled ? (

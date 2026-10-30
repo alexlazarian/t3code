@@ -39,7 +39,7 @@ import * as Struct from "effect/Struct";
 import * as Option from "effect/Option";
 import { AsyncResult, Atom } from "effect/reactivity";
 import { toastManager } from "~/components/ui/toast";
-import { isHostedStaticApp } from "~/hostedPairing";
+import { isLocalEnvironmentDisabled } from "~/localEnvironment";
 import { environmentCatalog } from "~/connection/catalog";
 import { primaryServerSettingsAtom, serverEnvironment } from "~/state/server";
 import { useEnvironments, usePrimaryEnvironment } from "~/state/environments";
@@ -513,12 +513,12 @@ export function usePrimarySettings<T = UnifiedSettings>(
 }
 
 export const PRIMARY_SETTINGS_UNAVAILABLE_MESSAGE =
-  "This setting is saved on a server, and the hosted app is not anchored to one. Change it from the desktop app or from the server's own address.";
+  "This setting is saved on an environment, and this computer's environment is off. Turn it back on, or change the setting from another environment.";
 
-/** Hosted clients have no primary: usePrimarySettings reads defaults and cannot write. */
+/** With the local environment off there is no primary: usePrimarySettings reads defaults and cannot write. */
 export function usePrimarySettingsAvailable(): boolean {
   const primaryEnvironment = usePrimaryEnvironment();
-  return primaryEnvironment !== null || !isHostedStaticApp();
+  return primaryEnvironment !== null || !isLocalEnvironmentDisabled();
 }
 
 function useSharedSettingsSyncTargetIds(includePending = false): ReadonlyArray<EnvironmentId> {

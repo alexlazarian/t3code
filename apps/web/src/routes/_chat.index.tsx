@@ -8,7 +8,7 @@ import { isElectron } from "../env";
 import { NoProjectsHero } from "../components/NoProjectsHero";
 import { sortScopedProjectsForSidebar } from "../components/Sidebar.logic";
 import { Button } from "../components/ui/button";
-import { HostedEmptyState } from "../components/HostedEmptyState";
+import { LocalEnvironmentOffState } from "../components/LocalEnvironmentOffState";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "../components/ui/empty";
 import { SidebarInset } from "../components/ui/sidebar";
 import { WorkspacePageHeader } from "../components/WorkspacePageHeader";
@@ -28,9 +28,9 @@ function ChatIndexRouteView() {
   const threadView = useClientSettings((s) => s.threadView);
   const settingsStatus = useClientSettingsHydrationStatus();
 
-  if (authGateState.status === "hosted-static") {
+  if (authGateState.status === "local-environment-off") {
     if (!isReady) return null;
-    if (environments.length === 0) return <HostedEmptyState />;
+    if (environments.length === 0) return <LocalEnvironmentOffState />;
   }
 
   // A draft started before the saved view loads would replace the Overview redirect.

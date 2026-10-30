@@ -10,7 +10,7 @@ type ProviderAuthDelivery = NonNullable<ReturnType<typeof readCodexAuthDelivery>
 
 /**
  * Remove the code before the router, tracing, or welcome screen sees the incoming address,
- * then hand it to its environment once that environment connects. Hosted web receives only
+ * then hand it to its environment once that environment connects. The web app receives only
  * the one-time code; the selected environment verifies and stores tokens.
  */
 export function startProviderAuthDelivery(): void {

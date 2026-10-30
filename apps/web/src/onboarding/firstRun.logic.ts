@@ -145,7 +145,7 @@ export function resolveFirstRunDecision(input: FirstRunDecisionInput): {
     : { decision: "app", persistCompletion: input.workspaceAuthoritative };
 }
 
-export function resolveHostedFirstRunDecision(hydrated: boolean): {
+export function resolveLocalEnvironmentOffFirstRunDecision(hydrated: boolean): {
   readonly decision: FirstRunDecision;
   readonly persistCompletion: boolean;
 } {

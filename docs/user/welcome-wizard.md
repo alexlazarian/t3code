@@ -3,9 +3,6 @@
 T3 Code shows a setup flow when you open a new installation. Existing
 workspaces skip this flow.
 
-The hosted app at app.t3.codes does not open setup. With no computer connected,
-it asks you to run `npx t3 pair` on your computer and add the pairing link.
-
 Close setup while no import is running to go straight to the app. You can connect
 computers and agents later from Settings, or open `/welcome` to run setup again.
 Direct links, such as Settings, open normally before setup is done.

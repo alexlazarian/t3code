@@ -1,4 +1,4 @@
-// @effect-diagnostics nodeBuiltinImport:off globalFetchInEffect:off - Hosted handoff test uses a real localhost listener without an OpenAI account.
+// @effect-diagnostics nodeBuiltinImport:off globalFetchInEffect:off - Web handoff test uses a real localhost listener without an OpenAI account.
 import * as NodeHttp from "node:http";
 import * as NodePath from "@effect/platform-node/NodePath";
 import { codexAuthHandoffUrl, readCodexAuthDelivery } from "@t3tools/shared/codexAuthHandoff";
@@ -298,7 +298,7 @@ it.effect(
 );
 
 it.effect.each(["startup", "open-url", "early-second-instance"] as const)(
-  "receives hosted web sign-in through the desktop %s handler",
+  "receives web sign-in through the desktop %s handler",
   (entry) =>
     Effect.gen(function* () {
       const port = yield* Effect.promise(async () => {
@@ -320,7 +320,7 @@ it.effect.each(["startup", "open-url", "early-second-instance"] as const)(
       }).toString();
       const request = {
         authorizationUrl: authorize.toString(),
-        returnUrl: "https://app.t3.codes/welcome#agents:remote-one",
+        returnUrl: "http://127.0.0.1:3773/welcome#agents:remote-one",
         environmentId: EnvironmentId.make("remote-one"),
         instanceId: ProviderInstanceId.make("work"),
         flowId: "flow-one",

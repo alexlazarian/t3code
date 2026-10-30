@@ -14,7 +14,7 @@ import {
   isFirstRunWorkspaceProvenanceAuthoritative,
   isFreshFirstRunWorkspace,
   resolveFirstRunDecision,
-  resolveHostedFirstRunDecision,
+  resolveLocalEnvironmentOffFirstRunDecision,
   transitionFirstRunGateState,
   type FirstRunGateState,
 } from "../../onboarding/firstRun.logic";
@@ -66,11 +66,11 @@ const soleThreadAtom = Atom.make((get) => {
 
 export function FirstRunGate({
   enabled,
-  hostedStatic,
+  localEnvironmentOff,
   children,
 }: {
   readonly enabled: boolean;
-  readonly hostedStatic: boolean;
+  readonly localEnvironmentOff: boolean;
   readonly children: React.ReactNode;
 }) {
   const navigate = useNavigate();
@@ -89,7 +89,7 @@ export function FirstRunGate({
   const workspaceEvidenceLive = useAtomValue(workspaceEvidenceLiveAtom);
   const [gateState, setGateState] = useState<FirstRunGateState>(() => ({
     decision:
-      (!enabled && !hostedStatic) || (hydrated && onboardingCompletedAt !== null)
+      (!enabled && !localEnvironmentOff) || (hydrated && onboardingCompletedAt !== null)
         ? "app"
         : "pending",
     stalled: false,
@@ -112,8 +112,8 @@ export function FirstRunGate({
       threads: soleThread === null ? [] : [soleThread],
     });
 
-  const { decision: nextDecision, persistCompletion } = hostedStatic
-    ? resolveHostedFirstRunDecision(hydrated)
+  const { decision: nextDecision, persistCompletion } = localEnvironmentOff
+    ? resolveLocalEnvironmentOffFirstRunDecision(hydrated)
     : resolveFirstRunDecision({
         enabled,
         hydrated,
