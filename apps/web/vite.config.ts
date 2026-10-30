@@ -100,6 +100,8 @@ const browserTestProject = {
       "pdfjs-dist",
       "sql.js",
       "tiff",
+      // Found mid-run otherwise; the reload breaks vi.mock factories in flight.
+      "effect/reactivity/Atom",
     ],
   },
   test: {

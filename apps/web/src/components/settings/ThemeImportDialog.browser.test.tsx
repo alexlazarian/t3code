@@ -102,7 +102,8 @@ it.each(["Update existing", "Keep both"])(
     await expect.element(page.getByText("Already installed")).toBeVisible();
     await expect.element(page.getByText(/^broken\.json:/)).toBeVisible();
     expect(getCustomThemes().map((theme) => theme.label)).toContain("Dawn");
-    await page.getByRole("button", { name: choice }).click();
+    // Tests load no CSS, so base-ui's fixed inert layer covers the unpositioned dialog footer.
+    (page.getByRole("button", { name: choice }).element() as HTMLElement).click();
     invalidateCustomThemes();
     const label = choice === "Update existing" ? "Dusk" : "Dusk (1)";
     expect(getCustomThemes().find((theme) => theme.label === label)?.colors).toEqual(
