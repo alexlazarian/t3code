@@ -385,27 +385,3 @@ describe("OtelEnvironment", () => {
     );
   });
 });
-
-describe("product telemetry opt-out", () => {
-  it.effect("does not disable user-configured tracing", () =>
-    Effect.gen(function* () {
-      const env = {
-        T3CODE_TELEMETRY_ENABLED: "false",
-        T3CODE_OTEL_SDK_DISABLED: "false",
-        OTEL_SDK_DISABLED: "true",
-        OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "https://user.example.test/v1/traces",
-      };
-      const otel = yield* load(env);
-      assert.isFalse(otel.disabled);
-      assert.deepStrictEqual(
-        otel.traces,
-        OtelEnvironment.OtelSignal.Export({
-          url: env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
-          variable: "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
-          protocol: "http/protobuf",
-          headers: undefined,
-        }),
-      );
-    }),
-  );
-});

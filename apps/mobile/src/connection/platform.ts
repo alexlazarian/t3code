@@ -16,7 +16,6 @@ import { AppState } from "react-native";
 
 import { authClientMetadata } from "../lib/authClientMetadata";
 import * as Runtime from "../lib/runtime";
-import * as MobileStorage from "../persistence/mobile-storage";
 import { clearThreadOutboxEnvironment } from "../state/thread-outbox-removal";
 import { clearComposerDraftsEnvironment } from "../state/use-composer-drafts";
 import { clearThreadComposerErrorsForEnvironment } from "../state/thread-composer-error";
@@ -139,18 +138,13 @@ const layerWakeups = Wakeups.layer({
 });
 
 const layerCapabilities = Layer.effectContext(
-  Effect.gen(function* () {
-    const storage = yield* MobileStorage.MobileStorage;
-    return Context.make(
+  Effect.sync(() =>
+    Context.make(
       ClientCapabilities.PrimaryEnvironmentAuth,
       ClientCapabilities.PrimaryEnvironmentAuth.of({
         bearerToken: Effect.succeed(Option.none()),
       }),
     ).pipe(
-      // Analytics only sends this persisted id's hash.
-      Context.add(ClientCapabilities.AnalyticsDevice, {
-        id: storage.loadOrCreateDeviceId.pipe(Effect.option),
-      }),
       Context.add(
         ClientCapabilities.ClientPresentation,
         ClientCapabilities.ClientPresentation.of({
@@ -177,8 +171,8 @@ const layerCapabilities = Layer.effectContext(
           disconnect: () => Effect.void,
         }),
       ),
-    );
-  }),
+    ),
+  ),
 );
 
 const layerPlatformConnectionSource = Layer.succeed(
@@ -189,7 +183,6 @@ const layerPlatformConnectionSource = Layer.succeed(
 );
 
 const layerProvidedConnectionStorage = ConnectionStorage.layer.pipe(Layer.provide(Runtime.layer));
-const layerProvidedCapabilities = layerCapabilities.pipe(Layer.provide(Runtime.layer));
 
 const layerEnvironmentOwnedDataCleanup = Layer.succeed(
   Persistence.EnvironmentOwnedDataCleanup,
@@ -218,7 +211,7 @@ type ConnectionPlatformLayerSource =
   | typeof Runtime.layer
   | typeof layerConnectivity
   | typeof layerWakeups
-  | typeof layerProvidedCapabilities
+  | typeof layerCapabilities
   | typeof layerPlatformConnectionSource
   | typeof layerEnvironmentOwnedDataCleanup;
 
@@ -231,7 +224,7 @@ export const layer: Layer.Layer<
   Runtime.layer,
   layerConnectivity,
   layerWakeups,
-  layerProvidedCapabilities,
+  layerCapabilities,
   layerPlatformConnectionSource,
   layerEnvironmentOwnedDataCleanup,
 );
