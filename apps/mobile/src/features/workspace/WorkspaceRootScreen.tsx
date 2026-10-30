@@ -3,6 +3,7 @@ import { WORKSPACE_TAB_LABELS, useEnabledNavigationTabs } from "./navigation-tab
 import { WorkspaceExtraTab } from "./WorkspaceExtraTab";
 import { SettingsRouteScreen } from "../settings/SettingsRouteScreen";
 import { WorkspaceSectionToolbar } from "./WorkspaceSectionToolbar";
+import { OverviewEntryButton } from "../overview-spike/OverviewEntryButton";
 import { useNavigation } from "@react-navigation/native";
 import { use } from "react";
 import { Platform, View, useWindowDimensions } from "react-native";
@@ -107,7 +108,8 @@ function WorkspaceRootContent() {
   );
   const tab = state.tabs[settingsOpen ? "settings" : state.selectedTab];
   const bottomClearance =
-    layout.primarySidebarOverlaysContent && state.selectedTab === "usage"
+    layout.primarySidebarOverlaysContent &&
+    (state.selectedTab === "usage" || state.selectedTab === "overview")
       ? workspaceDockBottomClearance({ bottomInset: insets.bottom, keyboardHeight })
       : Platform.OS === "ios" && isDuoDevice(deviceType)
         ? // The column's safe area already holds the Duo's search toolbar and keyboard.
@@ -158,7 +160,8 @@ function WorkspaceRootContent() {
               // Beside a detail column the tab bar names the tab and the detail header the page,
               // so the sidebar keeps the brand.
               headerTitle:
-                sidebarNavigation || (!settingsOpen && state.selectedTab !== "usage")
+                sidebarNavigation ||
+                (!settingsOpen && state.selectedTab !== "usage" && state.selectedTab !== "overview")
                   ? renderHeaderTitle
                   : undefined,
             }}
@@ -188,6 +191,7 @@ function WorkspaceRootContent() {
             ]}
           />
         )}
+        <OverviewEntryButton />
         <SafeAreaInsetsContext value={compactTabs ? { ...insets, bottom: 0 } : insets}>
           {settingsOpen ? (
             <SettingsRouteScreen />
