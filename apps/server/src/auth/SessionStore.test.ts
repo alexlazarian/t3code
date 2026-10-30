@@ -48,12 +48,12 @@ const layerSessionStore = (
     Layer.provide(layerServerConfig(overrides)),
   );
 
-const relaySessionInput = {
-  subject: "managed-relay-bootstrap",
+const proofBoundSessionInput = {
+  subject: "proof-bound-bootstrap",
   method: "dpop-access-token",
-  proofKeyThumbprint: "relay-proof-key",
+  proofKeyThumbprint: "client-proof-key",
   ttl: Duration.hours(1),
-  client: { label: "Relay desktop", deviceType: "desktop" },
+  client: { label: "Remote desktop", deviceType: "desktop" },
 } as const;
 
 const makeDiskSessionStoreLayer = Effect.fn("makeDiskSessionStoreLayer")(function* (
@@ -89,7 +89,7 @@ it.layer(NodeServices.layer)("SessionStore.layer", (it) => {
       Effect.gen(function* () {
         const sessions = yield* SessionStore.SessionStore;
         const owner = yield* sessions.issue({ subject: "owner" });
-        const client = yield* sessions.issue(relaySessionInput);
+        const client = yield* sessions.issue(proofBoundSessionInput);
         const ownerInvalidated = yield* Deferred.make<void>();
         yield* sessions
           .awaitInvalidation(owner.sessionId)
@@ -105,7 +105,8 @@ it.layer(NodeServices.layer)("SessionStore.layer", (it) => {
           .pipe(Effect.forkScoped({ startImmediately: true }));
         if (operation === "revoke") yield* sessions.revoke(client.sessionId);
         else if (operation === "revokeAllExcept") yield* sessions.revokeAllExcept(owner.sessionId);
-        else yield* sessions.issue({ ...relaySessionInput, replaceSessionId: client.sessionId });
+        else
+          yield* sessions.issue({ ...proofBoundSessionInput, replaceSessionId: client.sessionId });
         yield* Fiber.join(first);
         yield* Fiber.join(second);
         expect(yield* Deferred.isDone(ownerInvalidated)).toBe(false);
@@ -116,7 +117,7 @@ it.layer(NodeServices.layer)("SessionStore.layer", (it) => {
   it.effect("expires a connected session at its credential deadline", () =>
     Effect.gen(function* () {
       const sessions = yield* SessionStore.SessionStore;
-      const client = yield* sessions.issue(relaySessionInput);
+      const client = yield* sessions.issue(proofBoundSessionInput);
       yield* sessions.markConnected(client.sessionId);
       const invalidated = yield* Deferred.make<void>();
       const watcher = yield* sessions

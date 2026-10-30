@@ -139,10 +139,10 @@ describe("device hub proxy", () => {
     const { handler, headers } = fixture([AuthOrchestrationOperateScope]);
     const response = await handler(
       new Request(
-        "https://relay.test/api/device-hub/vendor/serve-emu/api/fold?device=emulator-5554",
+        "https://remote.test/api/device-hub/vendor/serve-emu/api/fold?device=emulator-5554",
         {
           method: "POST",
-          headers: { origin: "https://relay.test", "x-forwarded-proto": "https" },
+          headers: { origin: "https://remote.test", "x-forwarded-proto": "https" },
           body: '{"posture":"opened"}',
         },
       ),
