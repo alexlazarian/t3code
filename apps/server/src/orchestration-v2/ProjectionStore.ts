@@ -6152,16 +6152,18 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
         ORDER BY thread_id, ordinal
       `;
 
-    // Subagents of subagents, at any depth below each thread. A card lists them with the
-    // thread's own, so a lead sees everything running under it. A descendant contributes the
+    // Subagents of subagents, at any depth below the subagents a card lists. A card lists them
+    // with the thread's own, so a lead sees everything running under what it shows. Seeding from
+    // the listed subagents, not every child thread, keeps old subagents of old runs out. A descendant contributes the
     // subagents of the newest run that holds any, plus any still working in an earlier run.
     // The newest run overall is no use: each finished subagent starts a notice run with none.
-    const selectShellDescendantSubagentRows = (threadIds: ReadonlyArray<string>) =>
+    const selectShellDescendantSubagentRows = (
+      seeds: ReadonlyArray<{ readonly rootThreadId: string; readonly threadId: string }>,
+    ) =>
       sql<ShellActivitySubagentRow & { readonly root_thread_id: string }>`
         WITH RECURSIVE family(root_id, thread_id) AS (
-          SELECT thread_id, thread_id
-          FROM orchestration_v2_projection_threads
-          WHERE thread_id IN ${sql.in(threadIds)}
+          SELECT json_extract(seed.value, '$.rootThreadId'), json_extract(seed.value, '$.threadId')
+          FROM json_each(${JSON.stringify(seeds)}) AS seed
           UNION
           SELECT family.root_id, child.thread_id
           FROM family
@@ -6183,8 +6185,7 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
         FROM family
         JOIN orchestration_v2_projection_turn_items AS item
           ON item.thread_id = family.thread_id
-        WHERE family.thread_id <> family.root_id
-          AND item.type = 'subagent'
+        WHERE item.type = 'subagent'
           AND item.run_id IS NOT NULL
           AND (
             item.status IN ('pending', 'running', 'waiting')
@@ -6235,16 +6236,37 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
       ];
       if (runIds.length === 0) return new Map<RunId, OrchestrationV2ShellActivity>();
       const threadIds = rows.map((row) => row.thread_id);
-      const [steps, subagents, files, liveSubagents, descendantSubagents] = yield* Effect.all([
+      const [steps, subagents, files, liveSubagents] = yield* Effect.all([
         selectShellActivityStepRows(runIds),
         selectShellActivitySubagentRows(runIds),
         selectShellActivityFilesRows(threadIds, runIds),
         selectShellLiveSubagentRows(threadIds),
-        selectShellDescendantSubagentRows(threadIds),
       ]);
       const activityRunIdByThreadId = new Map(
         rows.map((row) => [row.thread_id, row.activity_run_id] as const),
       );
+      const threadIdByActivityRunId = new Map(
+        rows.flatMap((row) =>
+          row.activity_run_id === null ? [] : [[row.activity_run_id, row.thread_id] as const],
+        ),
+      );
+      // The subagents a card lists seed the nested lookup, so a lead's older subagents from
+      // older runs do not pull their own subagents in.
+      const seeds = [
+        ...subagents.flatMap((row) => {
+          const rootThreadId = threadIdByActivityRunId.get(row.run_id);
+          return rootThreadId === undefined || row.child_thread_id === null
+            ? []
+            : [{ rootThreadId, threadId: row.child_thread_id }];
+        }),
+        ...liveSubagents.flatMap((row) =>
+          row.child_thread_id === null
+            ? []
+            : [{ rootThreadId: row.thread_id, threadId: row.child_thread_id }],
+        ),
+      ];
+      const descendantSubagents =
+        seeds.length === 0 ? [] : yield* selectShellDescendantSubagentRows(seeds);
       const held = liveSubagents.flatMap(
         ({ thread_id, ...row }): ReadonlyArray<ShellActivityHeldSubagentRow> => {
           const activityRunId = activityRunIdByThreadId.get(thread_id) ?? null;

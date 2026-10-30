@@ -641,6 +641,16 @@ it.effect("SQL shells list subagents of subagents at any depth", () =>
       childThreadId: null,
     });
 
+    // A child of the root that no listed subagent leads to is old work: its subagents stay out.
+    const stale = yield* addChild("stale", rootId);
+    yield* addSubagentItem({
+      threadId: stale.childId,
+      runId: stale.runId,
+      title: "Stale",
+      status: "completed",
+      childThreadId: null,
+    });
+
     const all = yield* activity;
     assert.deepEqual(all?.subagents.map(({ title }) => title).toSorted(), [
       "Deep",
