@@ -566,3 +566,57 @@ export function shellStreamItemFromThreadShell(input: {
     threadId: input.stored.event.threadId,
   };
 }
+
+/**
+ * A card lists the subagents below a thread, but subagent transcript events never reach the
+ * shell stream, so a lead's card would only refresh on the lead's own events. Whenever a
+ * subagent thread's shell goes out, its ancestors' shells go out with it, under the batch's
+ * newest sequence, which clients accept for a thread update.
+ */
+export const withSubagentAncestorUpdates = Effect.fn("ShellStream.withSubagentAncestorUpdates")(
+  function* <A extends ShellDelta, E>(input: {
+    readonly items: ReadonlyArray<A>;
+    readonly getThreadShell: (
+      threadId: ThreadId,
+    ) => Effect.Effect<OrchestrationV2ThreadShell | null, E>;
+  }) {
+    const sent = new Map<string, OrchestrationV2ThreadShell>();
+    let sequence: number | null = null;
+    const queue: ThreadId[] = [];
+    for (const delta of input.items) {
+      const item: ShellDelta = delta;
+      sequence = Math.max(sequence ?? 0, item.sequence);
+      if (item.kind !== "thread.updated") continue;
+      sent.set(item.thread.id, item.thread);
+      const { relationshipToParent, parentThreadId } = item.thread.lineage;
+      if (relationshipToParent === "subagent" && parentThreadId !== null)
+        queue.push(parentThreadId);
+    }
+    if (sequence === null || queue.length === 0) return input.items;
+
+    const seen = new Set<string>();
+    const ancestors: OrchestrationV2ThreadShell[] = [];
+    while (queue.length > 0 && seen.size < 64) {
+      const threadId = queue.shift()!;
+      if (seen.has(threadId)) continue;
+      seen.add(threadId);
+      const known = sent.get(threadId);
+      const shell = known ?? (yield* input.getThreadShell(threadId));
+      if (shell === null) continue;
+      if (known === undefined) ancestors.push(shell);
+      const { relationshipToParent, parentThreadId } = shell.lineage;
+      if (relationshipToParent === "subagent" && parentThreadId !== null)
+        queue.push(parentThreadId);
+    }
+    const latest = sequence;
+    return [
+      ...input.items,
+      ...ancestors.map((shell) =>
+        shellStreamItemFromThreadShell({
+          stored: { sequence: latest, event: { threadId: shell.id } },
+          shell,
+        }),
+      ),
+    ];
+  },
+);

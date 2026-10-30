@@ -64,6 +64,34 @@ describe("applyShellStreamEvent", () => {
     expect(withoutIdentity.projects[0]?.repositoryIdentity).toEqual(repositoryIdentity);
   });
 
+  it("accepts a thread update at the current sequence and refuses other stale events", () => {
+    const at = { ...v2ShellSnapshot, snapshotSequence: 7, projects: [v2Project] };
+    const refreshed = applyShellStreamEvent(at, {
+      kind: "thread.updated",
+      sequence: 7,
+      location: "active",
+      thread: { ...v2ThreadShell, title: "Refreshed with a subagent event" },
+    });
+    expect(refreshed.threads[0]?.title).toBe("Refreshed with a subagent event");
+    expect(refreshed.snapshotSequence).toBe(7);
+
+    expect(
+      applyShellStreamEvent(at, {
+        kind: "thread.updated",
+        sequence: 6,
+        location: "active",
+        thread: { ...v2ThreadShell, title: "Older" },
+      }),
+    ).toBe(at);
+    expect(
+      applyShellStreamEvent(at, {
+        kind: "project.updated",
+        sequence: 7,
+        project: { ...v2Project, title: "Same sequence project" },
+      }),
+    ).toBe(at);
+  });
+
   it("does not keep prior repositoryIdentity after a workspace root move", () => {
     const withIdentity = applyShellStreamEvent(v2ShellSnapshot, {
       kind: "project.updated",

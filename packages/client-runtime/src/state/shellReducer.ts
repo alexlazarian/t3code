@@ -135,7 +135,13 @@ export function applyShellStreamEvent(
     { readonly kind: "snapshot" } | { readonly kind: "synchronized" }
   >,
 ): OrchestrationV2ShellSnapshot {
-  if (event.sequence <= snapshot.snapshotSequence) return snapshot;
+  // A thread update may share its sequence: the server refreshes a lead's card alongside the
+  // subagent event that changed it. A thread update replaces the whole thread, so it is safe.
+  const stale =
+    event.kind === "thread.updated"
+      ? event.sequence < snapshot.snapshotSequence
+      : event.sequence <= snapshot.snapshotSequence;
+  if (stale) return snapshot;
 
   switch (event.kind) {
     case "project.updated": {

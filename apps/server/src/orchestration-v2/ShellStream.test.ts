@@ -27,6 +27,7 @@ import {
   shellStreamItemsFromInitialSnapshot,
   shouldPublishShellApplicationEvent,
   skipUnchangedThreadShells,
+  withSubagentAncestorUpdates,
 } from "./ShellStream.ts";
 
 const emptyShellSnapshot = {
@@ -659,6 +660,68 @@ describe("skipUnchangedThreadShells", () => {
         updated(3, shell("a")),
       ]);
       expect(sent).toEqual([1, 2, 3]);
+    }),
+  );
+});
+
+describe("withSubagentAncestorUpdates", () => {
+  const thread = (id: string, parent: string | null): OrchestrationV2ThreadShell =>
+    shellFixture({
+      id: ThreadId.make(id),
+      lineage: {
+        rootThreadId: ThreadId.make("root"),
+        parentThreadId: parent === null ? null : ThreadId.make(parent),
+        relationshipToParent: parent === null ? null : "subagent",
+      },
+    });
+  const shells = new Map(
+    [thread("root", null), thread("child", "root"), thread("grandchild", "child")].map(
+      (shell) => [shell.id, shell] as const,
+    ),
+  );
+  const updated = (sequence: number, shell: OrchestrationV2ThreadShell) =>
+    ({ kind: "thread.updated", sequence, location: "active", thread: shell }) as const;
+  const read = (id: ThreadId) => Effect.succeed(shells.get(id) ?? null);
+
+  it.effect("sends every ancestor of a subagent thread under the batch's newest sequence", () =>
+    Effect.gen(function* () {
+      const items = yield* withSubagentAncestorUpdates({
+        items: [updated(10, shells.get(ThreadId.make("grandchild"))!)],
+        getThreadShell: read,
+      });
+      expect(
+        items.map((item) => [item.kind, "thread" in item ? item.thread.id : null, item.sequence]),
+      ).toEqual([
+        ["thread.updated", "grandchild", 10],
+        ["thread.updated", "child", 10],
+        ["thread.updated", "root", 10],
+      ]);
+    }),
+  );
+
+  it.effect("does not repeat an ancestor already in the batch, and still reaches its parents", () =>
+    Effect.gen(function* () {
+      const items = yield* withSubagentAncestorUpdates({
+        items: [
+          updated(10, shells.get(ThreadId.make("grandchild"))!),
+          updated(11, shells.get(ThreadId.make("child"))!),
+        ],
+        getThreadShell: read,
+      });
+      expect(items.map((item) => ("thread" in item ? item.thread.id : null))).toEqual([
+        "grandchild",
+        "child",
+        "root",
+      ]);
+      expect(items.at(-1)?.sequence).toBe(11);
+    }),
+  );
+
+  it.effect("leaves a batch without subagent threads alone", () =>
+    Effect.gen(function* () {
+      const batch = [updated(10, shells.get(ThreadId.make("root"))!)];
+      const items = yield* withSubagentAncestorUpdates({ items: batch, getThreadShell: read });
+      expect(items).toBe(batch);
     }),
   );
 });

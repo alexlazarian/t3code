@@ -128,6 +128,7 @@ import {
   shellSnapshotForSubscriber,
   shellStreamItemsFromResumeSnapshot,
   shouldPublishShellApplicationEvent,
+  withSubagentAncestorUpdates,
   skipUnchangedThreadShells,
   toShellApplicationEvent,
   type ShellApplicationEvent,
@@ -971,7 +972,7 @@ export const subscribeOrchestrationV2Shell = Effect.fn("ws.orchestrationV2.subsc
     const projectShellItems = Effect.fn("ws.orchestrationV2.projectShellItems")(function* (
       events: ReadonlyArray<ShellApplicationEvent>,
     ) {
-      return yield* Effect.forEach(
+      const items = yield* Effect.forEach(
         coalesceShellApplicationEvents(events),
         (stored) =>
           Effect.gen(function* () {
@@ -983,6 +984,10 @@ export const subscribeOrchestrationV2Shell = Effect.fn("ws.orchestrationV2.subsc
           }),
         { concurrency: 8 },
       );
+      return yield* withSubagentAncestorUpdates({
+        items,
+        getThreadShell: threadManagement.getThreadShell,
+      });
     });
 
     const toShellStream = <E, R>(stream: Stream.Stream<ShellApplicationEvent, E, R>) =>
