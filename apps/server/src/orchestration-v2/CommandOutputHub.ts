@@ -66,7 +66,9 @@ export class CommandOutputHub extends Context.Service<CommandOutputHub, CommandO
 const isCommandOutputError = Schema.is(OrchestrationV2CommandOutputError);
 
 function commandKey(target: CommandOutputTarget): string {
-  return `${target.threadId}\u0000${target.itemId}`;
+  return "itemId" in target
+    ? `${target.threadId}\u0000item\u0000${target.itemId}`
+    : `${target.threadId}\u0000task\u0000${target.taskId}`;
 }
 
 const decodeLegacyClaudeBashResult = Schema.decodeUnknownOption(
@@ -190,53 +192,58 @@ export const make = Effect.gen(function* () {
           }),
         );
 
-        // Persisted items provide settlement and final output; snapshot-only providers (ACP, Pi) also stream here.
         let snapshotOutput: string | undefined;
         let lost: Cause.Cause<unknown> | undefined;
         let settled: Extract<OrchestrationV2TurnItem, { type: "command_execution" }> | undefined;
-        const observe = (item: OrchestrationV2TurnItem | undefined) =>
-          Effect.suspend(() => {
-            if (item === undefined || item.type !== "command_execution") return Effect.void;
-            if (!isOrchestrationV2WorkActive(item.status)) {
-              settled = item;
-            } else if (item.output !== undefined && item.output !== snapshotOutput) {
-              snapshotOutput = item.output;
-            } else {
-              return Effect.void;
-            }
-            subscriber.needsReplace = true;
-            return Queue.offer(wake, undefined);
-          });
-        const fromSequence = yield* eventSink.latestSequence({ threadId: target.threadId });
-        yield* eventSink
-          .stream({
-            threadId: target.threadId,
-            afterSequence: fromSequence,
-            eventType: "turn-item.updated",
-          })
-          .pipe(
-            Stream.runForEach((stored) =>
-              stored.event.type === "turn-item.updated" && stored.event.payload.id === target.itemId
-                ? observe(stored.event.payload)
-                : Effect.void,
-            ),
-            // A lost event stream cannot settle the row; end with an error.
-            Effect.catchCause((cause) =>
-              Effect.sync(() => {
-                lost = cause;
-              }).pipe(Effect.andThen(Queue.offer(wake, undefined))),
-            ),
-            Effect.forkScoped,
-          );
-        const item = yield* projections.getTurnItem(target);
-        // Non-command rows would hold output subscriptions open forever.
-        if (item === null || item.type !== "command_execution") {
-          return yield* new OrchestrationV2CommandOutputError({
-            threadId: target.threadId,
-            message: "No such command.",
-          });
+        // Task targets have no item; they stream until the row leaves the roster and the client unsubscribes.
+        if ("itemId" in target) {
+          // Persisted items provide settlement and final output; snapshot-only providers (ACP, Pi) also stream here.
+          const itemTarget = target;
+          const observe = (item: OrchestrationV2TurnItem | undefined) =>
+            Effect.suspend(() => {
+              if (item === undefined || item.type !== "command_execution") return Effect.void;
+              if (!isOrchestrationV2WorkActive(item.status)) {
+                settled = item;
+              } else if (item.output !== undefined && item.output !== snapshotOutput) {
+                snapshotOutput = item.output;
+              } else {
+                return Effect.void;
+              }
+              subscriber.needsReplace = true;
+              return Queue.offer(wake, undefined);
+            });
+          const fromSequence = yield* eventSink.latestSequence({ threadId: target.threadId });
+          yield* eventSink
+            .stream({
+              threadId: target.threadId,
+              afterSequence: fromSequence,
+              eventType: "turn-item.updated",
+            })
+            .pipe(
+              Stream.runForEach((stored) =>
+                stored.event.type === "turn-item.updated" &&
+                stored.event.payload.id === itemTarget.itemId
+                  ? observe(stored.event.payload)
+                  : Effect.void,
+              ),
+              // A lost event stream cannot settle the row; end with an error.
+              Effect.catchCause((cause) =>
+                Effect.sync(() => {
+                  lost = cause;
+                }).pipe(Effect.andThen(Queue.offer(wake, undefined))),
+              ),
+              Effect.forkScoped,
+            );
+          const item = yield* projections.getTurnItem(itemTarget);
+          // Non-command rows would hold output subscriptions open forever.
+          if (item === null || item.type !== "command_execution") {
+            return yield* new OrchestrationV2CommandOutputError({
+              threadId: target.threadId,
+              message: "No such command.",
+            });
+          }
+          yield* observe(item);
         }
-        yield* observe(item);
         yield* Queue.offer(wake, undefined);
 
         let lastFrameAt: number | undefined;

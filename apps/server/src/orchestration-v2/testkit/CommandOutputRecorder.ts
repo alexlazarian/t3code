@@ -1,4 +1,3 @@
-import type { TurnItemId } from "@t3tools/contracts";
 import {
   appendTerminalOutput,
   EMPTY_TERMINAL_OUTPUT,
@@ -19,7 +18,8 @@ export interface RecordedCommandOutput {
 
 export class CommandOutputRecorder extends Context.Service<
   CommandOutputRecorder,
-  { readonly snapshot: Effect.Effect<ReadonlyMap<TurnItemId, RecordedCommandOutput>> }
+  /** Keyed by turn item id, or by task id for background tasks. */
+  { readonly snapshot: Effect.Effect<ReadonlyMap<string, RecordedCommandOutput>> }
 >()("t3/orchestration-v2/testkit/CommandOutputRecorder") {}
 
 export const layer: Layer.Layer<
@@ -29,15 +29,16 @@ export const layer: Layer.Layer<
 > = Layer.effectContext(
   Effect.gen(function* () {
     const hub = yield* CommandOutputHub.make;
-    const recorded = new Map<TurnItemId, RecordedCommandOutput>();
+    const recorded = new Map<string, RecordedCommandOutput>();
     return Context.make(
       CommandOutputHub.CommandOutputHub,
       CommandOutputHub.CommandOutputHub.of({
         ...hub,
         append: Effect.fn("CommandOutputHub.append")(function (input) {
           return Effect.sync(() => {
-            const previous = recorded.get(input.itemId);
-            recorded.set(input.itemId, {
+            const key = "itemId" in input ? input.itemId : input.taskId;
+            const previous = recorded.get(key);
+            recorded.set(key, {
               chunks: (previous?.chunks ?? 0) + 1,
               output: appendTerminalOutput(previous?.output ?? EMPTY_TERMINAL_OUTPUT, input.chunk),
             });

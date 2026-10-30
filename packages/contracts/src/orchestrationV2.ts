@@ -998,6 +998,13 @@ function kindUnionWithFallback<
   return Schema.Union([...members, unknownKind]);
 }
 
+/** Where a command's live output streams from: its turn item, or a provider task with no live item. */
+export const OrchestrationV2CommandOutputSource = Schema.Union([
+  Schema.Struct({ itemId: TurnItemId }),
+  Schema.Struct({ taskId: TrimmedNonEmptyString }),
+]);
+export type OrchestrationV2CommandOutputSource = typeof OrchestrationV2CommandOutputSource.Type;
+
 const PendingBackgroundTaskFields = {
   taskId: TrimmedNonEmptyString,
   description: Schema.optional(TrimmedNonEmptyString),
@@ -1008,6 +1015,8 @@ const PendingBackgroundTaskFields = {
    * subagent. Only the agent knows whether a command is a wait or a dev server it left running.
    */
   awaited: Schema.optional(Schema.Literal(true)),
+  /** Set when the server can stream this work's output; rows without it show no output. */
+  output: Schema.optional(OrchestrationV2CommandOutputSource),
 };
 
 export const OrchestrationV2PendingBackgroundTask = kindUnionWithFallback(
@@ -3598,10 +3607,10 @@ export const ORCHESTRATION_V2_WS_METHODS = {
   subscribeCommandOutput: "orchestration.subscribeCommandOutput",
 } as const;
 
-export const OrchestrationV2SubscribeCommandOutputInput = Schema.Struct({
-  threadId: ThreadId,
-  itemId: TurnItemId,
-});
+export const OrchestrationV2SubscribeCommandOutputInput = Schema.Union([
+  Schema.Struct({ threadId: ThreadId, itemId: TurnItemId }),
+  Schema.Struct({ threadId: ThreadId, taskId: TrimmedNonEmptyString }),
+]);
 export type OrchestrationV2SubscribeCommandOutputInput =
   typeof OrchestrationV2SubscribeCommandOutputInput.Type;
 

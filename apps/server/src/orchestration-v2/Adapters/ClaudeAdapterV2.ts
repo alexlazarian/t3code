@@ -2875,10 +2875,13 @@ function isClaudeRootTurnFrame(message: SDKMessage): boolean {
 function claudePendingBackgroundTasksFromRoster(
   roster: ReadonlyMap<string, OrchestrationV2PendingBackgroundTask>,
   awaitedTaskIds: ReadonlySet<string>,
+  tailedTaskIds: ReadonlyMap<string, unknown>,
 ): ReadonlyArray<OrchestrationV2PendingBackgroundTask> {
-  return Array.from(roster.values(), (task) =>
-    awaitedTaskIds.has(task.taskId) ? { ...task, awaited: true as const } : task,
-  );
+  return Array.from(roster.values(), (task) => ({
+    ...task,
+    ...(awaitedTaskIds.has(task.taskId) ? { awaited: true as const } : {}),
+    ...(tailedTaskIds.has(task.taskId) ? { output: { taskId: task.taskId } } : {}),
+  }));
 }
 
 function parseClaudeBackgroundTaskEntry(
@@ -4530,6 +4533,8 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
               Effect.asVoid,
             );
           });
+        // Background tasks outlive their Bash call; each tail runs until its task leaves every roster.
+        const backgroundTaskOutputTails = new Map<string, Deferred.Deferred<void>>();
         const sdkMessageLock = yield* Semaphore.make(1);
         // Members can finish after the launching turn; retain state to emit each transition once.
         const workflowMemberStates = yield* Ref.make(
@@ -5064,11 +5069,22 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
             taskId,
           );
 
+        const stopUnlistedBackgroundTaskOutputTails = Effect.fnUntraced(function* () {
+          if (backgroundTaskOutputTails.size === 0) return;
+          const rosters = [...(yield* Ref.get(pendingBackgroundTasksByNativeThread)).values()];
+          for (const [taskId, stop] of backgroundTaskOutputTails) {
+            if (rosters.some((roster) => roster.has(taskId))) continue;
+            backgroundTaskOutputTails.delete(taskId);
+            yield* Deferred.succeed(stop, undefined);
+          }
+        });
+
         const emitProviderThreadRoster = Effect.fnUntraced(function* (input: {
           readonly nativeThreadId: string;
           readonly providerThread: OrchestrationV2ProviderThread;
           readonly status?: OrchestrationV2ProviderThread["status"];
         }) {
+          yield* stopUnlistedBackgroundTaskOutputTails();
           const roster = rosterForNativeThread(
             yield* Ref.get(pendingBackgroundTasksByNativeThread),
             input.nativeThreadId,
@@ -5082,7 +5098,11 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
             ...input.providerThread,
             providerSessionId: session.id,
             ...(input.status === undefined ? {} : { status: input.status }),
-            pendingBackgroundTasks: claudePendingBackgroundTasksFromRoster(roster, awaitedTaskIds),
+            pendingBackgroundTasks: claudePendingBackgroundTasksFromRoster(
+              roster,
+              awaitedTaskIds,
+              backgroundTaskOutputTails,
+            ),
             ...(goalsByNativeThread.has(input.nativeThreadId)
               ? { goal: goalsByNativeThread.get(input.nativeThreadId) ?? null }
               : {}),
@@ -7372,6 +7392,7 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
                     );
                   }
                 }
+                yield* stopUnlistedBackgroundTaskOutputTails();
                 const roster =
                   nativeThreadId === null
                     ? new Map<string, OrchestrationV2PendingBackgroundTask>()
@@ -7427,6 +7448,7 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
                   pendingBackgroundTasks: claudePendingBackgroundTasksFromRoster(
                     roster,
                     awaitedTaskIds,
+                    backgroundTaskOutputTails,
                   ),
                   status: input.status === "completed" ? "active" : "idle",
                   updatedAt: input.completedAt,
@@ -8652,6 +8674,35 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
                   Effect.forkIn(sessionScope),
                 );
                 taskOutputTails.set(tailedCall.nativeItemId, { fiber, stop });
+              } else if (
+                taskOutputRoot !== undefined &&
+                message.task_type === "local_bash" &&
+                message.is_backgrounded === true &&
+                !backgroundTaskOutputTails.has(message.task_id)
+              ) {
+                const target = {
+                  threadId: tailedCall?.threadId ?? context.input.threadId,
+                  taskId: message.task_id,
+                };
+                const stop = yield* Deferred.make<void>();
+                yield* tailClaudeTaskOutput({
+                  root: taskOutputRoot,
+                  sessionId: message.session_id,
+                  taskId: message.task_id,
+                  stop,
+                  onChunk: (chunk) =>
+                    emitProviderEvent({
+                      type: "command_output.delta",
+                      driver: CLAUDE_PROVIDER,
+                      ...target,
+                      chunk,
+                    }),
+                }).pipe(
+                  Effect.provideService(FileSystem.FileSystem, fileSystem),
+                  Effect.provideService(Path.Path, path),
+                  Effect.forkIn(sessionScope),
+                );
+                backgroundTaskOutputTails.set(message.task_id, stop);
               }
               context.ignoredTaskIds.add(message.task_id);
               yield* applyBackgroundTaskRosterMessage({

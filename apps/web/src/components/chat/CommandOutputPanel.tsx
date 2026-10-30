@@ -1,8 +1,9 @@
 import type { CommandOutputView } from "@t3tools/client-runtime/state/command-output";
-import type { EnvironmentId, ThreadId, TurnItemId } from "@t3tools/contracts";
+import type { EnvironmentId, OrchestrationV2SubscribeCommandOutputInput } from "@t3tools/contracts";
 import { TERMINAL_PALETTES, terminalOutputSpans } from "@t3tools/shared/terminalOutput";
 import { useLayoutEffect, useRef } from "react";
 
+import { cn } from "~/lib/utils";
 import { useTheme } from "../../hooks/useTheme";
 import { useServerConfigs } from "../../state/entities";
 import { orchestrationEnvironment } from "../../state/orchestration";
@@ -17,18 +18,21 @@ export function useCommandOutputStreaming(environmentId: EnvironmentId): boolean
 }
 
 /**
- * Output of one expanded command row: streams while the command runs, then
+ * Output of one expanded command or background task: streams while the command runs, then
  * shows its final output. Mount it only when `useCommandOutputStreaming` holds.
  * It subscribes only while mounted, so collapsed rows and other threads receive nothing.
  */
 export function CommandOutputPanel(props: {
   readonly environmentId: EnvironmentId;
-  readonly threadId: ThreadId;
-  readonly itemId: TurnItemId;
+  readonly input: OrchestrationV2SubscribeCommandOutputInput;
+  /** A few lines tall, for a tail beside other content. */
+  readonly compact?: boolean;
 }) {
-  const input = { threadId: props.threadId, itemId: props.itemId };
   const { data, error } = useEnvironmentQuery<CommandOutputView, unknown>(
-    orchestrationEnvironment.v2.commandOutput({ environmentId: props.environmentId, input }),
+    orchestrationEnvironment.v2.commandOutput({
+      environmentId: props.environmentId,
+      input: props.input,
+    }),
   );
   const scrollRef = useRef<HTMLDivElement>(null);
   const followRef = useRef(true);
@@ -60,7 +64,10 @@ export function CommandOutputPanel(props: {
           followRef.current =
             element.scrollHeight - element.scrollTop - element.clientHeight <= FOLLOW_SLACK_PX;
         }}
-        className="max-h-80 overflow-auto text-muted-foreground"
+        className={cn(
+          "overflow-auto text-muted-foreground",
+          props.compact ? "max-h-32" : "max-h-80",
+        )}
       >
         {spans.map((span, index) =>
           span.style === null ? (

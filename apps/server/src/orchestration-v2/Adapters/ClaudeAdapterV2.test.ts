@@ -76,6 +76,7 @@ import { SpawnExecutableResolution } from "@t3tools/shared/shell";
 
 import * as PortScanner from "../../preview/PortScanner.ts";
 import { attachmentRelativePath } from "../../attachmentStore.ts";
+import { claudeTaskOutputRoot } from "./ClaudeTaskOutputTail.ts";
 import { WorkflowAgentTranscriptReadObserver } from "../workflowAgentTranscript.ts";
 import * as ServerConfig from "../../config.ts";
 import * as McpProviderSession from "@t3tools/provider-core/server/mcpSession";
@@ -7593,6 +7594,71 @@ describe("ClaudeAdapterV2 background wake turns", () => {
       > => event.type === "provider_thread.updated",
     );
 
+  it.effect("tails a backgrounded Bash task's output by task id after its call settles", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const tmpRoot = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-claude-bg-tail-" });
+        const root = claudeTaskOutputRoot({ CLAUDE_CODE_TMPDIR: tmpRoot }, path);
+        if (root === undefined) throw new Error("Claude task output needs a uid.");
+        const tasks = path.join(root, "project", WAKE_NATIVE_SESSION, "tasks");
+        yield* fileSystem.makeDirectory(tasks, { recursive: true });
+        yield* fileSystem.writeFileString(
+          path.join(tasks, `${WAKE_TASK_ID}.output`),
+          "compiling\n",
+        );
+        const harness = yield* makeWakeHarnessWithOptions({
+          environment: { CLAUDE_CODE_TMPDIR: tmpRoot },
+        });
+        yield* harness.runtime.startTurn(
+          makeClaudeTestTurnInput({
+            threadId: harness.threadId,
+            providerThread: harness.providerThread,
+            now: yield* DateTime.now,
+            attemptId: RunAttemptId.make("attempt-claude-background-tail"),
+            text: "Run the build in the background.",
+            attachments: [],
+          }),
+        );
+        yield* Queue.offer(harness.sdkMessages, wakeTaskStarted);
+        yield* Queue.offer(harness.sdkMessages, turnOneResult);
+        yield* harness.awaitTerminal(1);
+        yield* harness.until(() =>
+          harness.events.some((event) => event.type === "command_output.delta"),
+        );
+
+        assert.deepStrictEqual(
+          harness.events.filter((event) => event.type === "command_output.delta"),
+          [
+            {
+              type: "command_output.delta",
+              driver: ClaudeAdapterV2.CLAUDE_PROVIDER,
+              threadId: harness.threadId,
+              taskId: WAKE_TASK_ID,
+              chunk: "compiling\n",
+            },
+          ],
+        );
+        assert.deepStrictEqual(
+          providerThreadRosterEvents(harness.events).at(-1)?.providerThread.pendingBackgroundTasks,
+          [
+            {
+              taskId: WAKE_TASK_ID,
+              kind: "command",
+              description: WAKE_TASK_DESCRIPTION,
+              output: { taskId: WAKE_TASK_ID },
+            },
+          ],
+        );
+      }).pipe(
+        Effect.provide(
+          Layer.mergeAll(IdAllocator.layer, McpProviderSessions.layer, NodeServices.layer),
+        ),
+      ),
+    ),
+  );
+
   it.effect(
     "uses task_started as an incremental roster fallback and clears on empty snapshot",
     () =>
@@ -7924,7 +7990,12 @@ describe("ClaudeAdapterV2 background wake turns", () => {
         const roster = providerThreadRosterEvents(harness.events).at(-1)?.providerThread
           .pendingBackgroundTasks;
         assert.deepEqual(roster, [
-          { taskId: longRunning.taskId, kind: "monitor", description: "Monitor 0" },
+          {
+            taskId: longRunning.taskId,
+            kind: "monitor",
+            description: "Monitor 0",
+            output: { taskId: longRunning.taskId },
+          },
         ]);
       }).pipe(
         Effect.provide(
@@ -8344,7 +8415,12 @@ describe("ClaudeAdapterV2 background wake turns", () => {
             (event) => event.providerThread.id === providerThreadA.id,
           )?.providerThread.pendingBackgroundTasks;
           assert.deepEqual(rosterAAfterSettle ?? [], [
-            { taskId: taskA, description: "work on A", kind: "command" },
+            {
+              taskId: taskA,
+              description: "work on A",
+              kind: "command",
+              output: { taskId: taskA },
+            },
           ]);
           assert.isTrue(yield* hasPendingBackgroundWork);
           assert.isTrue(yield* hasPendingBackgroundWorkForThread(providerThreadA));

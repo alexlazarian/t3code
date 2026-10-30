@@ -149,11 +149,14 @@ const writeCommandItem = (
     });
   });
 
-const subscribeFrames = (threadId: ThreadId) =>
+const subscribeFrames = (
+  threadId: ThreadId,
+  source: { readonly itemId: TurnItemId } | { readonly taskId: string } = { itemId: ITEM_ID },
+) =>
   Effect.gen(function* () {
     const hub = yield* CommandOutputHub.CommandOutputHub;
     const frames = yield* Queue.unbounded<OrchestrationV2CommandOutputFrame | "ended">();
-    yield* hub.subscribe({ threadId, itemId: ITEM_ID }).pipe(
+    yield* hub.subscribe({ threadId, ...source }).pipe(
       Stream.runForEach((frame) => Queue.offer(frames, frame)),
       Effect.andThen(Queue.offer(frames, "ended")),
       Effect.forkScoped,
@@ -223,6 +226,35 @@ layer("CommandOutputHub", (it) => {
           assert.equal(yield* Queue.take(frames), "ended");
         }),
       ),
+  );
+
+  it.effect("a background task with no turn item streams its tail, then live appends", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const hub = yield* CommandOutputHub.CommandOutputHub;
+        const threadId = yield* seedThread;
+        const target = { threadId, taskId: "task-dev-server" };
+        // An item with the same id must not share the task's tail.
+        yield* hub.append({ threadId, itemId: TurnItemId.make("task-dev-server"), chunk: "x" });
+        yield* hub.append({ ...target, chunk: "listening on :3000\n" });
+
+        const frames = yield* subscribeFrames(threadId, { taskId: target.taskId });
+        assert.deepEqual(yield* takeFrame(frames), {
+          kind: "replace",
+          text: "listening on :3000\n",
+          truncated: false,
+          running: true,
+        });
+        yield* TestClock.adjust("1 second");
+        yield* hub.append({ ...target, chunk: "GET /\n" });
+        assert.deepEqual(yield* takeFrame(frames), {
+          kind: "append",
+          text: "GET /\n",
+          truncated: false,
+          running: true,
+        });
+      }),
+    ),
   );
 
   it.effect("a row that is not a known command fails instead of waiting forever", () =>

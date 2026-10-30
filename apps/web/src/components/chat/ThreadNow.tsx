@@ -1,8 +1,9 @@
 import { RefreshCwIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { threadSyncLabel, type ThreadSyncPhase } from "../../threadSync";
 import { cn } from "~/lib/utils";
+import { InlineButton } from "../ui/button";
 import { NoticeText } from "./ComposerBannerStack";
 
 /** A line of thread state for the end of the timeline. */
@@ -12,6 +13,8 @@ export interface ThreadNowItem {
   readonly title: ReactNode;
   readonly description?: ReactNode;
   readonly actions?: ReactNode;
+  /** Shown under the line while the user has it expanded; mounted only then. */
+  readonly output?: ReactNode;
 }
 
 /** Matches ThreadStatusLine, so every line at the end of the timeline reads as one family. */
@@ -33,7 +36,8 @@ function ThreadNowLine({
   /** Announces the line when it appears; only for something that needs the user. */
   readonly announce?: boolean;
 }) {
-  return (
+  const [outputOpen, setOutputOpen] = useState(false);
+  const line = (
     <div
       role={announce ? "alert" : undefined}
       className={lineClassName}
@@ -60,10 +64,32 @@ function ThreadNowLine({
           </>
         ) : null}
       </NoticeText>
-      {item.actions ? (
-        <span className="ms-1.5 flex shrink-0 items-center gap-2.5">{item.actions}</span>
+      {item.actions || item.output ? (
+        <span className="ms-1.5 flex shrink-0 items-center gap-2.5">
+          {item.output ? (
+            <InlineButton
+              tone="muted"
+              aria-expanded={outputOpen}
+              onClick={() => setOutputOpen((open) => !open)}
+            >
+              {outputOpen ? "Hide output" : "Output"}
+            </InlineButton>
+          ) : null}
+          {item.actions}
+        </span>
       ) : null}
     </div>
+  );
+  if (!item.output) return line;
+  return (
+    <>
+      {line}
+      {outputOpen ? (
+        <div className="mx-auto mb-2 flex w-full min-w-0 max-w-(--chat-content-max-width) flex-col gap-1.5 ps-6 pe-1 font-mono text-2xs leading-normal text-muted-foreground">
+          {item.output}
+        </div>
+      ) : null}
+    </>
   );
 }
 

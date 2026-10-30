@@ -11,7 +11,6 @@ import type {
   ProviderUserInputAnswers,
   CommandId,
   ThreadId,
-  TurnItemId,
 } from "@t3tools/contracts";
 import * as Clock from "effect/Clock";
 import * as Duration from "effect/Duration";
@@ -113,7 +112,7 @@ export interface OrchestratorV2ScenarioResult {
   readonly shellSnapshot: OrchestrationV2ThreadShellSnapshot;
   readonly capturedShellSnapshots: ReadonlyMap<string, OrchestrationV2ThreadShellSnapshot>;
   /** Live output each command streamed (never persisted). Provider replays fill it in. */
-  readonly commandOutput?: ReadonlyMap<TurnItemId, RecordedCommandOutput>;
+  readonly commandOutput?: ReadonlyMap<string, RecordedCommandOutput>;
 }
 
 export class OrchestratorV2ScenarioStepError extends Schema.TaggedError<OrchestratorV2ScenarioStepError>()(

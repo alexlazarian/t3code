@@ -7,6 +7,7 @@ import {
 } from "@t3tools/client-runtime/state/thread-execution";
 import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
 import * as Haptics from "expo-haptics";
+import { useState } from "react";
 import { Platform, Pressable, ScrollView, View } from "react-native";
 import { ScreenStack } from "react-native-screens";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -18,7 +19,9 @@ import { ScreenContent } from "../../components/ui/ScreenContent";
 import { NativeStackScreenOptions, nativeHeaderScrollEdgeEffects } from "../../native/StackHeader";
 import { NativeHeader, NativeScreen } from "../../native/ThemedScreenStack";
 import { environmentThreadShells } from "../../state/threads";
+import { useAppearancePreferences } from "../settings/appearance/AppearancePreferencesProvider";
 import { useAdaptiveWorkspaceLayout } from "../layout/AdaptiveWorkspaceLayout";
+import { ThreadCommandOutput, useCommandOutputStreaming } from "./thread-command-output";
 
 const HEADER_SCROLL_EDGE_EFFECTS = nativeHeaderScrollEdgeEffects(Platform.OS, Platform.Version);
 const KIND_LABELS = {
@@ -60,7 +63,13 @@ export function ThreadBackgroundWorkSheet({ route }: StaticScreenProps<Backgroun
         </Text>
       ) : (
         presentation.items.map((item) => (
-          <BackgroundWorkRow key={item.taskId} item={item} onOpen={openThread} />
+          <BackgroundWorkRow
+            key={item.taskId}
+            item={item}
+            environmentId={target.environmentId}
+            threadId={target.threadId}
+            onOpen={openThread}
+          />
         ))
       )}
     </ScrollView>
@@ -105,10 +114,15 @@ export function ThreadBackgroundWorkSheet({ route }: StaticScreenProps<Backgroun
 
 function BackgroundWorkRow(props: {
   readonly item: PendingBackgroundWorkItem;
+  readonly environmentId: EnvironmentId;
+  readonly threadId: ThreadId;
   readonly onOpen: (threadId: ThreadId) => void;
 }) {
   const { item } = props;
   const childThreadId = item.childThreadId;
+  const [outputOpen, setOutputOpen] = useState(false);
+  const { themeAppearance } = useAppearancePreferences();
+  const output = useCommandOutputStreaming(props.environmentId) ? item.output : undefined;
   const row = (
     <View className="flex-row items-center gap-3 border-b border-border py-3.5">
       <SymbolView
@@ -123,11 +137,39 @@ function BackgroundWorkRow(props: {
         <Text className="font-t3-medium text-sm text-foreground">{item.label}</Text>
         <Text className="text-xs text-foreground-muted">{KIND_LABELS[item.kind]}</Text>
       </View>
-      {childThreadId === undefined ? null : (
+      {childThreadId !== undefined ? (
         <SymbolView name="chevron.right" size={12} tintColorClassName="accent-icon-subtle" />
-      )}
+      ) : output !== undefined ? (
+        <SymbolView
+          name={outputOpen ? "chevron.up" : "chevron.down"}
+          size={12}
+          tintColorClassName="accent-icon-subtle"
+        />
+      ) : null}
     </View>
   );
+  if (childThreadId === undefined && output !== undefined) {
+    return (
+      <View className="pb-3">
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ expanded: outputOpen }}
+          accessibilityLabel={`${outputOpen ? "Hide" : "Show"} output of ${item.label}`}
+          onPress={() => setOutputOpen((open) => !open)}
+          className="active:opacity-70"
+        >
+          {row}
+        </Pressable>
+        {outputOpen ? (
+          <ThreadCommandOutput
+            environmentId={props.environmentId}
+            input={{ threadId: props.threadId, ...output }}
+            themeAppearance={themeAppearance}
+          />
+        ) : null}
+      </View>
+    );
+  }
   return childThreadId === undefined ? (
     <View accessible>{row}</View>
   ) : (

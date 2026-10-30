@@ -6,7 +6,7 @@ import type {
   ThreadId,
   ThreadPullRequestLink,
 } from "@t3tools/contracts";
-import { isOrchestrationV2WorkActive } from "@t3tools/contracts";
+import { isOrchestrationV2WorkActive, TurnItemId } from "@t3tools/contracts";
 import * as Predicate from "effect/Predicate";
 
 import { resolveT3McpToolId } from "./t3McpToolPresentation.ts";
@@ -192,7 +192,11 @@ function pendingTaskFromTurnItem(
         ...(item.childThreadId == null ? {} : { childThreadId: item.childThreadId }),
       };
     case "command_execution":
-      return { ...named, kind: item.monitor === true ? "monitor" : "command" };
+      return {
+        ...named,
+        kind: item.monitor === true ? "monitor" : "command",
+        output: { itemId: TurnItemId.make(String(item.id)) },
+      };
     default:
       return { ...named, kind: "background_task" };
   }

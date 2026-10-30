@@ -1,4 +1,5 @@
 import type {
+  EnvironmentId,
   OrchestrationV2PendingBackgroundTask,
   OrchestrationV2ProviderGoal,
   ThreadId,
@@ -24,6 +25,7 @@ import { tickTextContent } from "~/lib/tickTextContent";
 import { cn } from "~/lib/utils";
 import { Button, InlineButton } from "../ui/button";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
+import { CommandOutputPanel } from "./CommandOutputPanel";
 import type { ComposerBannerStackItem } from "./ComposerBannerStack";
 import type { ThreadNowItem } from "./ThreadNow";
 
@@ -114,6 +116,8 @@ export function backgroundWorkNowItem(input: {
   readonly stopping: boolean;
   readonly onStop: () => Promise<void>;
   readonly onOpenThread: (threadId: ThreadId) => void;
+  /** Set when the environment streams command output; rows with a source can then expand. */
+  readonly outputEnvironmentId?: EnvironmentId | undefined;
 }): ThreadNowItem | null {
   const { onOpenThread } = input;
   const presentation = presentPendingBackgroundWork(input.tasks);
@@ -140,6 +144,12 @@ export function backgroundWorkNowItem(input: {
   const verb = presentation.waiting ? "Waiting on" : "Running";
   const onlyThreadId = only?.childThreadId;
   const startedAtMs = only?.startedAtMs ?? null;
+  const { outputEnvironmentId } = input;
+  const outputRows = rows.flatMap(({ task }) =>
+    outputEnvironmentId === undefined || task.output === undefined
+      ? []
+      : [{ task, output: task.output }],
+  );
   return {
     id: `background-work:${input.threadId}`,
     icon: rows.every(isCommand) ? <TerminalIcon /> : <CircleDashedIcon />,
@@ -159,6 +169,21 @@ export function backgroundWorkNowItem(input: {
     ) : (
       rows.map((row) => row.task.label).join(", ")
     ),
+    output:
+      outputEnvironmentId === undefined || outputRows.length === 0
+        ? undefined
+        : outputRows.map(({ task, output }) => (
+            <div key={task.taskId} className="min-w-0">
+              {rows.length > 1 ? (
+                <div className="truncate text-muted-foreground/80">{task.label}</div>
+              ) : null}
+              <CommandOutputPanel
+                compact
+                environmentId={outputEnvironmentId}
+                input={{ threadId: input.threadId, ...output }}
+              />
+            </div>
+          )),
     actions: (
       <>
         {startedAtMs === null ? null : (

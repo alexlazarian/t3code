@@ -32,6 +32,7 @@ import {
   RunAttemptId,
   RunId,
   ThreadId,
+  TrimmedNonEmptyString,
   TurnItemId,
 } from "@t3tools/contracts";
 import * as Context from "effect/Context";
@@ -74,6 +75,13 @@ export const ProviderAdapterV2SessionStatus = Schema.Literals([
   "error",
 ]);
 export type ProviderAdapterV2SessionStatus = typeof ProviderAdapterV2SessionStatus.Type;
+
+const commandOutputDeltaFields = {
+  type: Schema.Literal("command_output.delta"),
+  driver: ProviderDriverKind,
+  threadId: ThreadId,
+  chunk: Schema.String,
+};
 
 export const ProviderAdapterV2Event = Schema.Union([
   Schema.Struct({
@@ -120,13 +128,9 @@ export const ProviderAdapterV2Event = Schema.Union([
     turnItem: OrchestrationV2TurnItem,
   }),
   /** Unpersisted deltas go only to clients showing the row; final output arrives in turn_item.updated. */
-  Schema.Struct({
-    type: Schema.Literal("command_output.delta"),
-    driver: ProviderDriverKind,
-    threadId: ThreadId,
-    itemId: TurnItemId,
-    chunk: Schema.String,
-  }),
+  Schema.Struct({ ...commandOutputDeltaFields, itemId: TurnItemId }),
+  /** Output of a background task that outlives its turn item, keyed by the roster's task id. */
+  Schema.Struct({ ...commandOutputDeltaFields, taskId: TrimmedNonEmptyString }),
   Schema.Struct({
     type: Schema.Literal("runtime_request.updated"),
     driver: ProviderDriverKind,

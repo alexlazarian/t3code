@@ -109,7 +109,9 @@ describe("derivePendingBackgroundWork", () => {
         },
       ],
     });
-    expect(tasks).toEqual([{ taskId: "cmd-1", description: "npm test", kind: "command" }]);
+    expect(tasks).toEqual([
+      { taskId: "cmd-1", description: "npm test", kind: "command", output: { itemId: "item-1" } },
+    ]);
   });
 
   it("excludes rolled_back items when the latest run is waiting", () => {
@@ -146,6 +148,7 @@ describe("derivePendingBackgroundWork", () => {
         taskId: "cmd-new",
         description: "still pending",
         kind: "command",
+        output: { itemId: "item-new" },
       },
     ]);
   });
@@ -173,7 +176,9 @@ describe("derivePendingBackgroundWork", () => {
         },
       ],
     });
-    expect(tasks).toEqual([{ taskId: "cmd-1", description: "npm test", kind: "command" }]);
+    expect(tasks).toEqual([
+      { taskId: "cmd-1", description: "npm test", kind: "command", output: { itemId: "item-1" } },
+    ]);
   });
 
   it("dedupes roster entries against turn items by native task id", () => {
@@ -306,6 +311,7 @@ describe("derivePendingBackgroundWork", () => {
         taskId: "cmd-null",
         description: "orphan item",
         kind: "command",
+        output: { itemId: "item-null-run" },
       },
     ]);
   });
@@ -319,7 +325,7 @@ describe("derivePendingBackgroundWork kinds", () => {
         {
           id: "pt-1" as never,
           pendingBackgroundTasks: [
-            { taskId: "bash", kind: "command" },
+            { taskId: "bash", kind: "command", output: { taskId: "bash" } },
             { taskId: "tests", kind: "command", awaited: true },
             { taskId: "watch", kind: "monitor" },
             { taskId: "workflow", kind: "background_task" },
@@ -346,7 +352,7 @@ describe("derivePendingBackgroundWork kinds", () => {
       ],
     });
     expect(tasks).toEqual([
-      { taskId: "bash", kind: "command" },
+      { taskId: "bash", kind: "command", output: { taskId: "bash" } },
       { taskId: "tests", kind: "command", awaited: true },
       { taskId: "watch", kind: "monitor" },
       { taskId: "workflow", kind: "background_task" },
@@ -356,7 +362,7 @@ describe("derivePendingBackgroundWork kinds", () => {
         kind: "subagent",
         childThreadId: "thread:child",
       },
-      { taskId: "cmd", description: "npm test", kind: "command" },
+      { taskId: "cmd", description: "npm test", kind: "command", output: { itemId: "item-cmd" } },
     ]);
   });
 

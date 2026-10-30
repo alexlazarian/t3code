@@ -258,8 +258,10 @@ export const V2ItemInspector = memo(function V2ItemInspector(props: V2ItemInspec
             streamsOutput ? (
               <CommandOutputPanel
                 environmentId={props.environmentId}
-                threadId={props.projectedItem.sourceThreadId}
-                itemId={props.projectedItem.sourceItemId}
+                input={{
+                  threadId: props.projectedItem.sourceThreadId,
+                  itemId: props.projectedItem.sourceItemId,
+                }}
               />
             ) : undefined
           }

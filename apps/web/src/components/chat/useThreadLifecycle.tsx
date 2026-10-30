@@ -58,6 +58,7 @@ import { appAtomRegistry } from "../../rpc/atomRegistry";
 import { readEnvironmentScope } from "../../state/session";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { useOrchestrationCommand } from "../../state/use-orchestration-command";
+import { useCommandOutputStreaming } from "./CommandOutputPanel";
 import { backgroundWorkNowItem, childInputNowItem, goalNowItem } from "./ThreadActivityBanners";
 import type { useLocalDispatchState } from "./useLocalDispatchState";
 const RELATED_THREAD_SHELL_WAIT_MS = 1_000;
@@ -509,6 +510,7 @@ export function useThreadLifecycle(input: ThreadLifecycleInput) {
         })
       : null;
 
+  const streamsCommandOutput = useCommandOutputStreaming(environmentId);
   const backgroundWorkNow = activeThread
     ? backgroundWorkNowItem({
         threadId: activeThread.id,
@@ -518,6 +520,7 @@ export function useThreadLifecycle(input: ThreadLifecycleInput) {
         stopping: isStoppingBackgroundWork,
         onStop: handleStopBackgroundWorkStable,
         onOpenThread: onOpenRelatedThreadStable,
+        outputEnvironmentId: streamsCommandOutput ? environmentId : undefined,
       })
     : null;
   // The relative times read the clock; nowMinute re-renders them on the minute.

@@ -1,4 +1,4 @@
-import type { EnvironmentId, ThreadId, TurnItemId } from "@t3tools/contracts";
+import type { EnvironmentId, OrchestrationV2SubscribeCommandOutputInput } from "@t3tools/contracts";
 import { TERMINAL_PALETTES, terminalOutputSpans } from "@t3tools/shared/terminalOutput";
 import type React from "react";
 import { useMemo, useRef } from "react";
@@ -20,14 +20,13 @@ export function useCommandOutputStreaming(environmentId: EnvironmentId): boolean
 /** Mount only while useCommandOutputStreaming holds; unmount to stop subscriptions for collapsed rows or other threads. */
 export function ThreadCommandOutput(props: {
   readonly environmentId: EnvironmentId;
-  readonly threadId: ThreadId;
-  readonly itemId: TurnItemId;
+  readonly input: OrchestrationV2SubscribeCommandOutputInput;
   readonly themeAppearance: "light" | "dark";
 }) {
   const { data, error } = useEnvironmentQuery(
     orchestrationEnvironment.v2.commandOutput({
       environmentId: props.environmentId,
-      input: { threadId: props.threadId, itemId: props.itemId },
+      input: props.input,
     }),
   );
   const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);

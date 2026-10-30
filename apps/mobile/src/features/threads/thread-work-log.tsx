@@ -1256,8 +1256,10 @@ const ThreadWorkLogRow = function ThreadWorkLogRow(
             <>
               <ThreadCommandOutput
                 environmentId={props.environmentId}
-                threadId={row.projectedItem.sourceThreadId}
-                itemId={row.projectedItem.sourceItemId}
+                input={{
+                  threadId: row.projectedItem.sourceThreadId,
+                  itemId: row.projectedItem.sourceItemId,
+                }}
                 themeAppearance={props.themeAppearance}
               />
               {exitLine}
