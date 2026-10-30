@@ -6141,6 +6141,57 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
         ORDER BY thread_id, ordinal
       `;
 
+    // Subagents of subagents, at any depth below each thread. A card lists them with the
+    // thread's own, so a lead sees everything running under it. A descendant contributes the
+    // subagents of the run it is working in, plus any still working in an earlier run.
+    const selectShellDescendantSubagentRows = (threadIds: ReadonlyArray<string>) =>
+      sql<ShellActivitySubagentRow & { readonly root_thread_id: string }>`
+        WITH RECURSIVE family(root_id, thread_id) AS (
+          SELECT thread_id, thread_id
+          FROM orchestration_v2_projection_threads
+          WHERE thread_id IN ${sql.in(threadIds)}
+          UNION
+          SELECT family.root_id, child.thread_id
+          FROM family
+          JOIN orchestration_v2_projection_threads AS child
+            ON CASE WHEN json_valid(child.payload_json)
+              THEN json_extract(child.payload_json, '$.lineage.parentThreadId')
+              ELSE NULL END = family.thread_id
+          WHERE json_extract(child.payload_json, '$.lineage.relationshipToParent') = 'subagent'
+        )
+        SELECT family.root_id AS root_thread_id, item.run_id,
+          json_extract(item.payload_json, '$.childThreadId') AS child_thread_id,
+          substr(json_extract(item.payload_json, '$.title'), 1, 400) AS title,
+          item.status,
+          substr(json_extract(item.payload_json, '$.progress'), 1, 2000) AS progress,
+          substr(json_extract(item.payload_json, '$.result'), 1, 2000) AS result,
+          json_extract(item.payload_json, '$.startedAt') AS started_at,
+          json_extract(item.payload_json, '$.completedAt') AS completed_at
+        FROM family
+        JOIN orchestration_v2_projection_turn_items AS item
+          ON item.thread_id = family.thread_id
+        WHERE family.thread_id <> family.root_id
+          AND item.type = 'subagent'
+          AND item.run_id IS NOT NULL
+          AND (
+            item.status IN ('pending', 'running', 'waiting')
+            OR item.run_id = (
+              SELECT r.run_id
+              FROM orchestration_v2_projection_runs r
+              WHERE r.thread_id = family.thread_id
+                AND r.status <> 'queued'
+                AND NOT (
+                  r.status = 'cancelled' AND json_extract(r.payload_json, '$.startedAt') IS NULL
+                )
+                AND NOT ${isSilentShellRun("r")}
+              ORDER BY r.status IN ('preparing', 'starting', 'running', 'waiting') DESC,
+                r.ordinal DESC, r.run_id DESC
+              LIMIT 1
+            )
+          )
+        ORDER BY family.root_id, item.ordinal
+      `;
+
     const selectShellActivityFilesRows = (
       threadIds: ReadonlyArray<string>,
       runIds: ReadonlyArray<string>,
@@ -6176,11 +6227,12 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
       ];
       if (runIds.length === 0) return new Map<RunId, OrchestrationV2ShellActivity>();
       const threadIds = rows.map((row) => row.thread_id);
-      const [steps, subagents, files, liveSubagents] = yield* Effect.all([
+      const [steps, subagents, files, liveSubagents, descendantSubagents] = yield* Effect.all([
         selectShellActivityStepRows(runIds),
         selectShellActivitySubagentRows(runIds),
         selectShellActivityFilesRows(threadIds, runIds),
         selectShellLiveSubagentRows(threadIds),
+        selectShellDescendantSubagentRows(threadIds),
       ]);
       const activityRunIdByThreadId = new Map(
         rows.map((row) => [row.thread_id, row.activity_run_id] as const),
@@ -6193,10 +6245,16 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
             : [{ ...row, activity_run_id: activityRunId }];
         },
       );
-      return shellActivityWithHeldSubagents(
-        shellActivityByRunId({ steps, subagents, files }),
-        held,
+      const nested = descendantSubagents.flatMap(
+        ({ root_thread_id, ...row }): ReadonlyArray<ShellActivityHeldSubagentRow> => {
+          const activityRunId = activityRunIdByThreadId.get(root_thread_id) ?? null;
+          return activityRunId === null ? [] : [{ ...row, activity_run_id: activityRunId }];
+        },
       );
+      return shellActivityWithHeldSubagents(shellActivityByRunId({ steps, subagents, files }), [
+        ...held,
+        ...nested,
+      ]);
     });
 
     const runMapsByThreadId = (input: {

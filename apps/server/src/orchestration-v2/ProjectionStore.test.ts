@@ -507,6 +507,150 @@ it.effect("SQL shells keep subagents that are still working after a later run st
   }).pipe(Effect.provide(layerTest)),
 );
 
+it.effect("SQL shells list subagents of subagents at any depth", () =>
+  Effect.gen(function* () {
+    const store = yield* ProjectionStore.ProjectionStoreV2;
+    const rootId = yield* addRolledBackRecoveryCandidate("nested-subagents");
+    const initial = yield* store.getThreadProjection(rootId);
+    const at = initial.updatedAt;
+    const template = initial.turnItems.find((item) => item.type === "command_execution")!;
+    yield* store.apply({
+      id: EventId.make("event:nested-subagents:root-completed"),
+      type: "run.updated",
+      threadId: rootId,
+      occurredAt: at,
+      payload: { ...initial.runs[0]!, status: "completed", completedAt: at },
+    });
+    const addChild = Effect.fn("addChild")(function* (name: string, parentId: ThreadId) {
+      const childId = ThreadId.make(`thread:nested-subagents:${name}`);
+      const runId = RunId.make(`run:nested-subagents:${name}`);
+      yield* store.apply({
+        id: EventId.make(`event:nested-subagents:${name}:thread`),
+        type: "thread.created",
+        threadId: childId,
+        occurredAt: at,
+        payload: {
+          createdBy: "agent",
+          creationSource: "provider",
+          id: childId,
+          projectId: initial.thread.projectId,
+          title: name,
+          providerInstanceId,
+          modelSelection,
+          runtimeMode: "full-access",
+          interactionMode: "default",
+          branch: null,
+          worktreePath: null,
+          activeProviderThreadId: null,
+          lineage: {
+            parentThreadId: parentId,
+            relationshipToParent: "subagent",
+            rootThreadId: rootId,
+          },
+          forkedFrom: null,
+          createdAt: at,
+          updatedAt: at,
+          archivedAt: null,
+          settledOverride: null,
+          settledAt: null,
+          lastVisitedAt: null,
+          deletedAt: null,
+        },
+      });
+      yield* store.apply({
+        id: EventId.make(`event:nested-subagents:${name}:run`),
+        type: "run.created",
+        threadId: childId,
+        occurredAt: at,
+        payload: {
+          ...initial.runs[0]!,
+          id: runId,
+          threadId: childId,
+          ordinal: 1,
+          status: "completed" as const,
+          completedAt: at,
+        },
+      });
+      return { childId, runId };
+    });
+    const addSubagentItem = (input: {
+      readonly threadId: ThreadId;
+      readonly runId: RunId;
+      readonly title: string;
+      readonly status: "running" | "completed";
+      readonly childThreadId: ThreadId | null;
+    }) =>
+      store.apply({
+        id: EventId.make(`event:nested-subagents:item:${input.title}:${input.status}`),
+        type: "turn-item.updated",
+        threadId: input.threadId,
+        runId: input.runId,
+        driver,
+        occurredAt: at,
+        payload: {
+          ...template,
+          providerThreadId: null,
+          providerTurnId: null,
+          nativeItemRef: null,
+          parentItemId: null,
+          id: TurnItemId.make(`item:nested-subagents:${input.title}`),
+          threadId: input.threadId,
+          runId: input.runId,
+          ordinal: 200,
+          type: "subagent" as const,
+          origin: "provider_native" as const,
+          driver,
+          providerInstanceId,
+          prompt: input.title,
+          title: input.title,
+          status: input.status,
+          subagentId: NodeId.make(`node:nested-subagents:${input.title}`),
+          childThreadId: input.childThreadId,
+          progress: "Working",
+          result: input.status === "running" ? null : "Done",
+        },
+      });
+    const activity = Effect.gen(function* () {
+      const listed = (yield* store.getShellSnapshot()).threads.find((row) => row.id === rootId);
+      const single = yield* store.getThreadShell(rootId);
+      assert.deepEqual(listed?.activity, single?.activity);
+      return single?.activity;
+    });
+
+    const child = yield* addChild("child", rootId);
+    const grandchild = yield* addChild("grandchild", child.childId);
+    yield* addSubagentItem({
+      threadId: rootId,
+      runId: initial.runs[0]!.id,
+      title: "Direct",
+      status: "completed",
+      childThreadId: child.childId,
+    });
+    yield* addSubagentItem({
+      threadId: child.childId,
+      runId: child.runId,
+      title: "Nested",
+      status: "running",
+      childThreadId: grandchild.childId,
+    });
+    yield* addSubagentItem({
+      threadId: grandchild.childId,
+      runId: grandchild.runId,
+      title: "Deep",
+      status: "running",
+      childThreadId: null,
+    });
+
+    const all = yield* activity;
+    assert.deepEqual(all?.subagents.map(({ title }) => title).toSorted(), [
+      "Deep",
+      "Direct",
+      "Nested",
+    ]);
+    assert.equal(all?.subagentCount, 3);
+  }).pipe(Effect.provide(layerTest)),
+);
+
 it.effect("SQL shells summarize the presented run's step, stats and subagents", () =>
   Effect.gen(function* () {
     const store = yield* ProjectionStore.ProjectionStoreV2;
