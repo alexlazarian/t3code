@@ -221,7 +221,7 @@ const config: ExpoConfig = {
     requireFullScreen: process.env.T3_SHOWCASE_CAPTURE_BUILD === "1",
     bundleIdentifier: iosBundleIdentifier,
     // Avoid Personal Team fallback: it cannot sign App Groups.
-    appleTeamId: "ARK85ZXQ4Z",
+    appleTeamId: repoEnv.T3CODE_APPLE_TEAM_ID?.trim() || "ARK85ZXQ4Z",
     entitlements: {
       "keychain-access-groups": [`$(AppIdentifierPrefix)${variant.iosBundleIdentifier}`],
     },
