@@ -1,5 +1,5 @@
 import { useAtomValue } from "@effect/atom-react";
-import { SearchIcon, SettingsIcon } from "lucide-react";
+import { ArrowLeftIcon, ArrowRightIcon, SearchIcon, SettingsIcon } from "lucide-react";
 import * as Schema from "effect/Schema";
 import {
   useEffect,
@@ -14,6 +14,11 @@ import { moveWorkspaceFocus, workspaceAreaProps } from "../lib/workspaceFocus";
 import { isCommandPaletteOpen, openCommandPalette } from "../commandPaletteBus";
 import { onOpenSidebarRequest } from "../sidebarOpenRequest";
 import { isElectron } from "../env";
+import {
+  navigateHistory,
+  useCanNavigateHistory,
+  type HistoryDirection,
+} from "../navigationHistory";
 import {
   releaseThreadUndoShortcut,
   threadUndoClaimsShortcut,
@@ -50,6 +55,7 @@ import { InfoBar } from "./InfoBar";
 import { SidebarUpdatePill } from "./sidebar/SidebarUpdatePill";
 import { PanelTab } from "./PanelTab";
 import { BackgroundThreadAnnouncer } from "./BackgroundThreadAnnouncer";
+import { HistorySwipeNavigation } from "./HistorySwipeNavigation";
 import ThreadSidebar from "./Sidebar";
 import {
   appModalReturnLocation,
@@ -454,6 +460,12 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
           />
           <TooltipPopup side="bottom">{sidebarToggleLabel}</TooltipPopup>
         </Tooltip>
+        {isElectron ? (
+          <div className="flex items-center max-md:hidden">
+            <HistoryNavigationButton direction="back" />
+            <HistoryNavigationButton direction="forward" />
+          </div>
+        ) : null}
       </div>
       {infoBarEnabled ? <InfoBar /> : <div className="min-w-0 flex-1 px-0!" />}
       <div className="border-l">
@@ -494,6 +506,37 @@ function AppTopBar({ windowControlsInsetStyle }: { windowControlsInsetStyle: CSS
         <SidebarUpdatePill />
       </div>
     </header>
+  );
+}
+
+function HistoryNavigationButton({ direction }: { direction: HistoryDirection }) {
+  const keybindings = useAtomValue(primaryServerKeybindingsAtom);
+  const enabled = useCanNavigateHistory(direction);
+  const shortcutLabel = shortcutLabelForCommand(
+    keybindings,
+    direction === "back" ? "navigation.back" : "navigation.forward",
+  );
+  const label = `${direction === "back" ? "Go back" : "Go forward"}${shortcutLabel ? ` (${shortcutLabel})` : ""}`;
+  const Icon = direction === "back" ? ArrowLeftIcon : ArrowRightIcon;
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        info={label}
+        render={
+          <Button
+            aria-label={direction === "back" ? "Go back" : "Go forward"}
+            className="[-webkit-app-region:no-drag]"
+            disabled={!enabled}
+            onClick={() => navigateHistory(direction)}
+            size="icon"
+            variant="ghost"
+          />
+        }
+      >
+        <Icon />
+      </TooltipTrigger>
+      <TooltipPopup side="bottom">{label}</TooltipPopup>
+    </Tooltip>
   );
 }
 
@@ -661,6 +704,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
           </div>
           <BackgroundThreadAnnouncer />
           <AppTopBar windowControlsInsetStyle={windowControlsInsetStyle} />
+          {isElectron ? <HistorySwipeNavigation /> : null}
         </SidebarProvider>
       </div>
     </PanelAnimationSuppressionProvider>

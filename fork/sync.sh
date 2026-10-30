@@ -103,7 +103,8 @@ if [ "$mode" = land ]; then
   fi
   # Only untracked build output and node_modules remain; tracked files were checked clean above.
   git worktree remove --force "$wt"
-  git branch -d "$sync"
+  # -d would compare against the shared checkout's branch, not fork-main.
+  git merge-base --is-ancestor "$sync" "$BRANCH" && git branch -D "$sync"
   echo "Landed $tag on $BRANCH."
   [ -n "$dmg" ] && echo "Install:  fork/install.sh '$dmg'   (quit T3 Code (Fork) first)"
   echo "Then refresh the service from a normal Terminal: ~/.t3/fork-service/refresh-runtime.sh --check"

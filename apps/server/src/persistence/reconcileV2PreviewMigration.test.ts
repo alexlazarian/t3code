@@ -55,6 +55,7 @@ describe("V2 preview upgrade", () => {
         [73, "DropWebhookRelayDeliveries"],
         [74, "DropRelayScopes"],
         [75, "ActiveTurnItemIndexes"],
+        [76, "ExcludeAttachmentPlaceholdersFromSearch"],
       ]);
       assert.deepStrictEqual(yield* runMigrations(), []);
       assert.deepStrictEqual(yield* sql`SELECT * FROM orchestration_v2_legacy_imports`, imports);
@@ -153,6 +154,7 @@ describe("V2 preview upgrade", () => {
         [73, "DropWebhookRelayDeliveries"],
         [74, "DropRelayScopes"],
         [75, "ActiveTurnItemIndexes"],
+        [76, "ExcludeAttachmentPlaceholdersFromSearch"],
       ]);
     }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: ":memory:" }))),
   );
