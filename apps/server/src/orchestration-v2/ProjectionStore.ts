@@ -4,7 +4,9 @@ import {
   SHELL_COUNTED_STEP_ITEM_TYPES,
   SHELL_STEP_ITEM_TYPES,
   shellActivityByRunId,
+  shellActivityWithHeldSubagents,
   type ShellActivityFilesRow,
+  type ShellActivityHeldSubagentRow,
   type ShellActivityStepRow,
   type ShellActivitySubagentRow,
 } from "./ShellActivity.ts";
@@ -6118,6 +6120,27 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
         ORDER BY run_id, ordinal
       `;
 
+    // Subagents still working in a run the card does not read. Their lead has usually ended
+    // that run, and a later run (a follow-up, or a subagent-finished notice) became the one
+    // the card shows.
+    const selectShellLiveSubagentRows = (threadIds: ReadonlyArray<string>) =>
+      sql<ShellActivitySubagentRow & { readonly thread_id: string }>`
+        SELECT thread_id, run_id,
+          json_extract(payload_json, '$.childThreadId') AS child_thread_id,
+          substr(json_extract(payload_json, '$.title'), 1, 400) AS title,
+          status,
+          substr(json_extract(payload_json, '$.progress'), 1, 2000) AS progress,
+          substr(json_extract(payload_json, '$.result'), 1, 2000) AS result,
+          json_extract(payload_json, '$.startedAt') AS started_at,
+          json_extract(payload_json, '$.completedAt') AS completed_at
+        FROM orchestration_v2_projection_turn_items
+        WHERE thread_id IN ${sql.in(threadIds)}
+          AND type = 'subagent'
+          AND status IN ('pending', 'running', 'waiting')
+          AND run_id IS NOT NULL
+        ORDER BY thread_id, ordinal
+      `;
+
     const selectShellActivityFilesRows = (
       threadIds: ReadonlyArray<string>,
       runIds: ReadonlyArray<string>,
@@ -6152,15 +6175,28 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
         ),
       ];
       if (runIds.length === 0) return new Map<RunId, OrchestrationV2ShellActivity>();
-      const [steps, subagents, files] = yield* Effect.all([
+      const threadIds = rows.map((row) => row.thread_id);
+      const [steps, subagents, files, liveSubagents] = yield* Effect.all([
         selectShellActivityStepRows(runIds),
         selectShellActivitySubagentRows(runIds),
-        selectShellActivityFilesRows(
-          rows.map((row) => row.thread_id),
-          runIds,
-        ),
+        selectShellActivityFilesRows(threadIds, runIds),
+        selectShellLiveSubagentRows(threadIds),
       ]);
-      return shellActivityByRunId({ steps, subagents, files });
+      const activityRunIdByThreadId = new Map(
+        rows.map((row) => [row.thread_id, row.activity_run_id] as const),
+      );
+      const held = liveSubagents.flatMap(
+        ({ thread_id, ...row }): ReadonlyArray<ShellActivityHeldSubagentRow> => {
+          const activityRunId = activityRunIdByThreadId.get(thread_id) ?? null;
+          return activityRunId === null || activityRunId === row.run_id
+            ? []
+            : [{ ...row, activity_run_id: activityRunId }];
+        },
+      );
+      return shellActivityWithHeldSubagents(
+        shellActivityByRunId({ steps, subagents, files }),
+        held,
+      );
     });
 
     const runMapsByThreadId = (input: {

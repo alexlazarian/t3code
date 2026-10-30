@@ -404,6 +404,109 @@ it.effect("SQL shells flag only an active turn blocked solely on T3 thread waits
   }).pipe(Effect.provide(layerTest)),
 );
 
+it.effect("SQL shells keep subagents that are still working after a later run starts", () =>
+  Effect.gen(function* () {
+    const store = yield* ProjectionStore.ProjectionStoreV2;
+    const threadId = yield* addRolledBackRecoveryCandidate("held-subagents");
+    const initial = yield* store.getThreadProjection(threadId);
+    const at = initial.updatedAt;
+    const previousCommand = initial.turnItems.find((item) => item.type === "command_execution")!;
+    yield* store.apply({
+      id: EventId.make("event:held-subagents:previous-completed"),
+      type: "run.updated",
+      threadId,
+      occurredAt: at,
+      payload: { ...initial.runs[0]!, status: "completed", completedAt: at },
+    });
+    const createRun = (name: string, ordinal: number) => {
+      const created = {
+        ...initial.runs[0]!,
+        id: RunId.make(`run:held-subagents:${name}`),
+        ordinal,
+        status: "completed" as const,
+        completedAt: at,
+      };
+      return store
+        .apply({
+          id: EventId.make(`event:held-subagents:${name}`),
+          type: "run.created",
+          threadId,
+          occurredAt: at,
+          payload: created,
+        })
+        .pipe(Effect.as(created));
+    };
+    const first = yield* createRun("first", 2);
+    const second = yield* createRun("second", 3);
+    let ordinal = 100;
+    const subagent = (title: string, status: "running" | "completed") => ({
+      ...previousCommand,
+      providerThreadId: previousCommand.providerThreadId ?? null,
+      providerTurnId: previousCommand.providerTurnId ?? null,
+      nativeItemRef: previousCommand.nativeItemRef ?? null,
+      parentItemId: previousCommand.parentItemId ?? null,
+      id: TurnItemId.make(`item:held-subagents:${title}`),
+      runId: first.id,
+      ordinal: ordinal++,
+      type: "subagent" as const,
+      origin: "provider_native" as const,
+      driver,
+      providerInstanceId,
+      prompt: title,
+      title,
+      status,
+      subagentId: NodeId.make(`node:held-subagents:${title}`),
+      childThreadId: null,
+      progress: "Working",
+      result: status === "running" ? null : "Done",
+    });
+    const updateItem = (payload: OrchestrationV2TurnItem) =>
+      store.apply({
+        id: EventId.make(`event:held-subagents:item:${payload.id}:${payload.status}`),
+        type: "turn-item.updated",
+        threadId,
+        runId: payload.runId ?? undefined,
+        driver,
+        occurredAt: at,
+        payload,
+      });
+    const activity = Effect.gen(function* () {
+      const listed = (yield* store.getShellSnapshot()).threads.find((row) => row.id === threadId);
+      const single = yield* store.getThreadShell(threadId);
+      assert.deepEqual(listed?.activity, single?.activity);
+      return single?.activity;
+    });
+
+    yield* updateItem(subagent("Still running", "running"));
+    yield* updateItem(subagent("Already done", "completed"));
+    yield* updateItem({
+      ...subagent("Newest run reply", "completed"),
+      runId: second.id,
+      title: "Own subagent",
+    });
+
+    // The card reads the second run, which has its own ended subagent only. The running
+    // subagent from the first run still shows, and the ended one stays with its own run.
+    const held = yield* activity;
+    assert.deepEqual(
+      held?.subagents.map(({ title, status }) => ({ title, status })),
+      [
+        { title: "Still running", status: "running" },
+        { title: "Own subagent", status: "completed" },
+      ],
+    );
+    assert.equal(held?.subagentCount, 2);
+
+    yield* updateItem(subagent("Still running", "completed"));
+    const ended = yield* activity;
+    assert.deepEqual(
+      ended?.subagents.map(({ title }) => title),
+      ["Own subagent"],
+    );
+    assert.equal(ended?.subagentCount, 1);
+  }).pipe(Effect.provide(layerTest)),
+);
+
 it.effect("SQL shells summarize the presented run's step, stats and subagents", () =>
   Effect.gen(function* () {
     const store = yield* ProjectionStore.ProjectionStoreV2;

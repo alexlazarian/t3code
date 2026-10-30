@@ -181,3 +181,39 @@ export function shellActivityByRunId(input: {
   }
   return result;
 }
+
+/** A subagent still working in a run other than the one a card reads. */
+export type ShellActivityHeldSubagentRow = ShellActivitySubagentRow & {
+  /** The run the card reads: the one this subagent is added to. */
+  readonly activity_run_id: string;
+};
+
+/**
+ * Adds subagents that are still working in an earlier run to the run a card reads. A later run
+ * (a follow-up, or the notice that a subagent finished) would otherwise hide them while the
+ * thread is parked on them. Ended subagents stay with their own run.
+ */
+export function shellActivityWithHeldSubagents(
+  activity: ReadonlyMap<RunId, OrchestrationV2ShellActivity>,
+  held: ReadonlyArray<ShellActivityHeldSubagentRow>,
+): ReadonlyMap<RunId, OrchestrationV2ShellActivity> {
+  if (held.length === 0) return activity;
+  const result = new Map(activity);
+  const byRunId = new Map<string, ReadonlyArray<OrchestrationV2ShellSubagent>>();
+  for (const row of held) {
+    byRunId.set(row.activity_run_id, [
+      ...(byRunId.get(row.activity_run_id) ?? []),
+      subagentFromRow(row),
+    ]);
+  }
+  for (const [runId, extra] of byRunId) {
+    const key = RunId.make(runId);
+    const own = result.get(key) ?? { step: null, stepCount: 0, subagents: [], subagentCount: 0 };
+    result.set(key, {
+      ...own,
+      subagents: [...extra, ...own.subagents].slice(-MAX_SHELL_SUBAGENTS),
+      subagentCount: own.subagentCount + extra.length,
+    });
+  }
+  return result;
+}
