@@ -1,8 +1,6 @@
 import { EnvironmentId } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
-import * as Predicate from "effect/Predicate";
 import * as Schema from "effect/Schema";
-import * as SchemaTransformation from "effect/SchemaTransformation";
 
 import {
   type ConnectionRegistration,
@@ -18,7 +16,7 @@ export const StoredConnectionCredential = Schema.Struct({
 });
 export type StoredConnectionCredential = typeof StoredConnectionCredential.Type;
 
-const ConnectionCatalogDocumentFields = Schema.Struct({
+export const ConnectionCatalogDocument = Schema.Struct({
   schemaVersion: Schema.Literal(1),
   targets: Schema.Array(PersistedConnectionTarget),
   profiles: Schema.Array(ConnectionProfile),
@@ -30,54 +28,6 @@ const ConnectionCatalogDocumentFields = Schema.Struct({
     Schema.withDecodingDefaultKey(Effect.succeed([])),
   ),
 });
-
-// Catalogs written while T3 Connect existed still hold its relay routes, the
-// learned routes it authorized, and its DPoP tokens. Dropping them on read keeps
-// every direct and Tailscale environment those documents also hold.
-const LEGACY_RELAY_TARGET_TAG = "RelayConnectionTarget";
-const LEGACY_CONNECT_AUTHORIZATION = "t3-connect";
-const LEGACY_DPOP_TOKENS_KEY = "remoteDpopTokens";
-
-function recordsOf(value: unknown): ReadonlyArray<unknown> | undefined {
-  return Array.isArray(value) ? value : undefined;
-}
-
-function dropLegacyConnectRecords(input: unknown): unknown {
-  if (!Predicate.isObject(input)) return input;
-  const { [LEGACY_DPOP_TOKENS_KEY]: _dpopTokens, ...document } = input as Record<string, unknown>;
-  const connectOnly = new Set(
-    (recordsOf(document.profiles) ?? []).flatMap((profile) =>
-      Predicate.isObject(profile) &&
-      "authorization" in profile &&
-      profile.authorization === LEGACY_CONNECT_AUTHORIZATION &&
-      "connectionId" in profile
-        ? [profile.connectionId]
-        : [],
-    ),
-  );
-  const keep = (record: unknown) =>
-    !Predicate.isObject(record) ||
-    !(
-      ("_tag" in record && record._tag === LEGACY_RELAY_TARGET_TAG) ||
-      ("connectionId" in record && connectOnly.has(record.connectionId))
-    );
-  const filter = (key: "targets" | "profiles" | "credentials") => {
-    const records = recordsOf(document[key]);
-    return records === undefined ? {} : { [key]: records.filter(keep) };
-  };
-  return { ...document, ...filter("targets"), ...filter("profiles"), ...filter("credentials") };
-}
-
-export const ConnectionCatalogDocument = Schema.Unknown.pipe(
-  Schema.decodeTo(
-    ConnectionCatalogDocumentFields,
-    SchemaTransformation.transform<typeof ConnectionCatalogDocumentFields.Encoded, unknown>({
-      decode: (input) =>
-        dropLegacyConnectRecords(input) as typeof ConnectionCatalogDocumentFields.Encoded,
-      encode: (document) => document,
-    }),
-  ),
-);
 export type ConnectionCatalogDocument = typeof ConnectionCatalogDocument.Type;
 
 export const EMPTY_CONNECTION_CATALOG_DOCUMENT: ConnectionCatalogDocument = Object.freeze({

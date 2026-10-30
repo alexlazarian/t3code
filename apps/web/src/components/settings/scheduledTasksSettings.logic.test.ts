@@ -156,7 +156,7 @@ describe("webhook scheduled tasks", () => {
   const webhookTask: ScheduledTask = {
     ...legacyTask,
     schedule: { type: "webhook", signature },
-    webhook: { path: "/api/hooks/legacy-task/token", url: null, hasSecret: true },
+    webhook: { path: "/api/hooks/legacy-task/token", hasSecret: true },
   };
 
   it("round-trips dedupe settings, clears them, and rejects invalid windows", () => {

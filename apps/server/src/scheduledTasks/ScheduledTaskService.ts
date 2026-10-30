@@ -275,7 +275,6 @@ function webhookEndpoint(
   if (row.webhook_token === null) return undefined;
   return {
     path: webhookPath(row.task_id, row.webhook_token),
-    url: null,
     hasSecret: row.webhook_secret !== null,
   };
 }

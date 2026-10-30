@@ -43,13 +43,7 @@ export const AuthAccessReadScope = "access:read" as const;
 export const AuthAccessWriteScope = "access:write" as const;
 /** Retired scopes, retained for decoding existing credentials; they grant no current RPC access. */
 const AuthReviewWriteScope = "review:write" as const;
-const AuthRelayReadScope = "relay:read" as const;
-const AuthRelayWriteScope = "relay:write" as const;
-const retiredScopes = new Set<string>([
-  AuthReviewWriteScope,
-  AuthRelayReadScope,
-  AuthRelayWriteScope,
-]);
+const retiredScopes = new Set<string>([AuthReviewWriteScope]);
 export const AuthEnvironmentScope = Schema.Literals([
   AuthOrchestrationReadScope,
   AuthOrchestrationOperateScope,
@@ -66,8 +60,6 @@ export const AuthEnvironmentScope = Schema.Literals([
   AuthSourceControlWriteScope,
   AuthAccessReadScope,
   AuthAccessWriteScope,
-  AuthRelayReadScope,
-  AuthRelayWriteScope,
 ]);
 export type AuthEnvironmentScope = typeof AuthEnvironmentScope.Type;
 export const AuthEnvironmentScopes = Schema.Array(AuthEnvironmentScope);
@@ -87,8 +79,6 @@ const legacyScopes = new Set<AuthEnvironmentScope>([
   AuthReviewWriteScope,
   AuthAccessReadScope,
   AuthAccessWriteScope,
-  AuthRelayReadScope,
-  AuthRelayWriteScope,
 ]);
 
 export function authScopeResponse(scopes: ReadonlyArray<AuthEnvironmentScope>) {

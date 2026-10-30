@@ -27,7 +27,7 @@ OpenAI `user_id` claim, not the Codex `account_id` (the ChatGPT workspace, which
 whole Team shares) or the token `sub` (one per login method).
 
 Every id is SHA-256 hashed with [one helper](../../packages/shared/src/telemetryId.ts)
-on both sides, so a Connect account hashes the same on the client and the server.
+on both sides, so an id hashes the same on the client and the server.
 The server accepts only hashes from clients.
 
 ## Attribution boundaries

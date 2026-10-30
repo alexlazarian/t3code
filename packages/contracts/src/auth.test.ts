@@ -13,7 +13,7 @@ import {
 } from "./auth.ts";
 
 describe("authorization grants", () => {
-  it.each(["review:write", "relay:read", "relay:write"] as const)(
+  it.each(["review:write"] as const)(
     "decodes retired %s credentials without offering it in new grants",
     (scope) => {
       const decodeAuthEnvironmentScopes = Schema.decodeSync(AuthEnvironmentScopes);
@@ -36,8 +36,6 @@ describe("authorization grants", () => {
       "review:write",
       "access:read",
       "access:write",
-      "relay:read",
-      "relay:write",
     ]),
   );
 

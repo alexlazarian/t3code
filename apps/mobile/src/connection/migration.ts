@@ -21,8 +21,6 @@ const LegacySavedRemoteConnection = Schema.Struct({
   httpBaseUrl: Schema.String,
   wsBaseUrl: Schema.String,
   bearerToken: Schema.NullOr(Schema.String),
-  authenticationMethod: Schema.optionalKey(Schema.Literals(["bearer", "dpop"])),
-  relayManaged: Schema.optionalKey(Schema.Literal(true)),
 });
 
 const LegacyConnectionDocument = Schema.Struct({
@@ -37,20 +35,11 @@ export class LegacyConnectionMigrationError extends Schema.TaggedError<LegacyCon
   },
 ) {}
 
-// Relay-managed connections have no direct route to migrate.
-function isRelayManaged(connection: typeof LegacySavedRemoteConnection.Type): boolean {
-  return connection.relayManaged === true || connection.authenticationMethod === "dpop";
-}
-
 function migrateConnection(
   document: ConnectionCatalogDocument,
   connection: typeof LegacySavedRemoteConnection.Type,
 ): ConnectionCatalogDocument {
-  if (
-    isRelayManaged(connection) ||
-    connection.bearerToken === null ||
-    connection.bearerToken.trim() === ""
-  ) {
+  if (connection.bearerToken === null || connection.bearerToken.trim() === "") {
     return document;
   }
 

@@ -35,7 +35,6 @@ const decodeConnectionCatalogDocument = Schema.decodeUnknownEffect(ConnectionCat
 
 const ENVIRONMENT_ID = EnvironmentId.make("environment-1");
 const decodeCatalogDocument = Schema.decodeUnknownSync(ConnectionCatalogDocument);
-const encodeCatalogDocument = Schema.encodeSync(ConnectionCatalogDocument);
 const LEARNED_ROUTE = {
   environmentId: ENVIRONMENT_ID,
   label: "Remote",
@@ -200,55 +199,6 @@ describe("ConnectionCatalogDocument", () => {
     });
 
     expect(decoded.disabledEnvironmentIds).toEqual([]);
-  });
-
-  it("drops T3 Connect records from a stored catalog and keeps direct routes", () => {
-    const relayOnlyEnvironment = EnvironmentId.make("environment-relay");
-    const encoded = encodeCatalogDocument({
-      ...EMPTY_CONNECTION_CATALOG_DOCUMENT,
-      targets: [BEARER_TARGET],
-      profiles: [BEARER_PROFILE],
-      credentials: [{ connectionId: BEARER_TARGET.connectionId, credential: BEARER_CREDENTIAL }],
-    });
-    const connectRoute = { _tag: "BearerConnectionTarget", ...LEARNED_ROUTE };
-    const decoded = decodeCatalogDocument({
-      ...(encoded as object),
-      targets: [
-        { _tag: "RelayConnectionTarget", environmentId: relayOnlyEnvironment, label: "Relay" },
-        { _tag: "RelayConnectionTarget", environmentId: ENVIRONMENT_ID, label: "Remote" },
-        connectRoute,
-        ...(encoded as { targets: ReadonlyArray<unknown> }).targets,
-      ],
-      profiles: [
-        {
-          _tag: "BearerConnectionProfile",
-          ...LEARNED_ROUTE,
-          httpBaseUrl: "https://learned.example.test",
-          wsBaseUrl: "wss://learned.example.test",
-          learned: true,
-          authorization: "t3-connect",
-        },
-        ...(encoded as { profiles: ReadonlyArray<unknown> }).profiles,
-      ],
-      credentials: [
-        {
-          connectionId: LEARNED_ROUTE.connectionId,
-          credential: { _tag: "BearerConnectionCredential", token: "learned" },
-        },
-        ...(encoded as { credentials: ReadonlyArray<unknown> }).credentials,
-      ],
-      remoteDpopTokens: [{ environmentId: ENVIRONMENT_ID, accessToken: "dpop-token" }],
-    });
-
-    expect(decoded).toEqual({
-      ...EMPTY_CONNECTION_CATALOG_DOCUMENT,
-      targets: [BEARER_TARGET],
-      profiles: [BEARER_PROFILE],
-      credentials: [{ connectionId: BEARER_TARGET.connectionId, credential: BEARER_CREDENTIAL }],
-    });
-    expect(() =>
-      decodeCatalogDocument({ ...(encoded as object), targets: [{ _tag: "Unknown" }] }),
-    ).toThrow();
   });
 
   it("switches a saved environment off and back on without touching its records", () => {

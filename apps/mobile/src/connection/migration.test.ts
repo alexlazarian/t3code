@@ -5,10 +5,9 @@ import * as Effect from "effect/Effect";
 import { migrateLegacyConnectionCatalog } from "./migration";
 
 describe("migrateLegacyConnectionCatalog", () => {
-  it.effect("migrates bearer connections and drops relay-managed ones", () =>
+  it.effect("migrates bearer connections", () =>
     Effect.gen(function* () {
       const bearerEnvironmentId = EnvironmentId.make("bearer-environment");
-      const relayEnvironmentId = EnvironmentId.make("relay-environment");
       const catalog = yield* migrateLegacyConnectionCatalog(
         JSON.stringify({
           connections: [
@@ -20,18 +19,6 @@ describe("migrateLegacyConnectionCatalog", () => {
               httpBaseUrl: "https://local.example.test",
               wsBaseUrl: "wss://local.example.test",
               bearerToken: "bearer-token",
-              authenticationMethod: "bearer",
-            },
-            {
-              environmentId: relayEnvironmentId,
-              environmentLabel: "Cloud Mac",
-              pairingUrl: "https://relay.example.test",
-              displayUrl: "https://relay.example.test",
-              httpBaseUrl: "https://relay.example.test",
-              wsBaseUrl: "wss://relay.example.test",
-              bearerToken: null,
-              authenticationMethod: "dpop",
-              relayManaged: true,
             },
           ],
         }),
@@ -62,7 +49,6 @@ describe("migrateLegacyConnectionCatalog", () => {
               httpBaseUrl: "https://invalid.example.test",
               wsBaseUrl: "wss://invalid.example.test",
               bearerToken: null,
-              authenticationMethod: "bearer",
             },
           ],
         }),
