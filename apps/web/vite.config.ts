@@ -80,6 +80,9 @@ const browserTestProject = {
   extends: true,
   // Pre-bundle lazy browser and worker dependencies to avoid mid-run reloads.
   optimizeDeps: {
+    // Crawl every browser test up front: a dependency found mid-run reloads the page and
+    // breaks in-flight vi.mock factories, aborting the whole run on a cold cache.
+    entries: ["src/**/*.browser.test.{ts,tsx}"],
     include: [
       "vite-plus/test/browser",
       "@base-ui/react/autocomplete",
@@ -100,8 +103,6 @@ const browserTestProject = {
       "pdfjs-dist",
       "sql.js",
       "tiff",
-      // Found mid-run otherwise; the reload breaks vi.mock factories in flight.
-      "effect/reactivity/Atom",
     ],
   },
   test: {
