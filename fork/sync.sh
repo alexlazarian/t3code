@@ -41,8 +41,17 @@ if [ "$mode" = start ]; then
   git push --quiet origin main
 fi
 
-tag="${tag:-$(git tag -l 'v*-nightly.*' --merged upstream/main --sort=-creatordate | head -1)}"
+newest="$(git tag -l 'v*-nightly.*' --merged upstream/main --sort=-creatordate | head -1)"
+# A sync in progress is finished before a newer nightly starts; land deletes its branch.
+pending="$(git for-each-ref --format='%(refname:strip=3)' refs/heads/sync/ | sed -E 's/-[0-9]+$//' | sort -u)"
+if [ -z "$tag" ] && [ -n "$pending" ]; then
+  [ "$(printf '%s\n' "$pending" | wc -l)" -eq 1 ] ||
+    die "syncs for several tags exist: $(echo $pending). Land or delete all but one sync/* branch."
+  tag="$pending"
+fi
+tag="${tag:-$newest}"
 has_tag "$tag" || die "tag $tag not found."
+[ "$tag" = "$newest" ] || echo "Note: $newest is newer than $tag. Land $tag first, then run fork/sync.sh again."
 
 # Newest existing attempt for this tag: sync/<tag>, then sync/<tag>-2, -3, ...
 latest="" next="sync/$tag" n=1

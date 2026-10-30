@@ -11,7 +11,7 @@ fork/sync.sh          # start or resume; stops when it needs you
 fork/sync.sh land     # after the checks pass
 ```
 
-`fork/sync.sh` fast-forwards `main`, picks the newest `v*-nightly.*` tag on `upstream/main`, and exits if `fork-main` already contains it. Otherwise it tags `fork-main` as `backup/fork-main-before-<tag>` (pushed), creates `sync/<tag>` in the worktree `../t3code-sync-<tag>`, merges the tag there, and runs `vp i`, format, lint, knip, the full typecheck and test suites, and `fork/build.sh --build-only`. Logs go to `.t3/sync/` in that worktree. Rerunning resumes the same branch; `fork/sync.sh --new` starts a fresh `sync/<tag>-2` and leaves the old attempt alone.
+`fork/sync.sh` fast-forwards `main`, picks the newest `v*-nightly.*` tag on `upstream/main`, and exits if `fork-main` already contains it. Otherwise it tags `fork-main` as `backup/fork-main-before-<tag>` (pushed), creates `sync/<tag>` in the worktree `../t3code-sync-<tag>`, merges the tag there, and runs `vp i`, format, lint, knip, the full typecheck and test suites, and `fork/build.sh --build-only`. Logs go to `.t3/sync/` in that worktree. Rerunning resumes the same branch, even after a newer nightly appears; land it, then run again for the newer one. `fork/sync.sh --new` starts a fresh `sync/<tag>-2` and leaves the old attempt alone.
 
 On conflicts it stops with a list and a `MERGE_MSG` template. Resolve each one by keeping upstream's version and re-applying the fork's behavior on top. Ask the owner when the fork's behavior can't be re-applied cleanly. List every conflicted file and its resolution in the merge commit, commit, and rerun `fork/sync.sh`.
 
