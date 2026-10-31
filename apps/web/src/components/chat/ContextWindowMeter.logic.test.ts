@@ -138,7 +138,6 @@ describe("hasDismissedResumeCompaction", () => {
 
 describe("shouldReserveContextWindowMeter", () => {
   const loadingStartedThread = {
-    meterEnabled: true,
     detailLoading: true,
     threadStarted: true,
     providerReportsContextWindow: true,

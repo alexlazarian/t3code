@@ -489,9 +489,6 @@ export function useSettingsRestore(onRestored?: () => void) {
       ? ["Follow-up behavior"]
       : []),
     ...(settings.safeSend !== DEFAULT_UNIFIED_SETTINGS.safeSend ? ["Safe send"] : []),
-    ...(settings.contextWindowMeterEnabled !== DEFAULT_UNIFIED_SETTINGS.contextWindowMeterEnabled
-      ? ["Context window indicator"]
-      : []),
     ...(settings.responseStreamingMode !== DEFAULT_UNIFIED_SETTINGS.responseStreamingMode
       ? ["Response streaming"]
       : []),
@@ -608,7 +605,6 @@ export function useSettingsRestore(onRestored?: () => void) {
       sendShortcut: DEFAULT_UNIFIED_SETTINGS.sendShortcut,
       followUpBehavior: DEFAULT_UNIFIED_SETTINGS.followUpBehavior,
       safeSend: DEFAULT_UNIFIED_SETTINGS.safeSend,
-      contextWindowMeterEnabled: DEFAULT_UNIFIED_SETTINGS.contextWindowMeterEnabled,
       glassOpacity: DEFAULT_UNIFIED_SETTINGS.glassOpacity,
       panelAnimationDurationMs: DEFAULT_UNIFIED_SETTINGS.panelAnimationDurationMs,
       sidebarProjectGroupingMode: DEFAULT_UNIFIED_SETTINGS.sidebarProjectGroupingMode,
@@ -706,29 +702,6 @@ function AutoSettleDaysInput({
       onBlur={() => setDraft(String(value))}
       aria-label="Days of inactivity before auto-settle"
     />
-  );
-}
-
-function LegacyFeaturesSection() {
-  const settings = useScopedSettings();
-  const updateSettings = useUpdateScopedSettings();
-
-  return (
-    <SettingsSection id="legacy-features" title="Legacy">
-      <SettingsRow
-        {...searchableSetting("legacy-context-window-indicator")}
-        description="Show how much of the context window is used, as a ring in the composer."
-        control={
-          <Switch
-            checked={settings.contextWindowMeterEnabled}
-            onCheckedChange={(checked) =>
-              updateSettings({ contextWindowMeterEnabled: Boolean(checked) })
-            }
-            aria-label="Context window indicator (legacy)"
-          />
-        }
-      />
-    </SettingsSection>
   );
 }
 
@@ -1231,7 +1204,6 @@ export function ChatSettingsPanel() {
           }
         />
       </SettingsSection>
-      <LegacyFeaturesSection />
     </SettingsPageContainer>
   );
 }

@@ -973,7 +973,6 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     modelOptionsByInstance,
   );
   const reserveContextWindowMeter = shouldReserveContextWindowMeter({
-    meterEnabled: settings.contextWindowMeterEnabled,
     detailLoading: props.threadSyncPhase === "loading",
     threadStarted: threadShellHasStarted(props.activeThreadShell),
     providerReportsContextWindow: selectedProviderStatus
@@ -3430,9 +3429,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                   <ComposerFooterPrimaryActions
                     compact={isComposerPrimaryActionsCompact}
                     canOperateThread={canOperateThread}
-                    activeContextWindow={
-                      settings.contextWindowMeterEnabled ? activeContextWindow : null
-                    }
+                    activeContextWindow={activeContextWindow}
                     reserveContextWindowMeter={reserveContextWindowMeter}
                     activeThreadModelDisplayName={activeThreadModelDisplayName}
                     pendingAction={pendingPrimaryAction}

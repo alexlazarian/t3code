@@ -112,17 +112,11 @@ export function formatContextWindowCompactionMessage(
 }
 
 export function shouldReserveContextWindowMeter(input: {
-  readonly meterEnabled: boolean;
   readonly detailLoading: boolean;
   readonly threadStarted: boolean;
   readonly providerReportsContextWindow: boolean | null;
 }): boolean {
-  return (
-    input.meterEnabled &&
-    input.detailLoading &&
-    input.threadStarted &&
-    input.providerReportsContextWindow !== false
-  );
+  return input.detailLoading && input.threadStarted && input.providerReportsContextWindow !== false;
 }
 
 export function formatContextWindowCost(cost: {
