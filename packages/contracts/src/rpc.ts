@@ -339,18 +339,6 @@ import {
 } from "./providerUsageLimits.ts";
 import { UsagePricing, UsageReadError, UsageSummary, UsageSummaryInput } from "./usage.ts";
 import {
-  ClaudeContextConflictError,
-  ClaudeContextError,
-  ClaudeContextReadInput,
-  ClaudeContextSnapshot,
-  ClaudeMemory,
-  ClaudeMemoryDeleteInput,
-  ClaudeMemoryDeleteResult,
-  ClaudeMemoryRestoreInput,
-  ClaudeMemoryWriteInput,
-  ClaudeUserInstructionsWriteInput,
-} from "./claudeContext.ts";
-import {
   StorageCleanupReport,
   DatabaseStorageStatus,
   ServerSettings,
@@ -534,11 +522,6 @@ export const WS_METHODS = {
   serverReportClientActivity: "server.reportClientActivity",
   serverGetUsageSummary: "server.getUsageSummary",
   serverRefreshUsageRates: "server.refreshUsageRates",
-  claudeContextRead: "claudeContext.read",
-  claudeContextWriteMemory: "claudeContext.writeMemory",
-  claudeContextDeleteMemory: "claudeContext.deleteMemory",
-  claudeContextRestoreMemory: "claudeContext.restoreMemory",
-  claudeContextWriteUserInstructions: "claudeContext.writeUserInstructions",
 
   scheduledTasksSubscribe: "scheduledTasks.subscribe",
   scheduledTasksUpsert: "scheduledTasks.upsert",
@@ -960,47 +943,6 @@ const WsServerGetUsageSummaryRpc = Rpc.make(WS_METHODS.serverGetUsageSummary, {
   success: UsageSummary,
   error: Schema.Union([EnvironmentAuthorizationError, UsageReadError]),
 });
-
-const WsClaudeContextReadRpc = Rpc.make(WS_METHODS.claudeContextRead, {
-  payload: ClaudeContextReadInput,
-  success: ClaudeContextSnapshot,
-  error: Schema.Union([EnvironmentAuthorizationError, ClaudeContextError]),
-});
-
-const WsClaudeContextWriteMemoryRpc = Rpc.make(WS_METHODS.claudeContextWriteMemory, {
-  payload: ClaudeMemoryWriteInput,
-  success: ClaudeMemory,
-  error: Schema.Union([
-    EnvironmentAuthorizationError,
-    ClaudeContextError,
-    ClaudeContextConflictError,
-  ]),
-});
-
-const WsClaudeContextDeleteMemoryRpc = Rpc.make(WS_METHODS.claudeContextDeleteMemory, {
-  payload: ClaudeMemoryDeleteInput,
-  success: ClaudeMemoryDeleteResult,
-  error: Schema.Union([EnvironmentAuthorizationError, ClaudeContextError]),
-});
-
-const WsClaudeContextRestoreMemoryRpc = Rpc.make(WS_METHODS.claudeContextRestoreMemory, {
-  payload: ClaudeMemoryRestoreInput,
-  success: ClaudeMemory,
-  error: Schema.Union([EnvironmentAuthorizationError, ClaudeContextError]),
-});
-
-const WsClaudeContextWriteUserInstructionsRpc = Rpc.make(
-  WS_METHODS.claudeContextWriteUserInstructions,
-  {
-    payload: ClaudeUserInstructionsWriteInput,
-    success: Schema.Void,
-    error: Schema.Union([
-      EnvironmentAuthorizationError,
-      ClaudeContextError,
-      ClaudeContextConflictError,
-    ]),
-  },
-);
 
 const WsServerRefreshUsageRatesRpc = Rpc.make(WS_METHODS.serverRefreshUsageRates, {
   payload: Schema.Struct({}),
@@ -2039,11 +1981,6 @@ export const WsRpcGroup = RpcGroup.make(
   WsServerPrepareTriageRpc,
   WsServerGetUsageSummaryRpc,
   WsServerRefreshUsageRatesRpc,
-  WsClaudeContextReadRpc,
-  WsClaudeContextWriteMemoryRpc,
-  WsClaudeContextDeleteMemoryRpc,
-  WsClaudeContextRestoreMemoryRpc,
-  WsClaudeContextWriteUserInstructionsRpc,
   WsServerSignalProcessRpc,
   WsScheduledTasksSubscribeRpc,
   WsScheduledTasksUpsertRpc,

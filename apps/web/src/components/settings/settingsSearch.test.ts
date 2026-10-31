@@ -322,6 +322,7 @@ describe("movedSettingsPath", () => {
     expect(movedSettingsPath("/settings/storage", "")).toBe("/settings/maintenance");
     expect(movedSettingsPath("/settings/integrations", "devices")).toBe("/settings/devices");
     expect(movedSettingsPath("/settings/labs", "")).toBe("/settings/connections");
+    expect(movedSettingsPath("/settings/context", "")).toBe("/settings/general");
   });
 
   it("leaves current pages alone", () => {

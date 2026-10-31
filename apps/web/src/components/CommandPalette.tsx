@@ -55,7 +55,6 @@ import { useLocation, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeftIcon,
   BugIcon,
-  BrainIcon,
   ChartNoAxesColumnIcon,
   CheckIcon,
   ChevronRightIcon,
@@ -1552,25 +1551,6 @@ function OpenCommandPaletteDialog(props: {
     shortcutCommand: "usage.open",
     run: async () => {
       await navigate({ to: "/settings/usage" });
-    },
-  });
-
-  actionItems.push({
-    kind: "action",
-    value: "action:context",
-    searchTerms: [
-      "context",
-      "memory",
-      "memories",
-      "claude.md",
-      "instructions",
-      "skills",
-      "commands",
-    ],
-    title: "Open Context: memories, instruction files and skills",
-    icon: <BrainIcon className={ITEM_ICON_CLASS} />,
-    run: async () => {
-      await navigate({ to: "/settings/context" });
     },
   });
 

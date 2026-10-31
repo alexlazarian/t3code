@@ -1298,27 +1298,6 @@ export function createServerEnvironmentAtoms<R, E>(
       label: "environment-data:server:scheduled-tasks:live",
       tag: WS_METHODS.scheduledTasksSubscribe,
     }),
-    claudeContext: createEnvironmentRpcQueryAtomFamily(runtime, {
-      label: "environment-data:claude-context",
-      tag: WS_METHODS.claudeContextRead,
-      staleTimeMs: 10_000,
-    }),
-    writeClaudeMemory: createEnvironmentRpcCommand(runtime, {
-      label: "environment-data:claude-context:write-memory",
-      tag: WS_METHODS.claudeContextWriteMemory,
-    }),
-    deleteClaudeMemory: createEnvironmentRpcCommand(runtime, {
-      label: "environment-data:claude-context:delete-memory",
-      tag: WS_METHODS.claudeContextDeleteMemory,
-    }),
-    restoreClaudeMemory: createEnvironmentRpcCommand(runtime, {
-      label: "environment-data:claude-context:restore-memory",
-      tag: WS_METHODS.claudeContextRestoreMemory,
-    }),
-    writeClaudeUserInstructions: createEnvironmentRpcCommand(runtime, {
-      label: "environment-data:claude-context:write-user-instructions",
-      tag: WS_METHODS.claudeContextWriteUserInstructions,
-    }),
     // A cold transcript scan is measured in seconds, so keep the result around
     // long enough that switching windows or re-rendering does not rescan.
     usageSummary: createEnvironmentRpcQueryAtomFamily(runtime, {

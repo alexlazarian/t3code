@@ -102,12 +102,11 @@ function SettingsScopeBoundary({ pathname, children }: { pathname: string; child
       </SettingsScopeNotice>
     );
   }
-  // Projects, Usage and Context pick their own targets.
+  // Projects and Usage pick their own targets.
   if (
     SETTINGS_DEVICE_ONLY_PATHS.has(pathname) ||
     pathname === "/settings/projects" ||
-    pathname === "/settings/usage" ||
-    pathname === "/settings/context"
+    pathname === "/settings/usage"
   ) {
     return children;
   }

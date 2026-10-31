@@ -25,7 +25,6 @@ export type SettingsPath =
   | "/settings/keybindings"
   | "/settings/snap-shot"
   | "/settings/providers"
-  | "/settings/context"
   | "/settings/usage"
   | "/settings/threads"
   | "/settings/browser"
@@ -92,7 +91,6 @@ export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
   "/settings/keybindings": "Keybindings",
   "/settings/snap-shot": "SnapShots",
   "/settings/providers": "Providers",
-  "/settings/context": "Context",
   "/settings/usage": "Usage",
   "/settings/threads": "Threads",
   "/settings/browser": "Browser",
@@ -129,7 +127,6 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
     heading: "Agents",
     paths: [
       "/settings/providers",
-      "/settings/context",
       "/settings/usage",
       "/settings/threads",
       "/settings/browser",
@@ -1139,12 +1136,6 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["restore reopen deleted history projects"],
   },
   {
-    id: "context",
-    title: "Context",
-    to: "/settings/context",
-    searchTerms: ["memory memories claude.md instructions skills commands"],
-  },
-  {
     id: "prompt-stash",
     title: "Prompt stash",
     to: "/settings/prompt-stash",
@@ -1167,7 +1158,6 @@ const SETTINGS_CATEGORY_SCOPES: Readonly<Record<SettingsPath, SettingsSearchScop
   "/settings/snap-shot": null,
   "/settings/keybindings": null,
   "/settings/providers": null,
-  "/settings/context": null,
   "/settings/usage": null,
   "/settings/threads": null,
   "/settings/browser": null,
@@ -1187,6 +1177,7 @@ const RENAMED_SETTINGS_PATHS: Readonly<Record<string, SettingsPath>> = {
   "/settings/integrations": "/settings/browser",
   "/settings/storage": "/settings/maintenance",
   "/settings/labs": "/settings/connections",
+  "/settings/context": "/settings/general",
 };
 const SPLIT_SETTINGS_PATHS: ReadonlySet<string> = new Set([
   "/settings/general",

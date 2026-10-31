@@ -262,33 +262,11 @@ a machine is offline.
 ## Use the Library
 
 On web and desktop, the **Library** tab beside **Threads** lists every settings
-page, plus **Context** and **Prompt stash**. Click one to open it in the main
+page, plus **Prompt stash**. Click one to open it in the main
 area; `Esc` or **Back** returns to where you were. The gear button in the top
 bar, the command palette, and the app menu open the same pages and switch the
 sidebar to the Library. **Prompt stash** lists the prompts saved with
 `Cmd/Ctrl+S` on this device, and can insert one into the thread you came from.
-
-### See and edit what Claude loads
-
-**Library → Context** opens a page with everything Claude loads, grouped by
-project: memories, instruction files, and skills and commands. The open thread's
-project comes first, and folders that belong to no project are listed under
-**Other folders**. Pick one project at the top to narrow the page. You can also
-open it from the command palette. **Insert in composer** on a skill adds it to
-the thread you opened the page from.
-
-Claude saves memories per folder, so each project combines the memories from its
-main checkout and all its worktrees, and tags each one with its folder.
-Memories from a worktree you have deleted stay listed. You can view, edit,
-delete, and add memories. **New memory** asks which folder the memory belongs
-to, because only sessions in that folder load it. Deleting a memory shows
-**Undo** for a few seconds. Each change also updates that folder's `MEMORY.md`
-index. Claude picks up changes at the start of its next session.
-
-Your own `~/.claude/CLAUDE.md` can be edited on the page. Project and local
-instruction files are shown read-only; edit them in the repository. The page
-reads and writes files on the machine that runs the thread, including remote
-machines. Only Claude is supported for now.
 
 ## Find and reference work
 

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type ComponentType, type KeyboardEvent } f
 import {
   ArchiveIcon,
   BookmarkIcon,
-  BrainIcon,
   BotIcon,
   createLucideIcon,
   CalendarClockIcon,
@@ -74,7 +73,6 @@ const SETTINGS_SECTION_ICONS: Readonly<
   "/settings/keybindings": KeyboardIcon,
   "/settings/snap-shot": SnapShotIcon,
   "/settings/providers": BotIcon,
-  "/settings/context": BrainIcon,
   "/settings/usage": ChartNoAxesColumnIcon,
   "/settings/threads": MessagesSquareIcon,
   "/settings/browser": GlobeIcon,
