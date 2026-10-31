@@ -146,7 +146,6 @@ import type { useWorktreeSetup } from "./useWorktreeSetup";
 
 const ENVIRONMENT_UNAVAILABLE_SEND_TOAST_TRAIL_SIZE = 3;
 
-const selectPlanModeEnabled = (settings: UnifiedSettings) => settings.planModeEnabled;
 const selectSafeSend = (settings: UnifiedSettings) => settings.safeSend;
 
 /** Puts an undone send back in its draft, after anything typed since it was sent. */
@@ -367,7 +366,6 @@ export function useComposerSend(input: ComposerSendInput) {
   const handleNewThread = useNewThreadHandler();
   const navigate = useNavigate();
   const clientSettingsHydrated = useClientSettingsHydrated();
-  const planModeEnabled = useEnvironmentSettings(environmentId, selectPlanModeEnabled);
   const safeSendEnabled = useEnvironmentSettings(environmentId, selectSafeSend);
   const startThreadTurn = useOrchestrationCommand(threadEnvironment.startTurn, {
     reportFailure: false,
@@ -910,7 +908,6 @@ export function useComposerSend(input: ComposerSendInput) {
       selections: multipleModelSelections ?? [],
       providerInstanceEntries,
       messageText: messageTextForSend,
-      planModeEnabled,
       interactionMode: sendInteractionMode,
     })) {
       if ("error" in resolved) {

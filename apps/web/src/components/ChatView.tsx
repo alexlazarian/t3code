@@ -1282,7 +1282,6 @@ export default function ChatView(props: ChatViewProps) {
   const activeProviderInstanceId = selectedProviderEntry?.instanceId ?? null;
   const activeProviderStatus = selectedProviderEntry?.snapshot ?? null;
   const { enabled: interactionModeEnabled, interactionMode } = resolveComposerInteractionMode({
-    planModeEnabled: settings.planModeEnabled,
     provider: activeProviderStatus,
     interactionMode:
       composerInteractionMode ?? activeThread?.interactionMode ?? DEFAULT_INTERACTION_MODE,

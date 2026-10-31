@@ -119,18 +119,13 @@ function getSelectedTraits(
   promptUltrathink: PromptUltrathink,
   modelOptions: ProviderOptions | null | undefined,
   allowPromptInjectedEffort: boolean,
-  planModeEnabled: boolean,
 ) {
-  const caps = getProviderModelCapabilities(models, model, provider, planModeEnabled);
+  const caps = getProviderModelCapabilities(models, model, provider);
   const modelIsUnavailable =
     provider === "opencode" &&
     !models.some((candidate) => candidate.slug === normalizeModelSlug(model, provider));
   const descriptors = modelIsUnavailable
-    ? buildUnavailableModelOptionDescriptors(
-        planModeEnabled
-          ? modelOptions
-          : modelOptions?.filter((option) => option.id !== "agent" || option.value !== "plan"),
-      )
+    ? buildUnavailableModelOptionDescriptors(modelOptions)
     : getProviderOptionDescriptors({
         caps,
         selections: modelOptions,
@@ -197,7 +192,6 @@ function getTraitsSectionVisibility(input: {
   promptUltrathink?: PromptUltrathink | undefined;
   modelOptions: ProviderOptions | null | undefined;
   allowPromptInjectedEffort?: boolean;
-  planModeEnabled: boolean;
 }) {
   const selected = getSelectedTraits(
     input.provider,
@@ -206,7 +200,6 @@ function getTraitsSectionVisibility(input: {
     input.promptUltrathink ?? "none",
     input.modelOptions,
     input.allowPromptInjectedEffort ?? true,
-    input.planModeEnabled,
   );
 
   const showEffort = selected.primarySelectDescriptor !== null;
@@ -245,7 +238,6 @@ export function getReasoningTraitStep(input: {
   modelOptions: ProviderOptions | undefined;
   reportedModelSelection: ModelSelection | null | undefined;
   prompt: string;
-  planModeEnabled: boolean;
   direction: 1 | -1;
 }) {
   const selected = getSelectedTraits(
@@ -255,7 +247,6 @@ export function getReasoningTraitStep(input: {
     readPromptUltrathink(input.prompt),
     input.modelOptions,
     true,
-    input.planModeEnabled,
   );
   if (selected.modelIsUnavailable || selected.ultrathinkInBodyText) return null;
   const descriptor = selected.selectDescriptors.find((entry) =>
@@ -300,7 +291,6 @@ export function shouldRenderTraitsControls(input: {
   promptUltrathink?: PromptUltrathink | undefined;
   modelOptions: ProviderOptions | null | undefined;
   allowPromptInjectedEffort?: boolean;
-  planModeEnabled: boolean;
 }): boolean {
   return getTraitsSectionVisibility(input).hasAnyControls;
 }
@@ -316,7 +306,6 @@ interface TraitsMenuContentProps {
   modelOptions?: ProviderOptions | null | undefined;
   reportedModelSelection?: ModelSelection | null | undefined;
   allowPromptInjectedEffort?: boolean;
-  planModeEnabled: boolean;
   triggerClassName?: string;
   isComposerOwned?: boolean;
   /** Composer chips name the effort level unless the user picked bars. */
@@ -339,7 +328,6 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
   modelOptions,
   reportedModelSelection,
   allowPromptInjectedEffort = true,
-  planModeEnabled,
   ...persistence
 }: TraitsMenuContentProps & TraitsPersistence) {
   const modelSelection =
@@ -367,7 +355,6 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
     promptUltrathink,
     modelOptions,
     allowPromptInjectedEffort,
-    planModeEnabled,
   });
   const {
     descriptors,
@@ -539,7 +526,6 @@ export const TraitsPicker = memo(function TraitsPicker({
   modelOptions,
   reportedModelSelection,
   allowPromptInjectedEffort = true,
-  planModeEnabled,
   triggerClassName,
   isComposerOwned,
   effortDisplay = "label",
@@ -567,7 +553,6 @@ export const TraitsPicker = memo(function TraitsPicker({
       promptUltrathink,
       modelOptions,
       allowPromptInjectedEffort,
-      planModeEnabled,
     });
   if (
     !shouldRenderTraitsControls({
@@ -577,7 +562,6 @@ export const TraitsPicker = memo(function TraitsPicker({
       promptUltrathink,
       modelOptions,
       allowPromptInjectedEffort,
-      planModeEnabled,
     })
   ) {
     return null;
@@ -739,7 +723,6 @@ export const TraitsPicker = memo(function TraitsPicker({
           modelOptions={modelOptions}
           reportedModelSelection={reportedModelSelection}
           allowPromptInjectedEffort={allowPromptInjectedEffort}
-          planModeEnabled={planModeEnabled}
           {...persistence}
         />
         {extraMenuContent ? (

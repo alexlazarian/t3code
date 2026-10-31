@@ -60,7 +60,6 @@ import { useDesktopUpdateState } from "../../state/desktopUpdate";
 import {
   getCustomModelOptionsByInstance,
   resolveAppModelSelectionState,
-  selectsPlanAgent,
 } from "../../modelSelection";
 import { providerInstanceEntriesFor } from "../../providerInstances";
 import { ensureLocalApi, readLocalApi } from "../../localApi";
@@ -716,19 +715,6 @@ function LegacyFeaturesSection() {
 
   return (
     <SettingsSection id="legacy-features" title="Legacy">
-      <SettingsRow
-        {...searchableSetting("legacy-plan-mode")}
-        description="Bring back Build/Plan, /plan, /default, and Shift+Tab. When off, threads use build mode."
-        control={
-          <Switch
-            checked={settings.planModeEnabled}
-            onCheckedChange={(checked) => {
-              updateSettings({ planModeEnabled: Boolean(checked) });
-            }}
-            aria-label="Plan mode (legacy)"
-          />
-        }
-      />
       <SettingsRow
         {...searchableSetting("legacy-context-window-indicator")}
         description="Show how much of the context window is used, as a ring in the composer."
@@ -1823,9 +1809,6 @@ export function ThreadsSettingsPanel() {
                     model={textGenModel}
                     modelOptions={textGenModelOptions}
                     allowPromptInjectedEffort={false}
-                    planModeEnabled={
-                      settings.planModeEnabled || selectsPlanAgent(textGenModelOptions)
-                    }
                     triggerClassName={SETTINGS_PICKER_TRIGGER_CLASSNAME}
                     onModelOptionsChange={(nextOptions) => {
                       updateSettings({

@@ -940,7 +940,6 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
   const selectedPromptEffort = composerProviderState.promptEffort;
   const selectedModelOptionsForDispatch = composerProviderState.modelOptionsForDispatch;
   const { enabled: planModeUiEnabled, interactionMode } = resolveComposerInteractionMode({
-    planModeEnabled: settings.planModeEnabled,
     provider: selectedProviderStatus,
     interactionMode: requestedInteractionMode,
   });
@@ -2284,7 +2283,6 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       reportedModelSelection={reportedModelSelection}
       promptUltrathink={promptUltrathink}
       onPromptEdit={editPromptFromTraitsStable}
-      planModeEnabled={settings.planModeEnabled}
       planModeUiEnabled={planModeUiEnabled}
       interactionMode={interactionMode}
       compatibleRuntimeMode={compatibleRuntimeMode}
@@ -2804,7 +2802,6 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
           reportedModelSelection,
           prompt: promptRef.current,
           cursor: readComposerSnapshotStable().expandedCursor,
-          planModeEnabled: settings.planModeEnabled,
           direction,
         });
         if (!change) return;
@@ -2998,7 +2995,6 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       selectedModel,
       selectedInstanceId,
       reportedModelSelection,
-      settings.planModeEnabled,
       selectedModelSelection,
       multipleModelSelections,
       setMultipleModelSelections,

@@ -50,7 +50,6 @@ export function ComposerControlsBar(props: {
   reportedModelSelection: ChatComposerProps["reportedModelSelection"];
   promptUltrathink: PromptUltrathink;
   onPromptEdit: (edit: (prompt: string) => string) => void;
-  planModeEnabled: boolean;
   planModeUiEnabled: boolean;
   effortDisplay: EffortDisplay;
   /** The strip under a new thread names the permissions, so the row does not repeat them. */
@@ -101,7 +100,6 @@ export function ComposerControlsBar(props: {
     reportedModelSelection,
     promptUltrathink,
     onPromptEdit,
-    planModeEnabled,
     planModeUiEnabled,
     interactionMode,
     compatibleRuntimeMode,
@@ -147,7 +145,6 @@ export function ComposerControlsBar(props: {
     reportedModelSelection,
     promptUltrathink,
     onPromptEdit,
-    planModeEnabled,
   });
   const accessMatchesDefault = compatibleRuntimeMode === defaultRuntimeMode;
   const permissionsChipHidden = accessMatchesDefault || props.permissionsShownInStrip;
@@ -162,7 +159,6 @@ export function ComposerControlsBar(props: {
     reportedModelSelection,
     promptUltrathink,
     onPromptEdit,
-    planModeEnabled,
     isComposerOwned: true,
     effortDisplay: props.effortDisplay,
     triggerClassName: cn("ps-1.5 pe-1", TEXT_CONTROL_STATES),

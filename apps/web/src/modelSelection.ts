@@ -328,10 +328,6 @@ export function getCustomModelOptionsByInstance(
   return out;
 }
 
-export function selectsPlanAgent(options: ModelSelection["options"]): boolean {
-  return options?.some((option) => option.id === "agent" && option.value === "plan") ?? false;
-}
-
 export function resolveAppModelSelectionState(
   settings: UnifiedSettings,
   providers: ReadonlyArray<ServerProvider>,
@@ -377,7 +373,6 @@ export function resolveAppModelSelectionState(
       model,
       models: entry.models,
       modelOptions: selectedEntry ? selection.options : undefined,
-      planModeEnabled: settings.planModeEnabled || selectsPlanAgent(selection.options),
     });
 
     return createModelSelection(entry.instanceId, model, modelOptionsForDispatch);

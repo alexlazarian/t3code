@@ -34,7 +34,6 @@ type ComposerProviderStateInput = {
   models: ReadonlyArray<ServerProviderModel>;
   promptInjectionState?: ComposerPromptInjectionState;
   modelOptions: ReadonlyArray<ProviderOptionSelection> | null | undefined;
-  planModeEnabled: boolean;
 };
 
 type ComposerPromptInjectionState = "none" | "ultrathink";
@@ -59,7 +58,6 @@ type TraitsRenderInput = {
   reportedModelSelection?: ModelSelection | null | undefined;
   promptUltrathink: PromptUltrathink;
   onPromptEdit: (edit: (prompt: string) => string) => void;
-  planModeEnabled: boolean;
   size?: ComposerControlSize;
   hidden?: boolean;
   triggerClassName?: string;
@@ -97,36 +95,24 @@ function resolveComposerOptionSelections(
   model: string,
   provider: ProviderDriverKind,
   modelOptions: ReadonlyArray<ProviderOptionSelection> | null | undefined,
-  planModeEnabled: boolean,
 ): {
   caps: ModelCapabilities;
   selections: ReadonlyArray<ProviderOptionSelection> | undefined;
 } {
-  const caps = getProviderModelCapabilities(models, model, provider, planModeEnabled);
+  const caps = getProviderModelCapabilities(models, model, provider);
   return { caps, selections: withImplicitFastModeDefault(caps, modelOptions) };
 }
 
 export function getComposerProviderState(input: ComposerProviderStateInput): ComposerProviderState {
-  const {
-    provider,
-    model,
-    models,
-    modelOptions,
-    promptInjectionState = "none",
-    planModeEnabled,
-  } = input;
+  const { provider, model, models, modelOptions, promptInjectionState = "none" } = input;
   if (provider === "opencode") {
     const normalizedModel = normalizeModelSlug(model, provider);
     const modelIsInCatalog = models.some((candidate) => candidate.slug === normalizedModel);
     if (!modelIsInCatalog) {
-      const preservedOptions = modelOptions?.filter(
-        (option) => planModeEnabled || option.id !== "agent" || option.value !== "plan",
-      );
       return {
         provider,
         promptEffort: null,
-        modelOptionsForDispatch:
-          preservedOptions && preservedOptions.length > 0 ? preservedOptions : undefined,
+        modelOptionsForDispatch: modelOptions && modelOptions.length > 0 ? modelOptions : undefined,
       };
     }
   }
@@ -135,7 +121,6 @@ export function getComposerProviderState(input: ComposerProviderStateInput): Com
     model,
     provider,
     modelOptions,
-    planModeEnabled,
   );
   const descriptors = getProviderOptionDescriptors({ caps, selections });
   const primarySelectDescriptor = descriptors.find(
@@ -175,7 +160,6 @@ export function getComposerReasoningStep(input: {
   reportedModelSelection?: ModelSelection | null | undefined;
   prompt: string;
   cursor: number;
-  planModeEnabled: boolean;
   direction: 1 | -1;
 }): {
   prompt: string;
@@ -188,7 +172,6 @@ export function getComposerReasoningStep(input: {
     input.model,
     input.provider,
     input.modelOptions,
-    input.planModeEnabled,
   );
   const step = getReasoningTraitStep({
     provider: input.provider,
@@ -198,7 +181,6 @@ export function getComposerReasoningStep(input: {
     modelOptions: selections,
     reportedModelSelection: input.reportedModelSelection,
     prompt,
-    planModeEnabled: input.planModeEnabled,
     direction: input.direction,
   });
   if (!step) return null;
@@ -232,7 +214,6 @@ function renderTraitsControl(
     reportedModelSelection,
     promptUltrathink,
     onPromptEdit,
-    planModeEnabled,
     size,
     hidden,
     triggerClassName,
@@ -248,7 +229,6 @@ function renderTraitsControl(
     model,
     provider,
     modelOptions,
-    planModeEnabled,
   );
   if (
     !hasTarget ||
@@ -258,7 +238,6 @@ function renderTraitsControl(
       model,
       modelOptions: resolvedModelOptions,
       promptUltrathink,
-      planModeEnabled,
     })
   ) {
     return null;
@@ -275,7 +254,6 @@ function renderTraitsControl(
       reportedModelSelection={reportedModelSelection}
       promptUltrathink={promptUltrathink}
       onPromptEdit={onPromptEdit}
-      planModeEnabled={planModeEnabled}
       {...(size !== undefined ? { size } : {})}
       {...(hidden !== undefined ? { hidden } : {})}
       {...(triggerClassName !== undefined ? { triggerClassName } : {})}
