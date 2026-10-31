@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Merge the newest upstream nightly into fork-main through a sync/<tag> worktree. See fork/README.md.
 #   fork/sync.sh [--new] [tag]   start or resume a sync: merge, then check and build (no install)
+#   fork/sync.sh --recheck       after fixing a full run's failures: retest only what failed or changed
 #   fork/sync.sh land [--accept-failures]
 #                                fast-forward fork-main to the checked sync branch and clean up
 # Never rebases, never force-pushes, never touches the shared checkout's branch.
@@ -18,12 +19,13 @@ checked_out_at() {
   git worktree list --porcelain | awk -v ref="branch refs/heads/$1" '/^worktree /{wt=substr($0,10)} $0==ref{print wt}'
 }
 
-mode=start new=0 accept=0 tag=""
+mode=start new=0 accept=0 recheck=0 tag=""
 for arg in "$@"; do
   case "$arg" in
     land) mode=land ;;
     --new) new=1 ;;
     --accept-failures) accept=1 ;;
+    --recheck) recheck=1 ;;
     -*) die "unknown option $arg" ;;
     *) tag="$arg" ;;
   esac
@@ -162,6 +164,28 @@ if [ "$(cat "$logs/passed" 2>/dev/null)" = "$head" ]; then
 fi
 
 mkdir -p "$logs"
+packages="$(git ls-files 'apps/*/package.json' 'packages/*/package.json' 'infra/*/package.json' \
+  evals/package.json scripts/package.json oxlint-plugin-t3code/package.json | xargs -n1 dirname)"
+# A recheck tests what failed in the last run plus what changed since the last full run.
+# A change outside every package (lockfile, root config) retests everything.
+test_dirs="$packages" rebuild=1
+if [ "$recheck" = 1 ]; then
+  full="$(cat "$logs/full" 2>/dev/null)" || die "no full run recorded for $sync. Run fork/sync.sh first."
+  changed="$(git diff --name-only "$full" HEAD)"
+  test_dirs="$(cat "$logs/failed-packages")"
+  for file in $changed; do
+    case "$file" in fork/*|docs/*|*.md) continue ;; esac
+    dir="$(printf '%s\n' "$packages" | awk -v f="$file" 'index(f, $0 "/") == 1' | head -1)"
+    if [ -z "$dir" ]; then test_dirs="$packages"; break; fi
+    test_dirs="$(printf '%s\n%s\n' "$test_dirs" "$dir")"
+  done
+  test_dirs="$(printf '%s\n' "$test_dirs" | sed '/^$/d' | sort -u)"
+  # Rebuild only when the build failed or non-test code changed.
+  if ! grep -qx build "$logs/failed-steps" &&
+    ! printf '%s\n' "$changed" | grep -vE '^(fork/|docs/)|\.md$|\.test\.tsx?$' | grep -q .; then
+    rebuild=0
+  fi
+fi
 rm -f "$logs/passed" "$logs/checked"
 failed=()
 step() {
@@ -172,15 +196,19 @@ step() {
 # One package at a time: `vp run -r test` stops at the first failing package.
 test_all() {
   local rc=0 dir
-  for dir in $(git ls-files 'apps/*/package.json' 'packages/*/package.json' 'infra/*/package.json' \
-    evals/package.json scripts/package.json oxlint-plugin-t3code/package.json | xargs -n1 dirname); do
+  for dir in $test_dirs; do
     grep -q '"test":' "$dir/package.json" || continue
     echo "=== $dir"
     vp run --filter "./$dir" test || { rc=1; echo "=== FAILED $dir"; }
   done
   return $rc
 }
-echo "Checking $sync at $(git rev-parse --short HEAD)"
+if [ "$recheck" = 1 ]; then
+  echo "Rechecking $sync at $(git rev-parse --short HEAD) against the full run at $(git rev-parse --short "$full")"
+  echo "Testing: $(echo $test_dirs)"
+else
+  echo "Checking $sync at $(git rev-parse --short HEAD)"
+fi
 step install vp i
 step fmt vp run fmt:check
 step lint vp run lint
@@ -188,8 +216,11 @@ step knip vp run knip:check
 step typecheck vp run typecheck
 step test test_all
 grep '^=== FAILED' "$logs/test.log" | sed 's/^=== FAILED/           failed:/' || true
-step build fork/build.sh --build-only
+if [ "$rebuild" = 1 ]; then step build fork/build.sh --build-only; else echo "build      skipped (passed before, only tests changed)"; fi
 echo "$head" >"$logs/checked"
+[ "$recheck" = 1 ] || echo "$head" >"$logs/full"
+grep '^=== FAILED' "$logs/test.log" | sed 's/^=== FAILED //' >"$logs/failed-packages" || true
+printf '%s\n' ${failed[@]+"${failed[@]}"} >"$logs/failed-steps"
 
 if [ "${#failed[@]}" = 0 ]; then
   echo "$head" >"$logs/passed"
@@ -198,7 +229,7 @@ else
   echo
   echo "Failed: ${failed[*]}"
   echo "A failure blocks only if it passes on both $tag and the previous $BRANCH ($(git rev-parse --short "$BRANCH"))."
-  echo "Compare them (see fork/README.md), fix the fork-caused ones here, commit, and rerun fork/sync.sh."
+  echo "Compare them (see fork/README.md), fix the fork-caused ones here, commit, and run fork/sync.sh --recheck."
   echo "If every remaining failure is pre-existing: fork/sync.sh land --accept-failures"
   exit 1
 fi

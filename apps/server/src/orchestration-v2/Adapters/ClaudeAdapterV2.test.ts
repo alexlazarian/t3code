@@ -8148,7 +8148,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const tmpRoot = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-claude-bg-tail-" });
-        const root = claudeTaskOutputRoot({ CLAUDE_CODE_TMPDIR: tmpRoot }, path, null, process.platform);
+        const root = claudeTaskOutputRoot({ CLAUDE_CODE_TMPDIR: tmpRoot }, path, null, "linux");
         if (root === undefined) throw new Error("Claude task output needs a uid.");
         const tasks = path.join(root, "project", WAKE_NATIVE_SESSION, "tasks");
         yield* fileSystem.makeDirectory(tasks, { recursive: true });
