@@ -96,7 +96,7 @@ describe("settings scope navigation", () => {
   it("preserves the checkout through category and settings-search navigation", async () => {
     const router = createSettingsRouter();
     await router.navigate({ to: "/settings/general", search: checkoutSearch, hash: "new-threads" });
-    await router.navigate({ to: "/settings/integrations", hash: "", replace: true });
+    await router.navigate({ to: "/settings/browser", hash: "", replace: true });
     expect(router.state.location.search).toEqual(checkoutSearch);
     expect(router.state.location.hash).toBe("");
     await router.navigate({ to: "/settings/source-control", hash: "source-control-writing-style" });
@@ -209,7 +209,7 @@ describe("settings scope navigation", () => {
     const reloaded = createSettingsRouter(checkoutHref);
     await reloaded.load();
     expect(reloaded.state.location.search).toEqual(checkoutSearch);
-    await reloaded.navigate({ to: "/settings/integrations", hash: "agent-browser-access" });
+    await reloaded.navigate({ to: "/settings/browser", hash: "agent-browser-access" });
     expect(reloaded.state.location.search).toEqual(checkoutSearch);
   });
 

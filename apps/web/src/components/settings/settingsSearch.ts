@@ -1174,8 +1174,6 @@ const SETTINGS_CATEGORY_SCOPES: Readonly<Record<SettingsPath, SettingsSearchScop
 };
 
 const RENAMED_SETTINGS_PATHS: Readonly<Record<string, SettingsPath>> = {
-  "/settings/integrations": "/settings/browser",
-  "/settings/storage": "/settings/maintenance",
   "/settings/labs": "/settings/connections",
   "/settings/context": "/settings/general",
 };
