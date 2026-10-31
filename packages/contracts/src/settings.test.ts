@@ -12,20 +12,16 @@ import {
   ClientSettingsPatch,
   ClaudeSettings,
   DEFAULT_SERVER_SETTINGS,
-  globalIdleCompaction,
-  idleCompactionPatch,
   requiredScopesForProjectMutation,
   resolveIdleCompaction,
   resolveProjectProviderInstanceEnabled,
   resolveProviderInstanceEnabled,
   ServerSettings,
   ServerSettingsPatch,
-  withIdleCompaction,
 } from "./settings.ts";
 
 const decodeClientSettings = Schema.decodeUnknownSync(ClientSettingsSchema);
 const decodeClientSettingsPatch = Schema.decodeUnknownSync(ClientSettingsPatch);
-const encodeClientSettings = Schema.encodeSync(ClientSettingsSchema);
 const decodeServerSettings = Schema.decodeUnknownSync(ServerSettings);
 const encodeProviderInstanceEnvironment = Schema.encodeSync(ProviderInstanceEnvironment);
 const decodeProviderInstanceEnvironment = Schema.decodeSync(ProviderInstanceEnvironment);
@@ -247,38 +243,8 @@ describe("resolveIdleCompaction", () => {
     expect(resolveIdleCompaction(settings, ProviderInstanceId.make("claudeAgent"))).toBe("off");
   });
 
-  it("reads the mode from the legacy switch, in either form servers saved it", () => {
-    expect(globalIdleCompaction(decodeServerSettings({ compactIdleThreads: true }))).toBe(
-      "beforeCacheExpires",
-    );
-    expect(globalIdleCompaction(decodeServerSettings({ compactIdleThreads: "off" }))).toBe("off");
-    expect(globalIdleCompaction(decodeServerSettings({}))).toBe("onReturn");
-  });
-
-  it("keeps the legacy switch a boolean, as shipped clients decode it", () => {
-    const encode = Schema.encodeSync(Schema.toCodecJson(ServerSettings));
-    for (const mode of ["onReturn", "beforeCacheExpires", "off"] as const) {
-      const encoded = encode(withIdleCompaction(DEFAULT_SERVER_SETTINGS, mode)) as {
-        readonly compactIdleThreads: unknown;
-        readonly idleCompaction: unknown;
-      };
-      expect(encoded.compactIdleThreads).toBe(mode === "beforeCacheExpires");
-      expect(encoded.idleCompaction).toBe(mode);
-    }
-  });
-
-  it("patches the field the server reads", () => {
-    expect(
-      idleCompactionPatch({ compactIdleThreads: false, idleCompaction: "onReturn" }, "off"),
-    ).toEqual({
-      idleCompaction: "off",
-    });
-    expect(idleCompactionPatch({ compactIdleThreads: "onReturn" }, "off")).toEqual({
-      compactIdleThreads: "off",
-    });
-    expect(idleCompactionPatch({ compactIdleThreads: false }, "beforeCacheExpires")).toEqual({
-      compactIdleThreads: true,
-    });
+  it("defaults to compacting when you return", () => {
+    expect(decodeServerSettings({}).idleCompaction).toBe("onReturn");
   });
 });
 
@@ -312,18 +278,6 @@ describe("ClientSettings reading spacing", () => {
     const settings = decodeClientSettings({ messageLineHeight: 163, messageParagraphSpacing: 65 });
     expect(settings.messageLineHeight).toBe(163);
     expect(settings.messageParagraphSpacing).toBe(65);
-  });
-});
-
-describe("ClientSettings quit confirmation", () => {
-  it.each([
-    [true, "hold"],
-    [false, "direct"],
-  ] as const)("migrates the legacy %s value to %s", (legacyValue, mode) => {
-    const settings = decodeClientSettings({ confirmQuit: legacyValue });
-
-    expect(settings.confirmQuit).toBe(mode);
-    expect(encodeClientSettings(settings).confirmQuit).toBe(mode);
   });
 });
 
@@ -370,32 +324,6 @@ describe("ServerSettings worktree defaults", () => {
     expect(
       encode(decodeServerSettings({ defaultThreadEnvMode: "worktree" })).defaultThreadEnvMode,
     ).toBe("worktree");
-  });
-});
-
-describe("ServerSettings.sourceControlWritingStyle", () => {
-  it.each([
-    { legacy: "", mode: "repo_conventions", customInstructions: "" },
-    { legacy: " \t\n ", mode: "repo_conventions", customInstructions: "" },
-    {
-      legacy: "  Prefer concise wording.\nKeep issue references.  ",
-      mode: "custom",
-      customInstructions: "Prefer concise wording.\nKeep issue references.",
-    },
-  ])("normalizes legacy writing style $legacy in snapshots only", ({ legacy, ...expected }) => {
-    const style = { ...expected, followChangeRequestTemplates: true };
-    for (const [input, normalized] of [
-      [{ sourceControlWritingStyle: legacy }, { sourceControlWritingStyle: style }],
-      [
-        { projectSettingsOverrides: { project: { sourceControlWritingStyle: legacy } } },
-        { projectSettingsOverrides: { project: { sourceControlWritingStyle: style } } },
-      ],
-    ] as const) {
-      const settings = decodeServerSettings(input);
-      expect(settings).toMatchObject(normalized);
-      expect(encodeServerSettings(settings)).toMatchObject(normalized);
-      expect(() => decodeServerSettingsPatch(input)).toThrow();
-    }
   });
 });
 

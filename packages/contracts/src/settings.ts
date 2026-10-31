@@ -273,18 +273,6 @@ export const QuitConfirmationMode = Schema.Literals(["direct", "hold", "double-c
 export type QuitConfirmationMode = typeof QuitConfirmationMode.Type;
 const DEFAULT_QUIT_CONFIRMATION_MODE: QuitConfirmationMode = "hold";
 
-const LegacyConfirmQuit = Schema.Boolean.pipe(
-  Schema.decodeTo(
-    QuitConfirmationMode,
-    SchemaTransformation.transform({
-      decode: (confirmQuit): QuitConfirmationMode => (confirmQuit ? "hold" : "direct"),
-      encode: (mode) => mode === "hold",
-    }),
-  ),
-);
-
-const QuitConfirmationModeSetting = Schema.Union([QuitConfirmationMode, LegacyConfirmQuit]);
-
 export const FontFamilyPreference = Schema.String.check(Schema.isMaxLength(200));
 export type FontFamilyPreference = typeof FontFamilyPreference.Type;
 
@@ -444,7 +432,7 @@ export const ClientSettingsSchema = Schema.Struct({
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_BROWSER_PROFILE_ID)),
   ),
 
-  confirmQuit: QuitConfirmationModeSetting.pipe(
+  confirmQuit: QuitConfirmationMode.pipe(
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_QUIT_CONFIRMATION_MODE)),
   ),
   confirmThreadArchive: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
@@ -720,10 +708,6 @@ export const IDLE_COMPACTION_MODES = [
 export const IdleCompactionMode = Schema.Literals(IDLE_COMPACTION_MODES.map((mode) => mode.value));
 export type IdleCompactionMode = typeof IdleCompactionMode.Type;
 
-// Shipped clients reject the whole server config unless `compactIdleThreads` is boolean.
-// Keep the mode in `idleCompaction`, but accept strings from older servers.
-const LegacyCompactIdleThreads = Schema.Union([Schema.Boolean, IdleCompactionMode]);
-
 const INSTANCE_IDLE_COMPACTION_MODES = [
   { value: "default", label: "Use default" },
   ...IDLE_COMPACTION_MODES,
@@ -937,27 +921,6 @@ export const SourceControlWritingStyleSettings = Schema.Struct({
 });
 export type SourceControlWritingStyleSettings = typeof SourceControlWritingStyleSettings.Type;
 
-const LegacySourceControlWritingStyle = TrimmedString.pipe(
-  Schema.decodeTo(
-    Schema.toType(SourceControlWritingStyleSettings),
-    SchemaTransformation.transform({
-      decode: (value): SourceControlWritingStyleSettings => ({
-        mode: value.length > 0 ? "custom" : "repo_conventions",
-        customInstructions: value,
-        followChangeRequestTemplates: true,
-      }),
-      encode: (value) => value.customInstructions,
-    }),
-  ),
-);
-
-// The struct member comes first so encoding uses its defaulted fields: the server strips
-// default sub-fields before writing settings.json, and a toType target would reject them.
-const SourceControlWritingStyleSetting = Schema.Union([
-  SourceControlWritingStyleSettings,
-  LegacySourceControlWritingStyle,
-]);
-
 export const BranchNamingMode = Schema.Literals(["static", "semantic", "custom"]);
 export type BranchNamingMode = typeof BranchNamingMode.Type;
 
@@ -1100,7 +1063,7 @@ export const ProjectSettingsOverrides = Schema.Struct({
   sourceControlWriterModelSelection: Schema.optionalKey(Schema.NullOr(ModelSelection)),
   reviewGuideModelSelection: Schema.optionalKey(Schema.NullOr(ModelSelection)),
   reviewGuideInstructions: Schema.optionalKey(TrimmedString),
-  sourceControlWritingStyle: Schema.optionalKey(SourceControlWritingStyleSetting),
+  sourceControlWritingStyle: Schema.optionalKey(SourceControlWritingStyleSettings),
   removeAgentCreditsOnMerge: Schema.optionalKey(Schema.Boolean),
   branchNamingMode: Schema.optionalKey(BranchNamingMode),
   branchNamePrefix: Schema.optionalKey(TrimmedString),
@@ -1270,10 +1233,7 @@ export const ServerSettings = Schema.Struct({
   sidebarAutoSettleAfterDays: Schema.NullOr(SidebarAutoSettleAfterDays).pipe(
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_SIDEBAR_AUTO_SETTLE_AFTER_DAYS)),
   ),
-  compactIdleThreads: LegacyCompactIdleThreads.pipe(
-    Schema.withDecodingDefault(Effect.succeed(false)),
-  ),
-  idleCompaction: Schema.optionalKey(IdleCompactionMode),
+  idleCompaction: IdleCompactionMode.pipe(Schema.withDecodingDefault(Effect.succeed("onReturn"))),
   snoozeLimitedThreads: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
   autoResumeLimitedThreads: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
   snoozePresets: SnoozePresetSettings.pipe(
@@ -1342,7 +1302,7 @@ export const ServerSettings = Schema.Struct({
   branchNamePrefix: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed("t3"))),
   branchNameInstructions: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
   removeAgentCreditsOnMerge: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
-  sourceControlWritingStyle: SourceControlWritingStyleSetting.pipe(
+  sourceControlWritingStyle: SourceControlWritingStyleSettings.pipe(
     Schema.withDecodingDefault(Effect.succeed({})),
   ),
   sourceControlWriterModelSelection: Schema.NullOr(ModelSelection).pipe(
@@ -1444,41 +1404,8 @@ export const resolveProjectProviderInstanceEnabled = (
 
 const decodeClaudeSettings = Schema.decodeUnknownOption(ClaudeSettings);
 
-type IdleCompactionSettings = Pick<ServerSettings, "compactIdleThreads" | "idleCompaction">;
-
-/** The environment-wide idle compaction mode, from whichever field the settings carry. */
-export const globalIdleCompaction = (settings: IdleCompactionSettings): IdleCompactionMode =>
-  settings.idleCompaction ??
-  (typeof settings.compactIdleThreads === "string"
-    ? settings.compactIdleThreads
-    : settings.compactIdleThreads
-      ? "beforeCacheExpires"
-      : "onReturn");
-
-/** Sets the mode, and the legacy switch shipped clients still read alongside it. */
-export const withIdleCompaction = <S extends IdleCompactionSettings>(
-  settings: S,
-  mode: IdleCompactionMode,
-): S => ({ ...settings, idleCompaction: mode, compactIdleThreads: mode === "beforeCacheExpires" });
-
-/** Whether a server reads modes, rather than only the boolean switch from before them. */
-export const readsIdleCompactionModes = (settings: IdleCompactionSettings) =>
-  settings.idleCompaction !== undefined || typeof settings.compactIdleThreads === "string";
-
-/**
- * The patch that sets `mode` in the form the server's settings show it reads:
- * the mode for a server that has `idleCompaction` or kept the mode in the legacy
- * field, the boolean switch for a server from before modes.
- */
-export const idleCompactionPatch = (settings: IdleCompactionSettings, mode: IdleCompactionMode) =>
-  settings.idleCompaction !== undefined
-    ? { idleCompaction: mode }
-    : readsIdleCompactionModes(settings)
-      ? { compactIdleThreads: mode }
-      : { compactIdleThreads: mode === "beforeCacheExpires" };
-
 export const resolveIdleCompaction = (
-  settings: Pick<ServerSettings, "providerInstances" | "compactIdleThreads" | "idleCompaction">,
+  settings: Pick<ServerSettings, "providerInstances" | "idleCompaction">,
   instanceId: ProviderInstanceId,
 ): IdleCompactionMode => {
   const instance = Object.hasOwn(settings.providerInstances, instanceId)
@@ -1488,7 +1415,7 @@ export const resolveIdleCompaction = (
     Option.map((config) => config.idleCompaction),
     Option.getOrElse(() => "default" as const),
   );
-  return override === "default" ? globalIdleCompaction(settings) : override;
+  return override === "default" ? settings.idleCompaction : override;
 };
 
 export const ServerSettingsOperation = Schema.Literals([
@@ -1630,7 +1557,6 @@ export const ServerSettingsPatch = Schema.Struct({
   deviceHosts: Schema.optionalKey(SshDeviceHostConfigs),
   easDeviceHosts: Schema.optionalKey(EasDeviceHostConfigs),
   sidebarAutoSettleAfterDays: Schema.optionalKey(Schema.NullOr(SidebarAutoSettleAfterDays)),
-  compactIdleThreads: Schema.optionalKey(LegacyCompactIdleThreads),
   idleCompaction: Schema.optionalKey(IdleCompactionMode),
   sidebarAutoSettleKeepPullRequests: Schema.optionalKey(Schema.Boolean),
   sidebarAutoSettleOnMerge: Schema.optionalKey(Schema.Boolean),

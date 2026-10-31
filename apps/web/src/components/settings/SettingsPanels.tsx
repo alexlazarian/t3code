@@ -7,7 +7,6 @@ import { useRef, useState } from "react";
 import {
   type DesktopUpdateChannel,
   IDLE_COMPACTION_MODES,
-  globalIdleCompaction,
   ProviderDriverKind,
   type ProviderInstanceId,
   type SidebarProjectGroupingMode,
@@ -52,7 +51,6 @@ import {
 } from "./useScopedSettings";
 import { useScopedModelDisabledReason } from "./useScopedModelAvailability";
 import { useOptionalSettingsScope, useSettingsScope } from "./SettingsScopeContext";
-import { scopedIdleCompaction } from "./scopedSettings";
 import { ProjectDefaultsSettings } from "./ProjectDefaultsSettings";
 import { ThreadTitleInstructionsSettings } from "./ThreadTitleInstructionsSettings";
 import { SnoozePresetsRow } from "./SnoozePresetsSettings";
@@ -1412,29 +1410,28 @@ export function CompactIdleThreadsRow() {
 function ScopedCompactIdleThreadsRow() {
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
-  const { targets } = useSettingsScope();
-  const idleCompaction = scopedIdleCompaction(targets.length > 0 ? targets : [{ settings }]);
+  const mixed = useScopedSettingsMixed(["idleCompaction"]);
 
   return (
     <SettingsRow
       serverScoped
-      settingKeys={["idleCompaction", "compactIdleThreads"]}
-      mixed={idleCompaction.mixed}
+      settingKeys={["idleCompaction"]}
+      mixed={mixed}
       {...searchableSetting("compact-idle-threads")}
       description="When to compact an idle Claude thread that is over 200,000 tokens: when you come back, just before its cache expires, or never. Each Claude provider can change this."
       resetAction={
-        globalIdleCompaction(settings) !== globalIdleCompaction(DEFAULT_UNIFIED_SETTINGS) ? (
+        settings.idleCompaction !== DEFAULT_UNIFIED_SETTINGS.idleCompaction ? (
           <SettingResetButton
             label="compact idle threads"
             onClick={() =>
-              updateSettings({ idleCompaction: globalIdleCompaction(DEFAULT_UNIFIED_SETTINGS) })
+              updateSettings({ idleCompaction: DEFAULT_UNIFIED_SETTINGS.idleCompaction })
             }
           />
         ) : null
       }
       control={
         <Select
-          value={idleCompaction.mixed ? null : globalIdleCompaction(settings)}
+          value={mixed ? null : settings.idleCompaction}
           onValueChange={(value) => {
             const mode = IDLE_COMPACTION_MODES.find((candidate) => candidate.value === value);
             if (mode) updateSettings({ idleCompaction: mode.value });
@@ -1451,13 +1448,7 @@ function ScopedCompactIdleThreadsRow() {
           </SelectTrigger>
           <SelectPopup align="end" alignItemWithTrigger={false}>
             {IDLE_COMPACTION_MODES.map((mode) => (
-              <SelectItem
-                hideIndicator
-                key={mode.value}
-                value={mode.value}
-                // A server from before modes has only the on/off switch, so it cannot store "Never".
-                disabled={mode.value === "off" && !idleCompaction.neverAvailable}
-              >
+              <SelectItem hideIndicator key={mode.value} value={mode.value}>
                 {mode.label}
               </SelectItem>
             ))}
