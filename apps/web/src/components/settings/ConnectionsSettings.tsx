@@ -1600,6 +1600,7 @@ export function ConnectionsSettings({ view }: { readonly view: "environments" | 
           key={environment.environmentId}
           environmentId={environment.environmentId}
           environmentLabel={peerLinkHosts.length > 1 ? environment.label : null}
+          enabled={environment.serverConfig?.settings.linkedEnvironmentsEnabled === true}
           isSearchTarget={index === 0}
         />
       ))}

@@ -48,12 +48,13 @@ export function useLinkedEnvironments(
   });
 }
 
+/** Connected environments that support links, whether or not links are turned on there. */
 export function usePeerLinkHosts() {
   const { environments } = useEnvironments();
   const supported = environments.filter(
     (environment) =>
       environment.connection.phase === "connected" &&
-      offersLinkedEnvironments(environment.serverConfig),
+      environment.serverConfig?.environment.capabilities.peerLinks === true,
   );
   const readable = useEnvironmentsWithScope(supported, AuthAccessReadScope);
   return supported.filter((environment) => readable.has(environment.environmentId));

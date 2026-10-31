@@ -134,8 +134,8 @@ gateway and workers built from Simlock's `main` at
 [6316e10](https://github.com/callstackincubator/simlock/commit/6316e10) or
 later, the first with a lease holder's screen and input.
 
-Turn on **Settings → Labs → Simlock device hosts (alpha)** and **Use devices**
-in Settings → Devices, then choose **Add source → Simlock pool** with an **agent token**
+Turn on **Use devices** and **Simlock device hosts (alpha)** in Settings → Devices,
+then choose **Add source → Simlock pool** with an **agent token**
 (`simlock --gateway token create --role agent`). Give each T3 server its own
 token: Simlock counts every lease made with one token against the same
 requester, and allows one at a time unless the gateway's

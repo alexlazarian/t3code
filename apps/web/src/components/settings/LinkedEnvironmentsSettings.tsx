@@ -2,6 +2,7 @@ import { useAtomValue } from "@effect/atom-react";
 import { linkRequestFailureMessage } from "@t3tools/client-runtime/link-request";
 import {
   AuthAccessWriteScope,
+  AuthSettingsWriteScope,
   type AuthMcpClientAccess,
   type EnvironmentId,
   type PeerLinkSummary,
@@ -21,6 +22,7 @@ import { requestConfirmDialog } from "~/confirmDialog";
 import { mintPairingCodeOn } from "~/state/peerPairingCode";
 import { peerLinkEnvironment, useLinkableMachines } from "~/state/peerLinks";
 import { useEnvironmentQuery } from "~/state/query";
+import { serverEnvironment } from "~/state/server";
 import { useEnvironmentScope, usePreparedConnection } from "~/state/session";
 import { useAtomCommand } from "~/state/use-atom-command";
 import { accessConfig } from "../auth/ConnectAgentSurface";
@@ -40,6 +42,7 @@ import {
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Spinner } from "../ui/spinner";
+import { Switch } from "../ui/switch";
 import { stackedThreadToast, toastManager } from "../ui/toast";
 import { ITEM_ROW_CLASSNAME, ITEM_ROW_INNER_CLASSNAME } from "./itemRows";
 import { LinkAccessPicker } from "./LinkAccessPicker";
@@ -54,22 +57,49 @@ const failureToast = (title: string, description: string) =>
 export function LinkedEnvironmentsSettings({
   environmentId,
   environmentLabel,
+  enabled,
   isSearchTarget,
 }: {
   readonly environmentId: EnvironmentId;
   readonly environmentLabel: string | null;
+  readonly enabled: boolean;
   readonly isSearchTarget: boolean;
 }) {
-  const links = useEnvironmentQuery(peerLinkEnvironment.list({ environmentId, input: {} }));
+  const links = useEnvironmentQuery(
+    enabled ? peerLinkEnvironment.list({ environmentId, input: {} }) : null,
+  );
   const canLink = useAtomValue(peerLinkEnvironment.link.permissionAtom(environmentId));
+  const canChange = useEnvironmentScope(environmentId, AuthSettingsWriteScope);
+  const updateSettings = useAtomCommand(serverEnvironment.updateSettings, {
+    label: "change linked environments",
+  });
   const search = searchableSetting("linked-environments");
   return (
     <SettingsSection
       {...(isSearchTarget ? { id: search.id } : {})}
       title={environmentLabel === null ? search.title : `${search.title} · ${environmentLabel}`}
-      headerAction={canLink ? <LinkEnvironmentAction environmentId={environmentId} /> : null}
+      headerAction={
+        enabled && canLink ? <LinkEnvironmentAction environmentId={environmentId} /> : null
+      }
     >
-      {links.error ? (
+      <SettingsRow
+        title="Work across machines"
+        description="Let agents here work on your other machines, and theirs here. Turn it on for each machine, then link them here. When off, nothing new starts over a link. Tasks already running finish."
+        control={
+          <Switch
+            checked={enabled}
+            disabled={!canChange}
+            onCheckedChange={(checked) =>
+              void updateSettings({
+                environmentId,
+                input: { patch: { linkedEnvironmentsEnabled: Boolean(checked) } },
+              })
+            }
+            aria-label="Linked environments"
+          />
+        }
+      />
+      {!enabled ? null : links.error ? (
         <SettingsRow title="Could not load linked environments" description={links.error} />
       ) : !links.data ? (
         <SettingsRow title="Loading linked environments…" role="status" />

@@ -37,7 +37,6 @@ export type SettingsPath =
   | "/settings/access"
   | "/settings/secrets"
   | "/settings/maintenance"
-  | "/settings/labs"
   | "/settings/about"
   | "/settings/archived";
 
@@ -105,7 +104,6 @@ export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
   "/settings/access": "Sharing & access",
   "/settings/secrets": "Secrets",
   "/settings/maintenance": "Maintenance",
-  "/settings/labs": "Labs",
   "/settings/about": "About",
   "/settings/archived": "Archive",
 };
@@ -153,7 +151,7 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
   },
   {
     heading: null,
-    paths: ["/settings/maintenance", "/settings/labs", "/settings/about", "/settings/archived"],
+    paths: ["/settings/maintenance", "/settings/about", "/settings/archived"],
   },
 ];
 
@@ -482,16 +480,9 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["hide fold running monitoring threads inbox sidebar shelf"],
   },
   {
-    id: "linked-environments-beta",
-    title: "Linked environments",
-    to: "/settings/labs",
-    scope: "environment",
-    searchTerms: ["beta link another machine vps peer agents work there delegate"],
-  },
-  {
     id: "simlock-hosts",
     title: "Simlock device hosts (alpha)",
-    to: "/settings/labs",
+    to: "/settings/devices",
     scope: "environment",
     searchTerms: ["beta alpha simlock callstack simulator emulator ios android pool lease gateway"],
   },
@@ -762,13 +753,13 @@ export const SETTINGS_SEARCH_ITEMS = [
   {
     id: "legacy-plan-mode",
     title: "Plan mode (legacy)",
-    to: "/settings/labs",
+    to: "/settings/chat",
     searchTerms: ["build plan composer old"],
   },
   {
     id: "legacy-context-window-indicator",
     title: "Context window indicator (legacy)",
-    to: "/settings/labs",
+    to: "/settings/chat",
     searchTerms: ["composer meter usage tokens circle old"],
   },
   {
@@ -1125,7 +1116,9 @@ export const SETTINGS_SEARCH_ITEMS = [
     title: "Linked environments",
     to: "/settings/connections",
     targetId: "linked-environments",
-    searchTerms: ["link peer another machine vps agents work there handoff pairing code"],
+    searchTerms: [
+      "link peer another machine vps agents work there handoff pairing code delegate turn on off",
+    ],
   },
   {
     id: "remote-environments",
@@ -1211,7 +1204,6 @@ const SETTINGS_CATEGORY_SCOPES: Readonly<Record<SettingsPath, SettingsSearchScop
   "/settings/secrets": null,
   "/settings/scheduled-tasks": null,
   "/settings/maintenance": null,
-  "/settings/labs": null,
   "/settings/about": null,
   "/settings/archived": "project-defaults",
 };
@@ -1219,7 +1211,7 @@ const SETTINGS_CATEGORY_SCOPES: Readonly<Record<SettingsPath, SettingsSearchScop
 const RENAMED_SETTINGS_PATHS: Readonly<Record<string, SettingsPath>> = {
   "/settings/integrations": "/settings/browser",
   "/settings/storage": "/settings/maintenance",
-  "/settings/beta": "/settings/labs",
+  "/settings/labs": "/settings/connections",
 };
 const SPLIT_SETTINGS_PATHS: ReadonlySet<string> = new Set([
   "/settings/general",
@@ -1231,7 +1223,7 @@ const SPLIT_SETTINGS_PATHS: ReadonlySet<string> = new Set([
 // Section anchors that moved but are not search results themselves.
 const MOVED_SECTION_ANCHORS: Readonly<Record<string, SettingsPath>> = {
   "authorized-clients": "/settings/access",
-  "legacy-features": "/settings/labs",
+  "legacy-features": "/settings/chat",
   "text-generation": "/settings/threads",
   about: "/settings/about",
 };

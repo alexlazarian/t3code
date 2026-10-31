@@ -710,7 +710,7 @@ function AutoSettleDaysInput({
   );
 }
 
-export function LegacyFeaturesSection() {
+function LegacyFeaturesSection() {
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
 
@@ -1245,6 +1245,7 @@ export function ChatSettingsPanel() {
           }
         />
       </SettingsSection>
+      <LegacyFeaturesSection />
     </SettingsPageContainer>
   );
 }
