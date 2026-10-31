@@ -2,7 +2,7 @@
 # Merge the newest upstream nightly into fork-main through a sync/<tag> worktree. See fork/README.md.
 #   fork/sync.sh [--new] [tag]   start or resume a sync: merge, then check and build (no install)
 #   fork/sync.sh --recheck       after fixing a full run's failures: retest only what failed or changed
-#   fork/sync.sh land [--accept-failures]
+#   fork/sync.sh land [--accept-failures | --skip-checks]
 #                                fast-forward fork-main to the checked sync branch and clean up
 # Never rebases, never force-pushes, never touches the shared checkout's branch.
 set -euo pipefail
@@ -19,13 +19,14 @@ checked_out_at() {
   git worktree list --porcelain | awk -v ref="branch refs/heads/$1" '/^worktree /{wt=substr($0,10)} $0==ref{print wt}'
 }
 
-mode=start new=0 accept=0 recheck=0 tag=""
+mode=start new=0 accept=0 skip=0 recheck=0 tag=""
 for arg in "$@"; do
   case "$arg" in
     land) mode=land ;;
     --new) new=1 ;;
     --accept-failures) accept=1 ;;
     --recheck) recheck=1 ;;
+    --skip-checks) skip=1 ;;
     -*) die "unknown option $arg" ;;
     *) tag="$arg" ;;
   esac
@@ -81,7 +82,9 @@ if [ "$mode" = land ]; then
   [ -d "$wt" ] || die "worktree $wt is missing."
   [ -z "$(git -C "$wt" status --porcelain --untracked-files=no)" ] || die "$wt has uncommitted changes."
   head="$(git rev-parse "$sync")"
-  if [ "$(cat "$logs/passed" 2>/dev/null)" != "$head" ]; then
+  if [ "$skip" = 1 ]; then
+    echo "Landing $sync without checks. Run them later on $BRANCH (see fork/README.md)."
+  elif [ "$(cat "$logs/passed" 2>/dev/null)" != "$head" ]; then
     [ "$(cat "$logs/checked" 2>/dev/null)" = "$head" ] || die "$sync was not checked at its current commit. Run fork/sync.sh."
     [ "$accept" = 1 ] || die "checks failed on $sync (logs in $logs). Land anyway only after confirming each failure also fails on $tag or on the previous $BRANCH: fork/sync.sh land --accept-failures"
   fi
