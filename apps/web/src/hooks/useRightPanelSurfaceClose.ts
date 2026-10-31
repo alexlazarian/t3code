@@ -54,7 +54,7 @@ export function useRightPanelSurfaceClose(input: {
       readEnvironmentScope(ref.environmentId, AuthTerminalOperateScope)
     ) {
       for (const terminalId of surface.terminalIds) {
-        terminalActions.closeTerminalSession(terminalId);
+        terminalActions.closeTerminalSession(terminalId, ref);
       }
     }
   };

@@ -113,6 +113,7 @@ function partition(threads: ReadonlyArray<ReturnType<typeof makeThread>>, workin
       [envA, capableConfig],
       [envB, capableConfig],
     ]),
+    connectedEnvironmentIds: [envA, envB],
     optimisticDrop: null,
     workingShelfEnabled: workingShelf,
     statusFilter: "all",

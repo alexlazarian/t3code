@@ -205,6 +205,8 @@ export function OverviewView() {
           ),
     delegatedUnderParent,
     serverConfigs,
+    // The board never drags rows, so none needs to be writable.
+    connectedEnvironmentIds: [],
     optimisticDrop: null,
     // The board has no Working shelf, but the inbox tracker is shared with the sidebar.
     workingShelfEnabled,

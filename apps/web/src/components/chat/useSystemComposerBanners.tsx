@@ -84,7 +84,24 @@ export function useSystemComposerBanners(input: SystemComposerBannersInput) {
     activeReconnectingEnvironmentId,
     ENVIRONMENT_RECONNECT_WARNING_GRACE_MS,
   );
-  const handleReconnectActiveEnvironmentStable = useStableCallback(reconnect);
+  const handleReconnectActiveEnvironment = async (environmentId: EnvironmentId) => {
+    // A retry does nothing while the environment is switched off.
+    if (activeEnvironment?.entry.enabled !== false) return reconnect(environmentId);
+    const result = await setEnvironmentEnabled({ environmentId, enabled: true });
+    if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
+      const error = squashAtomCommandFailure(result);
+      toastManager.add(
+        stackedThreadToast({
+          type: "error",
+          title: "Could not reconnect environment",
+          description: error instanceof Error ? error.message : "Failed to reconnect.",
+        }),
+      );
+    }
+  };
+  const handleReconnectActiveEnvironmentStable = useStableCallback(
+    handleReconnectActiveEnvironment,
+  );
   const disconnectDelayElapsed = useEnvironmentDisconnectDelay(
     activeEnvironmentUnavailable && activeEnvironment ? activeEnvironment.environmentId : null,
   );

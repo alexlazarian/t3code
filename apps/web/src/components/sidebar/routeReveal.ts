@@ -43,6 +43,9 @@ export function useActiveRowReveal(
     if (reveal.pendingKey !== rowKey && revealedListMount.current === listMount) return;
     completeSidebarRouteReveal(reveal);
     revealedListMount.current = listMount;
+    // A row under the pointer was just clicked, so it is in view; scrolling it would force a
+    // layout mid-commit. Keyboard activation can come from a focused row scrolled out of view.
+    if (row.matches(":hover")) return;
     row.scrollIntoView({ block: "nearest" });
   };
 }
