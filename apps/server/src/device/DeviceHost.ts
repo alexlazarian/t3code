@@ -87,12 +87,6 @@ export type AgentDaemonEndpoint = Pick<AgentDeviceEndpoint, "baseUrl" | "token">
 export interface AgentDeviceBinding extends AgentDaemonEndpoint {
   /** Null when the session alone picks the device and selector flags would be refused. */
   readonly agentDeviceId: string | null;
-  /** The one session the device is leased to, shared by every thread. */
-  readonly session?: string;
-  /** agent-device state holding that session's connection. */
-  readonly stateDir?: string;
-  /** agent-device accepts installs into the session only from the directory that opened it. */
-  readonly installDirectory?: string;
 }
 
 /** Where the proxy sends a device hub request, for hosts that serve several upstreams. */

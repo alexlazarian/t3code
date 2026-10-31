@@ -118,7 +118,7 @@ export function DeviceControlsRail(props: {
               </Menu>
             ) : null}
           </>
-        ) : props.hostKind === "simlock" ? null : (
+        ) : (
           <RailButton
             tooltipSide={popupSide}
             label="Rotate device"
@@ -194,16 +194,14 @@ export function DeviceControlsRail(props: {
             </RailButton>
           </>
         ) : null}
-        {props.hostKind === "simlock" ? null : (
-          <RailButton
-            tooltipSide={popupSide}
-            label={props.screenshotPending ? "Capturing screenshot" : "Save screenshot"}
-            disabled={!view.streaming || props.screenshotPending}
-            onClick={props.onScreenshot}
-          >
-            <Camera />
-          </RailButton>
-        )}
+        <RailButton
+          tooltipSide={popupSide}
+          label={props.screenshotPending ? "Capturing screenshot" : "Save screenshot"}
+          disabled={!view.streaming || props.screenshotPending}
+          onClick={props.onScreenshot}
+        >
+          <Camera />
+        </RailButton>
         <Menu>
           <MenuTrigger
             render={
@@ -229,7 +227,7 @@ export function DeviceControlsRail(props: {
             <MenuSeparator />
             <MenuItem variant="destructive" onClick={props.onPowerOff}>
               <Power />
-              {props.hostKind === "simlock" ? "Return device to the pool" : "Power off device"}
+              Power off device
             </MenuItem>
           </MenuPopup>
         </Menu>

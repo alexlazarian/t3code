@@ -120,8 +120,6 @@ export interface DeviceStreamTarget {
   readonly preferMjpeg?: boolean;
   readonly panelId?: 1 | 3;
   readonly videoOnly?: boolean;
-  /** The host speaks only serve-sim's AVCC stream and input socket, on both platforms (Simlock). */
-  readonly serveSimOnly?: boolean;
 }
 
 export type DeviceHardwareButton = "home" | "back" | "recents" | "power" | "appSwitcher";
@@ -390,16 +388,13 @@ export function createDeviceStreamClient(
 ): DeviceStreamClient {
   const { access, platform, deviceId } = target;
   const sink = "present" in output ? output : createCanvasFrameSink(output);
-  // Android normally streams over serve-emu's socket; a serve-sim-only host serves it like iOS.
-  const serveSimOnly = target.serveSimOnly === true;
-  const avcc = platform === "ios" || serveSimOnly;
+  const avcc = platform === "ios";
   const vendor = avcc ? "/vendor/serve-sim" : "/vendor/serve-emu";
   const device = encodeURIComponent(deviceId);
   const httpUrl = (path: string) =>
     withDeviceHubQuery(`${access.httpBase}${vendor}${path}`, access);
   const wsUrl = (path: string) => withDeviceHubQuery(`${access.wsBase}${vendor}${path}`, access);
-  const useWebCodecs =
-    isWebCodecsSupported() && !(platform === "ios" && target.preferMjpeg && !serveSimOnly);
+  const useWebCodecs = isWebCodecsSupported() && !(platform === "ios" && target.preferMjpeg);
 
   let stopped = true;
   let socket: WebSocket | null = null;
@@ -578,11 +573,7 @@ export function createDeviceStreamClient(
   };
 
   const recoverDecoder = () => {
-    if (serveSimOnly) {
-      // A new AVCC request starts a fresh capture with a keyframe; there is no MJPEG.
-      closeDecoder();
-      controller?.abort();
-    } else if (platform === "ios") fallBackToMjpeg();
+    if (platform === "ios") fallBackToMjpeg();
     else {
       closeDecoder();
       connecting("Video decoder restarted.");
@@ -772,12 +763,7 @@ export function createDeviceStreamClient(
               if (!configured) {
                 await reader.cancel().catch(() => {});
                 if (!isCurrent()) return;
-                if (serveSimOnly)
-                  setStatus(
-                    "error",
-                    `This browser cannot decode this device's ${avcCodecString(chunk.payload)} stream.`,
-                  );
-                else if (target.videoOnly)
+                if (target.videoOnly)
                   setStatus(
                     "error",
                     `This browser cannot decode the Duo panel's ${avcCodecString(chunk.payload)} stream.`,
@@ -1081,7 +1067,7 @@ export function createDeviceStreamClient(
   const connectIosInput = async () => {
     if (stopped) return;
     const session = generation;
-    if (!serveSimOnly) await primeIosHelper(session);
+    await primeIosHelper(session);
     if (stopped || generation !== session) return;
     const ws = new WebSocket(wsUrl(`/helper/ws?device=${device}`));
     ws.binaryType = "arraybuffer";
@@ -1261,11 +1247,7 @@ export function createDeviceStreamClient(
     iosInputAdmitted = false;
     iosInputUnavailable = false;
     connecting();
-    if (serveSimOnly) {
-      if (!target.videoOnly) void connectIosInput();
-      if (useWebCodecs) void readIosVideo();
-      else fail("This browser cannot decode this device's stream (WebCodecs unavailable).");
-    } else if (platform === "ios") {
+    if (platform === "ios") {
       if (!target.videoOnly) void connectIosInput();
       if (useWebCodecs) void readIosVideo();
       else fallBackToMjpeg();
@@ -1404,9 +1386,7 @@ export function createDeviceStreamClient(
               ? "app_switcher"
               : button === "power"
                 ? "lock"
-                : button === "back" && platform === "android"
-                  ? "back"
-                  : null;
+                : null;
         if (name) send(taggedJson(IOS_MSG_BUTTON, { button: name }));
         return;
       }

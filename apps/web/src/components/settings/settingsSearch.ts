@@ -474,13 +474,6 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["hide fold running monitoring threads inbox sidebar shelf"],
   },
   {
-    id: "simlock-hosts",
-    title: "Simlock device hosts (alpha)",
-    to: "/settings/devices",
-    scope: "environment",
-    searchTerms: ["beta alpha simlock callstack simulator emulator ios android pool lease gateway"],
-  },
-  {
     id: "auto-settle-inactive-threads",
     title: "Auto-settle inactive threads",
     to: "/settings/threads",
@@ -834,7 +827,7 @@ export const SETTINGS_SEARCH_ITEMS = [
     title: "Device sources",
     to: "/settings/devices",
     searchTerms: [
-      "device hosts ssh remote mac mini identity key connection eas expo cloud simlock pool gateway local simulators",
+      "device hosts ssh remote mac mini identity key connection eas expo cloud local simulators",
     ],
   },
   {

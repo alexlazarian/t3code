@@ -4,7 +4,6 @@ import {
   CodexSettings,
   EasDeviceHostConfig,
   type ServerSettings,
-  SimlockDeviceHostConfig,
   UsageLimitSourceConfig,
   isSecretReference,
   secretSettingsFields,
@@ -35,7 +34,6 @@ const providerSecretFields = new Map([
 ]);
 const usageLimitSecretFields = secretSettingsFields(UsageLimitSourceConfig);
 const easDeviceHostSecretFields = secretSettingsFields(EasDeviceHostConfig);
-const simlockDeviceHostSecretFields = secretSettingsFields(SimlockDeviceHostConfig);
 const encode = (value: string) => Buffer.from(value, "utf8").toString("base64url");
 
 export interface SettingsSecret {
@@ -161,24 +159,11 @@ export function mapSettingsSecrets(
       ) as EasDeviceHostConfig,
   );
 
-  // Its own prefix: an EAS and a Simlock host may share an id.
-  const simlockDeviceHosts = settings.simlockDeviceHosts.map(
-    (host) =>
-      mapFields(
-        host,
-        simlockDeviceHostSecretFields,
-        (field, serverHost) =>
-          `simlock-device-host-${encode(host.id)}-${encode(field)}` +
-          (serverHost === null ? "" : `-${encode(serverHost)}`),
-      ) as SimlockDeviceHostConfig,
-  );
-
   return {
     ...settings,
     providerInstances,
     sourceControlHosts,
     usageLimitSources,
     easDeviceHosts,
-    simlockDeviceHosts,
   };
 }

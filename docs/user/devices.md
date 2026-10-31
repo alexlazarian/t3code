@@ -123,43 +123,6 @@ installation, and connectivity to development servers such as Metro separately.
 A simulator on another machine cannot reach Metro through your environment's
 localhost without forwarding or another reachable address.
 
-## Simlock hosts (alpha)
-
-[Simlock](https://incubator.callstack.com/simlock/) pools iOS simulators and
-Android emulators across machines. If you run a Simlock gateway, T3 can lease
-devices from it. Simlock is new and unreleased, so this integration is an
-alpha: it may change or stop working with a newer Simlock. T3 does not install
-or manage Simlock; set up the gateway and its workers yourself. It needs a
-gateway and workers built from Simlock's `main` at
-[6316e10](https://github.com/callstackincubator/simlock/commit/6316e10) or
-later, the first with a lease holder's screen and input.
-
-Turn on **Use devices** and **Simlock device hosts (alpha)** in Settings → Devices,
-then choose **Add source → Simlock pool** with an **agent token**
-(`simlock --gateway token create --role agent`). Give each T3 server its own
-token: Simlock counts every lease made with one token against the same
-requester, and allows one at a time unless the gateway's
-`lease.maxPerRequester` is raised to the host's **Devices at once**. The token
-leases devices and reaches only its own leases, but commands on a leased device
-run on its worker, so treat it like shell access to your workers. T3 sends it
-with every request, so use an HTTPS gateway URL, or plain HTTP only over an
-encrypted network such as Tailscale. The gateway
-and workers need `capabilities.stream.enabled` and `capabilities.input.enabled`
-for the live screen and for input.
-
-The picker lists the models your workers can make. Opening one takes a lease;
-closing it with **Return device to the pool**, or removing the host, returns it
-wiped. The panel keeps a watched device leased up to the host's lease limit.
-You can tap, swipe, type, and press Home, and Back and Recents on Android.
-Rotation, appearance, text size, device tools, and screenshots are not offered
-for Simlock devices; agents can still do them through `device_open`. On iOS 27
-simulators, typing on your keyboard does nothing; tap the on-screen keyboard
-instead. Workers must run the same agent-device
-version as T3 (see Device tool updates), and agent-device accepts app installs
-for a lease only from the folder it was opened from, which `device_open`
-names. A device cannot reach development servers on your machine through
-localhost; use an address its worker can reach.
-
 ## Device tool updates
 
 The connected T3 server manages the device hub and agent tools on its own machine and configured SSH hosts. Required versions install automatically the next time those tools are used. In Settings → Devices, select a version and choose **Check versions** to read installed versions without installing tools or starting devices.

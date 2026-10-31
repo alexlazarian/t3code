@@ -15,7 +15,6 @@ const encodeEndpoint = Schema.encodeEffect(
     Schema.Struct({
       daemonBaseUrl: Schema.String,
       daemonAuthToken: Schema.String,
-      stateDir: Schema.optionalKey(Schema.String),
     }),
   ),
 );
@@ -47,7 +46,7 @@ export const agentDeviceSession = (threadId: string, hostId: string, deviceId: s
 
 export const writeAgentDeviceConfig = Effect.fn("AgentDeviceTarget.writeConfig")(function* (
   file: string,
-  endpoint: AgentDaemonEndpoint & { readonly stateDir?: string | undefined },
+  endpoint: AgentDaemonEndpoint,
 ) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -55,7 +54,6 @@ export const writeAgentDeviceConfig = Effect.fn("AgentDeviceTarget.writeConfig")
   const content = yield* encodeEndpoint({
     daemonBaseUrl: endpoint.baseUrl,
     daemonAuthToken: endpoint.token,
-    ...(endpoint.stateDir === undefined ? {} : { stateDir: endpoint.stateDir }),
   });
   if ((yield* fs.readFileString(file).pipe(Effect.orElseSucceed(() => ""))) === content) return;
   const temporary = yield* fs.makeTempFile({ directory: path.dirname(file), prefix: ".endpoint-" });

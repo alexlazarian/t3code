@@ -4,7 +4,6 @@ import {
   DeviceBootError,
   DeviceServiceState,
   EasDeviceHostConfig,
-  SimlockDeviceHostConfig,
   EasDeviceHostConfigs,
   SshDeviceHostConfigs,
 } from "./device.ts";
@@ -50,7 +49,6 @@ describe("configured device hosts", () => {
 
   it("marks the EAS access token as a secret setting", () => {
     expect(secretSettingsFields(EasDeviceHostConfig)).toEqual(["accessToken"]);
-    expect(secretSettingsFields(SimlockDeviceHostConfig)).toEqual(["agentToken"]);
   });
 });
 
@@ -65,7 +63,6 @@ describe("device state for clients from before EAS hosts", () => {
     hosts: [
       { ...summary, id: "local", kind: "local" as const },
       { ...summary, id: "eas", kind: "eas" as const },
-      { ...summary, id: "pool", kind: "simlock" as const },
     ],
     hostStatus: "ready" as const,
     hostStatuses: {},
@@ -77,7 +74,7 @@ describe("device state for clients from before EAS hosts", () => {
     revision: 1,
   };
 
-  it("sends EAS and Simlock hosts where an older client does not look, and reads them back", () => {
+  it("sends EAS hosts where an older client does not look, and reads them back", () => {
     const wire = encodeState(state);
     expect(decodeOlderState(wire).hosts.map((host) => host.id)).toEqual(["local"]);
     expect(decodeState(wire).hosts).toEqual(state.hosts);

@@ -11,7 +11,6 @@ import {
   type EasDeviceHostConfig,
   type EnvironmentId,
   type ServerSettingsPatch,
-  type SimlockDeviceHostConfig,
   type SshDeviceHostConfig,
 } from "@t3tools/contracts";
 import { ChevronDownIcon, MoreVertical, PlusIcon } from "lucide-react";
@@ -39,14 +38,6 @@ import {
 import { useSettingsScope } from "./SettingsScopeContext";
 import { SettingsSection } from "./settingsLayout";
 import { settingsScopeEnvironmentLabel } from "./settingsScopeAxis";
-import { SimlockDeviceHostEditor } from "./SimlockDeviceHostEditor";
-import {
-  newSimlockDeviceHost,
-  planSimlockDeviceHostSave,
-  simlockLeaseLimits,
-  updateSimlockDeviceHosts,
-  type SimlockTokenEntry,
-} from "./simlockDeviceHostsSettings.logic";
 import { useHostConnectionChecks } from "./useHostConnectionChecks";
 
 const deviceHostStatesAtom = environmentAtomList("web-device-host-states", (environmentId) =>
@@ -83,8 +74,7 @@ interface SourceRow {
   readonly description: ReactNode;
   readonly environments: ReadonlyArray<SourceEnvironment>;
   /**
-   * One machine or account every environment reaches the same way (an SSH host, EAS, a Simlock
-   * pool), so its platforms are the same for all of them. Local simulators differ per machine.
+   * One machine or account every environment reaches the same way (an SSH host, EAS), so its platforms are the same for all of them. Local simulators differ per machine.
    */
   readonly shared: boolean;
   readonly actions?: ReactNode;
@@ -104,8 +94,7 @@ type Editing =
       readonly isNew: boolean;
       /** Where the editor checks the Expo account: an environment that holds the host. */
       readonly environmentId: EnvironmentId;
-    }
-  | { readonly kind: "simlock"; readonly host: SimlockDeviceHostConfig; readonly isNew: boolean };
+    };
 
 /** What a configured host is doing on one environment, when it is not simply working. */
 function hostStatus(
@@ -136,10 +125,7 @@ const hostPlatforms = (state: DeviceServiceState | undefined, hostId: string) =>
  * Every device source the selected environments can open, one row each. A source configured on
  * several environments is one row; how it stands on each lives in the row's breakdown.
  */
-export function DeviceSourcesSettings(props: {
-  readonly supportsEas: boolean;
-  readonly supportsSimlock: boolean;
-}) {
+export function DeviceSourcesSettings(props: { readonly supportsEas: boolean }) {
   const { scope, environments, connectedEnvironments, environment: primary } = useSettingsScope();
   const projectScope = scope.kind === "project" || scope.kind === "checkout";
   const update = useAtomCommand(serverEnvironment.updateSettings, { reportFailure: false });
@@ -167,7 +153,6 @@ export function DeviceSourcesSettings(props: {
   });
   // Environments with devices off are left out: the switch above already says so.
   const active = members.filter((member) => member.settings?.enableDeviceSupport);
-  const simlockEnabled = members.some((member) => member.settings?.simlockDeviceHostsEnabled);
   // Like every scoped setting, a change reaches the connected environments and skips the rest.
   const disabled = projectScope || busy || members.length === 0;
 
@@ -263,37 +248,6 @@ export function DeviceSourcesSettings(props: {
     );
     if (saved) setEditing(null);
   };
-
-  const simlockEnvironments = members.map((member) => ({
-    environmentId: member.environmentId,
-    label: member.label,
-    hosts: member.settings?.simlockDeviceHosts ?? [],
-  }));
-  const saveSimlock = async (
-    host: SimlockDeviceHostConfig,
-    tokens: ReadonlyMap<EnvironmentId, SimlockTokenEntry>,
-  ) => {
-    const plan = planSimlockDeviceHostSave(simlockEnvironments, host, tokens);
-    if ("problem" in plan) return;
-    const saved = await write(
-      plan.patches.map((patch) => ({
-        environmentId: patch.environmentId,
-        patch: { simlockDeviceHosts: patch.hosts },
-      })),
-      "Simlock host not saved everywhere",
-    );
-    if (saved) setEditing(null);
-  };
-  const removeSimlock = (host: SimlockDeviceHostConfig) =>
-    void write(
-      simlockEnvironments
-        .filter((environment) => environment.hosts.some((candidate) => candidate.id === host.id))
-        .map((environment) => ({
-          environmentId: environment.environmentId,
-          patch: { simlockDeviceHosts: updateSimlockDeviceHosts(environment.hosts, host, true) },
-        })),
-      "Simlock host not removed everywhere",
-    );
 
   const [testing, setTesting] = useState<ReadonlySet<string>>(new Set());
   const testSsh = async (host: SshDeviceHostConfig) => {
@@ -483,39 +437,6 @@ export function DeviceSourcesSettings(props: {
     }
   }
 
-  if (props.supportsSimlock && simlockEnabled) {
-    const simlockHosts = new Map<string, SimlockDeviceHostConfig>();
-    for (const environment of simlockEnvironments)
-      for (const host of environment.hosts)
-        if (!simlockHosts.has(host.id)) simlockHosts.set(host.id, host);
-    for (const host of simlockHosts.values()) {
-      const edit = () => setEditing({ kind: "simlock", host, isNew: false });
-      rows.push({
-        key: `simlock:${host.id}`,
-        shared: true,
-        title: host.label,
-        kind: "Simlock",
-        description: `${host.gatewayUrl.replace(/^https?:\/\//, "")} · ${simlockLeaseLimits(host)}`,
-        environments: active.map((member) => {
-          const held = (member.settings?.simlockDeviceHosts ?? []).find(
-            (candidate) => candidate.id === host.id,
-          );
-          if (!held)
-            return { environmentId: member.environmentId, label: member.label, added: false };
-          return {
-            environmentId: member.environmentId,
-            label: member.label,
-            added: true,
-            platforms: hostPlatforms(member.state, host.id),
-            // A blank token can still resolve to the machine's own, so the host's answer decides.
-            status: hostStatus(member.state, host.id),
-          };
-        }),
-        actions: rowActions(edit, () => removeSimlock(host)),
-      });
-    }
-  }
-
   const addMenu = (
     <Menu>
       <MenuTrigger
@@ -551,15 +472,6 @@ export function DeviceSourcesSettings(props: {
             EAS Simulator
           </MenuItem>
         ) : null}
-        {props.supportsSimlock && simlockEnabled ? (
-          <MenuItem
-            onClick={() =>
-              setEditing({ kind: "simlock", host: newSimlockDeviceHost(randomUUID()), isNew: true })
-            }
-          >
-            Simlock pool (alpha)
-          </MenuItem>
-        ) : null}
       </MenuPopup>
     </Menu>
   );
@@ -587,16 +499,6 @@ export function DeviceSourcesSettings(props: {
           isNew={editing.isNew}
           busy={busy}
           onSave={(host) => void saveEas(host, false, editing.isNew ? undefined : editing.host)}
-          onClose={() => setEditing(null)}
-        />
-      ) : editing?.kind === "simlock" ? (
-        <SimlockDeviceHostEditor
-          key={editing.host.id}
-          host={editing.host}
-          isNew={editing.isNew}
-          environments={simlockEnvironments}
-          busy={busy}
-          onSave={(host, tokens) => void saveSimlock(host, tokens)}
           onClose={() => setEditing(null)}
         />
       ) : null}

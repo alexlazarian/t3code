@@ -108,7 +108,7 @@ it.live("closes an upstream socket that is still connecting without an unhandled
     );
     const address = hub.address();
     if (typeof address !== "object" || !address) throw new Error("Missing hub port");
-    // Handshake headers, as Simlock's routes send, select the `ws` package over the global WebSocket.
+    // Handshake headers, as EAS routes send, select the `ws` package over the global WebSocket.
     const upstream = yield* Socket.makeWebSocket(`ws://127.0.0.1:${address.port}`, {
       headers: { authorization: "Bearer test" },
     }).pipe(Effect.provide(DeviceHubProxy.upstreamWebSocketConstructor));
