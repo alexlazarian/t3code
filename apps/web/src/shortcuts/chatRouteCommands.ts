@@ -70,9 +70,7 @@ export function createStartNewThread(
 ): () => void {
   const readThreadContext = createThreadContextReader(router, handleNewThread);
   return () => {
-    // The boring sidebar's folders already show the context, so it starts in the current project.
-    const { boringSidebarEnabled, legacySidebarEnabled } = getClientSettings();
-    if (!boringSidebarEnabled && !legacySidebarEnabled && readProjectGroupCount() > 1) {
+    if (readProjectGroupCount() > 1) {
       openCommandPalette({ open: "new-thread-in" });
       return;
     }

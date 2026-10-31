@@ -482,18 +482,6 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["hide fold running monitoring threads inbox sidebar shelf"],
   },
   {
-    id: "boring-sidebar",
-    title: "Boring sidebar (group by project)",
-    to: "/settings/labs",
-    searchTerms: ["beta folders project tree legacy old classic sidebar"],
-  },
-  {
-    id: "boring-sidebar-multiline",
-    title: "Two-line folder rows",
-    to: "/settings/labs",
-    searchTerms: ["beta boring sidebar folder rows multiline branch pull request details"],
-  },
-  {
     id: "linked-environments-beta",
     title: "Linked environments",
     to: "/settings/labs",

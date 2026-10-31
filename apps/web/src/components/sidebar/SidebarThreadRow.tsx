@@ -150,7 +150,7 @@ const useSubagentsExpandedStore = create<{
     }),
 }));
 
-/** The project icon with the provider glyph in its corner; folder rows already sit under their project, so they show the glyph alone. */
+/** The project icon with the provider glyph in its corner, or the glyph alone without a project. */
 function SidebarThreadTile(props: {
   project: ProjectFaviconProject | null;
   providerEntry: SidebarProviderEntry | null;
@@ -529,9 +529,7 @@ const dropVerbBadge: Record<SidebarDropVerb, ReactNode> = {
 
 type SidebarThreadRowProps = {
   thread: SidebarThreadSummary;
-  // "folder" is a one-line row inside a boring sidebar project folder;
-  // "folder-multiline" adds the card's branch and PR line under it.
-  variant: "card" | "slim" | "folder" | "folder-multiline";
+  variant: "card" | "slim";
   navigationParent?: string | undefined;
   variantAction: SidebarSweepAction;
   settlementSupported: boolean;
@@ -650,7 +648,6 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
     variant,
     variantAction,
   } = props;
-  const inFolder = variant === "folder" || variant === "folder-multiline";
   const threadRef = scopeThreadRef(thread.environmentId, thread.id);
   const threadKey = scopedThreadKey(threadRef);
   const canOperateThread = useEnvironmentScope(thread.environmentId, AuthOrchestrationOperateScope);
@@ -1222,8 +1219,6 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
       ? props.environmentLabel
       : null;
   const queuedCount = thread.source.queuedRunCount ?? 0;
-  const hasDetailLine =
-    !inFolder || step !== null || queuedCount > 0 || hasUnsentDraft || machineLabel !== null;
 
   return (
     <li
@@ -1247,13 +1242,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
               data-sidebar-parent={props.navigationParent}
               aria-label={accessibility.label}
               aria-current={accessibility.current}
-              data-testid={
-                inFolder
-                  ? "sidebar-row-folder"
-                  : variant === "card"
-                    ? "sidebar-row-card"
-                    : "sidebar-row-slim"
-              }
+              data-testid={variant === "card" ? "sidebar-row-card" : "sidebar-row-slim"}
               data-info-thread={threadKey}
               aria-busy={isRegeneratingTitle || undefined}
               className={cn(
@@ -1277,7 +1266,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
           </span>
           <span className="flex bg-inherit">
             <SidebarThreadTile
-              project={inFolder ? null : props.project}
+              project={props.project}
               providerEntry={providerEntry}
               displayName={
                 providerEntry?.displayName ?? thread.runtime?.providerName ?? modelInstanceId
@@ -1310,30 +1299,28 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
             {statusSlot}
             {props.sweepAction !== null ? dragDestination : null}
           </span>
-          {hasDetailLine ? (
-            <span className="col-span-2 col-start-3 flex min-w-0 items-center gap-1.5 text-xs leading-4 text-muted-foreground">
-              {step ? (
-                <span aria-hidden className="flex min-w-0 flex-1">
-                  <StepText step={step} />
-                </span>
-              ) : (
-                <span className="flex-1" />
-              )}
-              {queuedCount > 0 ? (
-                <span className="shrink-0 text-2xs tabular-nums">{queuedCount} queued</span>
-              ) : null}
-              {hasUnsentDraft ? (
-                <span className="shrink-0 text-2xs">
-                  <UnsentDraftLabel testId={`sidebar-draft-indicator-${thread.id}`} />
-                </span>
-              ) : null}
-              {machineLabel ? (
-                <span aria-hidden className="max-w-[30%] shrink-0 truncate text-2xs">
-                  {machineLabel}
-                </span>
-              ) : null}
-            </span>
-          ) : null}
+          <span className="col-span-2 col-start-3 flex min-w-0 items-center gap-1.5 text-xs leading-4 text-muted-foreground">
+            {step ? (
+              <span aria-hidden className="flex min-w-0 flex-1">
+                <StepText step={step} />
+              </span>
+            ) : (
+              <span className="flex-1" />
+            )}
+            {queuedCount > 0 ? (
+              <span className="shrink-0 text-2xs tabular-nums">{queuedCount} queued</span>
+            ) : null}
+            {hasUnsentDraft ? (
+              <span className="shrink-0 text-2xs">
+                <UnsentDraftLabel testId={`sidebar-draft-indicator-${thread.id}`} />
+              </span>
+            ) : null}
+            {machineLabel ? (
+              <span aria-hidden className="max-w-[30%] shrink-0 truncate text-2xs">
+                {machineLabel}
+              </span>
+            ) : null}
+          </span>
           {props.jumpLabel ? <JumpHintBadge label={props.jumpLabel} /> : null}
         </TooltipTrigger>
         {detailsTooltip}
