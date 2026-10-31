@@ -29,7 +29,6 @@ import {
 } from "./lib/contextChipAccents";
 
 import { appAtomRegistry, subscribeAtomChanges } from "./rpc/atomRegistry";
-import { removeSidebarBackgrounds } from "./sidebarBackground";
 import { primaryServerEnvironmentThemesAtom } from "./state/server";
 
 export { CLASSIC_MEDIUM_THEME, COCKPIT_THEME, THEME_COLOR_ROLES, VSCODE_THEME };
@@ -1404,9 +1403,6 @@ export function removeCustomThemes(themeIds: ReadonlyArray<string>): void {
     ),
     nextThemes,
   );
-  void removeSidebarBackgrounds([...removedIds]).catch((error: unknown) => {
-    console.error("[sidebar-background] cleanup failed", error);
-  });
 }
 
 function parseThemeColorOverrides(value: unknown): ThemeColorOverrides {

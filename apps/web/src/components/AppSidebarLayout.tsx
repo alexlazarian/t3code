@@ -64,7 +64,6 @@ import {
   openSettings,
 } from "./sidebar/mainAppLocation";
 import type { SidebarRouteReveal } from "./sidebar/routeReveal";
-import { SidebarBackgroundLayer } from "./sidebar/SidebarBackgroundLayer";
 import {
   clampThreadSidebarWidth,
   resolveInitialThreadSidebarWidth,
@@ -689,10 +688,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
               onResize: setSidebarWidth,
             }}
           >
-            <SidebarBackgroundLayer />
-            <div className="relative flex min-h-0 flex-1 flex-col">
-              <ThreadSidebar routeReveal={sidebarRouteReveal} />
-            </div>
+            <ThreadSidebar routeReveal={sidebarRouteReveal} />
             <SidebarRail onDoubleClick={resetSidebarWidth} />
           </Sidebar>
           <div

@@ -376,12 +376,6 @@ export const SETTINGS_SEARCH_ITEMS = [
     to: "/settings/appearance",
   },
   {
-    id: "sidebar-background",
-    title: "Sidebar background",
-    to: "/settings/appearance",
-    searchTerms: ["image picture photo svg wallpaper pattern hex overlay tile theme"],
-  },
-  {
     id: "interface-font",
     title: "Interface font",
     to: "/settings/appearance",
